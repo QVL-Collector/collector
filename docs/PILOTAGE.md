@@ -22,10 +22,14 @@ En cas de doute, ce document fait foi. Toute évolution de ces règles est valid
 | J1 | Besoin et découpage (D01, D02) |
 | J2 | Décisions techniques (D03 à D14) |
 | J3 | Documents de process, bac à sable, configuration AWS |
-| J4 | Sprint 1 : walking skeleton |
-| J5 | Sprint 2 : fonctionnalité métier, charge et autoscaling |
+| J4 | Sprint 1 : walking skeleton (WS-2, § 3.4) : Place de marché et Contrôle de publication à une règle, reliés par le canal |
+| J5 | Sprint 2 : mise en vente contrôlée complète, charge et autoscaling |
+| J5 bis | Sprint 3 : diffusion vers Interactions et réservation par Transactions |
 | J6 | Audit sécurité, remédiation, analyse de la dette, compétences |
 | J7 | Répétitions, vidéo de secours, soutenance |
+
+Contenu indicatif des trois sprints et ordre de coupe : [D02](decisions/D02-decoupage-applicatif.md), « Découpage indicatif en sprints ».
+Le sprint 3 est inséré avant J6 sous le numéro J5 bis : les jalons J6 et J7, cités dans d'autres documents, gardent leur numéro.
 
 ## 2. Rôles
 
@@ -50,7 +54,7 @@ Les rôles sont des fonctions. Une même personne peut en tenir plusieurs, mais 
 2. Avis croisés, collés dans les sections Avis du fichier : sécurité (section « Avis sécurité ») ; faisabilité et simplicité (section « Avis faisabilité »).
 3. Martin tranche. Sa décision est consignée avec ses propres mots dans la section « Décision de Martin ».
 4. Le statut est mis à jour (`Décidée`, `Rejetée` ou `Candidate (XPnn)`), ainsi que l'[index](decisions/INDEX.md).
-5. Commit : `docs(decisions): record Dxx <slug>`.
+5. Commit : `docs(decisions): record dxx <slug>` (sujet en minuscules, règle Karma).
 
 Règles :
 - Une décision n'est jamais écrite comme prise tant que Martin ne l'a pas tranchée.
@@ -87,7 +91,13 @@ Règles :
 3. Mise à jour de la documentation touchée par le sprint.
 4. Clôture : toutes les US livrées sont mergées sur `main`, les branches mergées sont supprimées, les statuts sont à jour. Une branche non mergée est signalée, jamais supprimée d'office.
 
-Le **sprint 1 est un walking skeleton** : un service minimal déployé de bout en bout sur l'environnement managé (CI, HTTPS, authentification, allumage et extinction depuis zéro), avant toute fonctionnalité métier.
+Le **sprint 1 est un walking skeleton**, variante WS-2 décidée dans [D02](decisions/D02-decoupage-applicatif.md) :
+- **Contenu** : la Place de marché et le Contrôle de publication, reliés par le canal, déployés de bout en bout sur l'environnement managé, avec CI, HTTPS, authentification, allumage et extinction depuis zéro.
+- **Une seule règle de contrôle** : la complétude du titre, de la description, de la catégorie et du prix.
+- Le squelette porte la première tranche de la fonctionnalité métier, réutilisée telle quelle au sprint 2, qui ajoute les autres règles et les écrans.
+- **Conditions** : l'expérimentation du canal est concluante sur l'environnement managé, et D05 est tranchée avant J4.
+- **À défaut**, variante WS-1 : la Place de marché seule ; le canal et le Contrôle arrivent au sprint 2. Aucune publication directe temporaire : un article n'est jamais publié sans contrôle.
+
 Le contenu et les objectifs de chaque sprint sont dans `backlog/sprints/sprint-N.md`.
 
 ## 4. Statuts
@@ -132,7 +142,7 @@ Une US est terminée quand **toutes** les conditions suivantes sont vraies :
 - **Commits au format Karma** : `<type>(<scope>): <sujet>`.
   - Types : `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `build`, `ci`, `revert`.
   - Sujet à l'impératif, en minuscules, sans point final. Corps optionnel séparé par une ligne vide.
-  - Exemples : `chore(repo): initialize collector project structure`, `docs(decisions): record D01 exigences`.
+  - Exemples : `chore(repo): initialize collector project structure`, `docs(decisions): record d01 poc business feature`.
 - **Messages de commit et de PR** : ils décrivent le changement, sans ligne de signature, de co-auteur ou de mention d'outil.
 - **Merge sur `main`** : uniquement après la phrase explicite de Martin « je valide la livraison de la feature ». Une formulation ambiguë ne vaut pas validation : on redemande.
 - **PR** : vers `main`, CI verte obligatoire avant merge. La forge et le pipeline sont définis par D10.

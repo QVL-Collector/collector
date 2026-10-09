@@ -7,8 +7,8 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 
 ## État actuel
 
-- **Phase** : besoin et découpage en cours (jalon J1).
-- **Décisions** : Session S1 close : [D01](docs/decisions/D01-fonctionnalite-poc.md) décidée (mise en vente d'un article avec contrôle automatisé de publication). Prochaine étape : D02 (découpage applicatif). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
+- **Phase** : besoin et découpage terminés (jalon J1). Prochain jalon : décisions techniques (J2).
+- **Décisions** : Session S2 close : [D02](docs/decisions/D02-decoupage-applicatif.md) décidée (option B, 4 services ; POC option P2) ; [architecture logique v0.2](docs/architecture/architecture-technique.md) ; [analyse de menaces](docs/securite/exigences-securite.md) validée. Prochaine étape : S3 (D03 hébergement et orchestration, D04 stack). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
 - **Code** : aucun service, front ou infrastructure pour l'instant.
 
 ## Démarrer / arrêter
@@ -31,7 +31,8 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 | [docs/00-cadrage/contexte-et-grille.md](docs/00-cadrage/contexte-et-grille.md) | Contexte de l'entreprise, travail demandé, grille d'évaluation | Disponible |
 | [docs/00-cadrage/exigences.md](docs/00-cadrage/exigences.md) | Exigences fonctionnelles et non fonctionnelles reformulées | Disponible |
 | [docs/decisions/D01-fonctionnalite-poc.md](docs/decisions/D01-fonctionnalite-poc.md) | D01 : exigences reformulées et fonctionnalité métier du POC | Disponible |
-| [docs/decisions/](docs/decisions/) | Décisions D02 à D14 (`Dxx-*.md`) | À venir |
+| [docs/decisions/D02-decoupage-applicatif.md](docs/decisions/D02-decoupage-applicatif.md) | D02 : architecture cible V1, découpage applicatif, périmètre du POC | Disponible |
+| [docs/decisions/](docs/decisions/) | Décisions D03 à D14 (`Dxx-*.md`) | À venir |
 | [docs/decisions/INDEX.md](docs/decisions/INDEX.md) | Index et statut des décisions | Disponible |
 | [docs/decisions/_GABARIT.md](docs/decisions/_GABARIT.md) | Gabarit d'une décision | Disponible |
 
@@ -39,10 +40,10 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 
 | Emplacement | Contenu | État |
 |---|---|---|
-| [docs/architecture/](docs/architecture/) | `architecture-technique.md` | À venir |
+| [docs/architecture/architecture-technique.md](docs/architecture/architecture-technique.md) | Architecture logique de la V1 (option B, quatre services) et tranche du POC, v0.2 | Disponible |
 | [docs/architecture/schemas/](docs/architecture/schemas/) | Schémas (sources et exports) | À venir |
 | [docs/processus/](docs/processus/) | `qualite-indicateurs.md`, `devsecops.md`, `cicd.md`, `tests.md`, `competences-formation.md` | À venir |
-| [docs/securite/exigences-securite.md](docs/securite/exigences-securite.md) | Analyse de menaces du besoin et exigences de sécurité V1 | Disponible |
+| [docs/securite/exigences-securite.md](docs/securite/exigences-securite.md) | Analyse de menaces (validée, révisée pour l'option B) et exigences de sécurité V1 | Disponible |
 | [docs/securite/](docs/securite/) | `audit-v1.md`, `plan-remediation.md` | À venir |
 | `docs/exploitation.md` | Services, ports, variables (noms seulement), démarrer/arrêter, démo | À venir |
 
