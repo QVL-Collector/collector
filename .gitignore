@@ -1,0 +1,93 @@
+# --- Secrets et environnements ---
+.env*
+!.env.example
+
+# Clés et certificats
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ppk
+id_rsa*
+id_ed25519*
+
+# Credentials AWS et accès clusters
+.aws/
+credentials
+*.credentials
+aws-credentials*
+kubeconfig*
+*.kubeconfig
+
+# --- IaC : states, plans, caches ---
+# Terraform / OpenTofu
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+# AWS CDK
+cdk.out/
+.cdk.staging/
+# Pulumi (backend local)
+.pulumi/
+# AWS SAM
+.aws-sam/
+
+# --- Dépendances et builds ---
+node_modules/
+target/
+dist/
+build/
+out/
+.next/
+.turbo/
+.cache/
+.parcel-cache/
+.gradle/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.log
+
+# --- Rapports générés lourds ---
+coverage/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+*.jtl
+*.har
+tests/charge/**/results/
+
+# --- IDE ---
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# --- Vidéos ---
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
