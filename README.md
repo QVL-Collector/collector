@@ -8,7 +8,7 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 ## État actuel
 
 - **Phase** : besoin et découpage terminés (jalon J1). Prochain jalon : décisions techniques (J2).
-- **Décisions** : Session S2 close : [D02](docs/decisions/D02-decoupage-applicatif.md) décidée (option B, 4 services ; POC option P2) ; [architecture logique v0.2](docs/architecture/architecture-technique.md) ; [analyse de menaces](docs/securite/exigences-securite.md) validée. Prochaine étape : S3 (D03 hébergement et orchestration, D04 stack). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
+- **Décisions** : Session S3 close : [D03](docs/decisions/D03-hebergement-orchestration.md) en statut Candidate (EKS, repli ECS Fargate, comparatif en bac à sable), [D04](docs/decisions/D04-stack.md) décidée (Go, React + TypeScript + MUI). Contraintes de l'environnement : [environnement-learner-lab.md](docs/00-cadrage/environnement-learner-lab.md). Prochaine étape : S4 (D05 à D11). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
 - **Code** : aucun service, front ou infrastructure pour l'instant.
 
 ## Démarrer / arrêter
@@ -30,9 +30,12 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 | [docs/PILOTAGE.md](docs/PILOTAGE.md) | Règles du projet : rôles, circuits, statuts, Definition of Done, conventions git | Disponible |
 | [docs/00-cadrage/contexte-et-grille.md](docs/00-cadrage/contexte-et-grille.md) | Contexte de l'entreprise, travail demandé, grille d'évaluation | Disponible |
 | [docs/00-cadrage/exigences.md](docs/00-cadrage/exigences.md) | Exigences fonctionnelles et non fonctionnelles reformulées | Disponible |
+| [docs/00-cadrage/environnement-learner-lab.md](docs/00-cadrage/environnement-learner-lab.md) | Contraintes de l'environnement AWS Academy Learner Lab (recherche documentaire du 2026-10-09, à confirmer par la sonde du premier jour) | Disponible |
 | [docs/decisions/D01-fonctionnalite-poc.md](docs/decisions/D01-fonctionnalite-poc.md) | D01 : exigences reformulées et fonctionnalité métier du POC | Disponible |
 | [docs/decisions/D02-decoupage-applicatif.md](docs/decisions/D02-decoupage-applicatif.md) | D02 : architecture cible V1, découpage applicatif, périmètre du POC | Disponible |
-| [docs/decisions/](docs/decisions/) | Décisions D03 à D14 (`Dxx-*.md`) | À venir |
+| [docs/decisions/D03-hebergement-orchestration.md](docs/decisions/D03-hebergement-orchestration.md) | D03 : hébergement et orchestration AWS (Candidate : EKS, repli ECS Fargate) | Disponible |
+| [docs/decisions/D04-stack.md](docs/decisions/D04-stack.md) | D04 : stack back et front (Go ; React, TypeScript et MUI) | Disponible |
+| [docs/decisions/](docs/decisions/) | Décisions D05 à D14 (`Dxx-*.md`) | À venir |
 | [docs/decisions/INDEX.md](docs/decisions/INDEX.md) | Index et statut des décisions | Disponible |
 | [docs/decisions/_GABARIT.md](docs/decisions/_GABARIT.md) | Gabarit d'une décision | Disponible |
 

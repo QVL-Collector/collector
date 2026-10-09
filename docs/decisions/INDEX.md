@@ -9,8 +9,8 @@ Sessions : S1 = D01 · S2 = D02 · S3 = D03 + D04 · S4 = D05 à D11 · S5 = D12
 |---|---|---|---|---|---|---|
 | D01 | Exigences reformulées et fonctionnalité métier du POC | S1 | Décidée | C3, C2, C7, C5, C8 | — | [D01-fonctionnalite-poc.md](D01-fonctionnalite-poc.md) |
 | D02 | Architecture cible V1, découpage applicatif, périmètre du POC | S2 | Décidée | C2, C10 | D01 | [D02-decoupage-applicatif.md](D02-decoupage-applicatif.md) |
-| D03 | Hébergement et orchestration AWS | S3 | À instruire | C5, C2 | D02 | |
-| D04 | Stack back et front | S3 | À instruire | C2, C9 | D02 | |
+| D03 | Hébergement et orchestration AWS | S3 | Candidate (XP en D14) | C5, C2 | D02 | [D03-hebergement-orchestration.md](D03-hebergement-orchestration.md) |
+| D04 | Stack back et front | S3 | Décidée | C2, C9 | D02 | [D04-stack.md](D04-stack.md) |
 | D05 | Communication interservice (sync/async, broker) | S4 | À instruire | C2, C1 | D02, D03 | |
 | D06 | Authentification et autorisation | S4 | À instruire | C8, C2 | D03, D04 | |
 | D07 | Données (SGBD, stockage des photos) | S4 | À instruire | C2 | D02, D03 | |
