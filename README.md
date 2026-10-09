@@ -7,8 +7,8 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 
 ## État actuel
 
-- **Phase** : cadrage en cours (jalon J0 — organisation).
-- **Décisions** : aucune décision n'est encore prise. Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
+- **Phase** : besoin et découpage en cours (jalon J1).
+- **Décisions** : Session S1 close : [D01](docs/decisions/D01-fonctionnalite-poc.md) décidée (mise en vente d'un article avec contrôle automatisé de publication). Prochaine étape : D02 (découpage applicatif). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
 - **Code** : aucun service, front ou infrastructure pour l'instant.
 
 ## Démarrer / arrêter
@@ -28,8 +28,10 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 |---|---|---|
 | [README.md](README.md) | Entrée du dépôt : objectif, état, démarrer/arrêter, carte des documents | Disponible |
 | [docs/PILOTAGE.md](docs/PILOTAGE.md) | Règles du projet : rôles, circuits, statuts, Definition of Done, conventions git | Disponible |
-| [docs/00-cadrage/](docs/00-cadrage/) | `contexte-et-grille.md` (contexte, grille d'évaluation), `exigences.md` | À venir |
-| [docs/decisions/](docs/decisions/) | Décisions D01 à D14 (`Dxx-*.md`) | À venir |
+| [docs/00-cadrage/contexte-et-grille.md](docs/00-cadrage/contexte-et-grille.md) | Contexte de l'entreprise, travail demandé, grille d'évaluation | Disponible |
+| [docs/00-cadrage/exigences.md](docs/00-cadrage/exigences.md) | Exigences fonctionnelles et non fonctionnelles reformulées | Disponible |
+| [docs/decisions/D01-fonctionnalite-poc.md](docs/decisions/D01-fonctionnalite-poc.md) | D01 : exigences reformulées et fonctionnalité métier du POC | Disponible |
+| [docs/decisions/](docs/decisions/) | Décisions D02 à D14 (`Dxx-*.md`) | À venir |
 | [docs/decisions/INDEX.md](docs/decisions/INDEX.md) | Index et statut des décisions | Disponible |
 | [docs/decisions/_GABARIT.md](docs/decisions/_GABARIT.md) | Gabarit d'une décision | Disponible |
 
@@ -40,7 +42,8 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 | [docs/architecture/](docs/architecture/) | `architecture-technique.md` | À venir |
 | [docs/architecture/schemas/](docs/architecture/schemas/) | Schémas (sources et exports) | À venir |
 | [docs/processus/](docs/processus/) | `qualite-indicateurs.md`, `devsecops.md`, `cicd.md`, `tests.md`, `competences-formation.md` | À venir |
-| [docs/securite/](docs/securite/) | `exigences-securite.md`, `audit-v1.md`, `plan-remediation.md` | À venir |
+| [docs/securite/exigences-securite.md](docs/securite/exigences-securite.md) | Analyse de menaces du besoin et exigences de sécurité V1 | Disponible |
+| [docs/securite/](docs/securite/) | `audit-v1.md`, `plan-remediation.md` | À venir |
 | `docs/exploitation.md` | Services, ports, variables (noms seulement), démarrer/arrêter, démo | À venir |
 
 ### Expérimentations, mesures, audits
