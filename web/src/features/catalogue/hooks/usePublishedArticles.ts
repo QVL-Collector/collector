@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react
 import { useCatalogueClient } from '../api/useCatalogueClient';
 import { cataloguePageSize, type CataloguePage } from '../domain/catalogue';
 
-export const publishedArticlesQueryKey = (page: number) =>
+const publishedArticlesQueryKey = (page: number) =>
   ['catalogue', 'published-articles', page, cataloguePageSize] as const;
 
 export function usePublishedArticles(page: number): UseQueryResult<CataloguePage> {

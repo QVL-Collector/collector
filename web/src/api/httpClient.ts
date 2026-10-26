@@ -1,5 +1,4 @@
 import { ApiError } from './ApiError';
-import { readProblemSummary } from './problemDetails';
 
 export type QueryParameters = Readonly<Record<string, string>>;
 
@@ -49,7 +48,7 @@ async function send(url: URL, headers: Headers, signal?: AbortSignal): Promise<R
     if (isAbortError(error)) {
       throw error;
     }
-    throw new ApiError('network', null, null);
+    throw new ApiError(null);
   }
 }
 
@@ -59,7 +58,7 @@ export function createHttpClient({ baseUrl, getAccessToken }: HttpClientOptions)
       const url = buildUrl(baseUrl, path, options.query);
       const response = await send(url, buildHeaders(getAccessToken()), options.signal);
       if (!response.ok) {
-        throw new ApiError('http', response.status, await readProblemSummary(response));
+        throw new ApiError(response.status);
       }
       const payload: unknown = await response.json();
       return payload;

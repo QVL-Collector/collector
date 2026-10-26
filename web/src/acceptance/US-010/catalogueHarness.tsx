@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, render, type RenderResult } from '@testing-library/react';
 import i18n from 'i18next';
-import { afterEach, beforeAll, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import { App } from '../../app/App';
 import type { AppServices } from '../../app/createAppServices';
 import type {
@@ -45,8 +45,11 @@ class RequestWithoutJsdomSignal extends Request {
 
 beforeAll(async () => {
   stubMatchMedia();
-  globalThis.Request = RequestWithoutJsdomSignal;
   await initI18n('fr');
+});
+
+beforeEach(() => {
+  vi.stubGlobal('Request', RequestWithoutJsdomSignal);
 });
 
 afterEach(async () => {
@@ -56,7 +59,7 @@ afterEach(async () => {
   window.history.replaceState(null, '', '/');
 });
 
-export async function useLanguage(language: SupportedLanguage): Promise<void> {
+export async function switchLanguage(language: SupportedLanguage): Promise<void> {
   await i18n.changeLanguage(language);
 }
 

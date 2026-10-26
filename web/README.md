@@ -40,7 +40,8 @@ Un composant ne contient que du JSX ; état, effets et appels vivent dans un hoo
 | `marketplaceApiUrl`      | chemin de même origine, ex. `/marche`   | Préfixe de la Place de marché ; une URL absolue est refusée         |
 | `catalogue.source`       | `api`, `demo`                           | Client HTTP réel ou adaptateur de démonstration chargé à la demande |
 | `catalogue.demoScenario` | `nominal`, `empty`, `error`             | États du catalogue rejouables sans back                             |
-| `oidc`                   | `null` ou `{ "authority", "clientId" }` | Réservé à la connexion (US-008)                                     |
+
+La configuration OIDC (émetteur, client) sera ajoutée avec la connexion (US-008).
 
 ## Contrat supposé du catalogue public
 
@@ -48,7 +49,7 @@ Le contrat OpenAPI n'existe pas encore (US-009, US-013). Hypothèse isolée dans
 
 - `GET {marketplaceApiUrl}/v1/articles?page=1&taille=12`, sans authentification ;
 - réponse `{ "elements": [{ "id", "titre", "prix": { "montantCentimes", "devise" }, "categorie": { "id", "libelle" } }], "page", "taille", "total" }` ;
-- erreurs en `application/problem+json` (RFC 9457).
+- erreurs en `application/problem+json` (RFC 9457) ; le front n'en lit que le statut HTTP (pas de nouvel essai sur 4xx).
 
 La réponse est validée champ par champ avant affichage ; un écart de contrat produit l'état d'erreur. Seul `cataloguePayload.ts` change quand l'OpenAPI sera publiée.
 

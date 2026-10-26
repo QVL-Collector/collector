@@ -44,7 +44,7 @@ export function createDemoCatalogueClient(scenario: DemoScenario): CatalogueClie
     async listPublishedArticles(query, signal) {
       await waitForLatency(signal);
       if (scenario === 'error') {
-        throw new ApiError('http', serviceUnavailableStatus, null);
+        throw new ApiError(serviceUnavailableStatus);
       }
       return parseCataloguePage(toPayload(scenarioArticles(scenario), query));
     },

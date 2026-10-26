@@ -9,7 +9,7 @@ import {
   publishedArticle,
   publishedArticles,
   renderCatalogue,
-  useLanguage,
+  switchLanguage,
   type FakeCatalogue,
 } from './catalogueHarness';
 
@@ -72,7 +72,7 @@ describe('US-010-AC6 accessibilité du catalogue', () => {
   });
 
   it('Given la page en anglais, When axe-core analyse la page, Then aucune violation serious ou critical', async () => {
-    await useLanguage('en');
+    await switchLanguage('en');
     renderCatalogue(catalogueContaining(publishedArticles(30)));
     await screen.findByRole('list', { name: 'Published items' });
 
@@ -143,7 +143,7 @@ describe('US-010-AC6 accessibilité du catalogue', () => {
 
 describe('US-010 catalogue bilingue FR/EN', () => {
   it('Given la langue anglaise, When le catalogue s’affiche, Then libellés, prix et annonce sont en anglais', async () => {
-    await useLanguage('en');
+    await switchLanguage('en');
     renderCatalogue(catalogueContaining(publishedArticles(30)));
 
     const items = within(await screen.findByRole('list', { name: 'Published items' })).getAllByRole(
@@ -171,7 +171,7 @@ describe('US-010 catalogue bilingue FR/EN', () => {
   });
 
   it('Given la langue anglaise et l’API en erreur, When le catalogue s’ouvre, Then le bouton s’intitule « Try again »', async () => {
-    await useLanguage('en');
+    await switchLanguage('en');
     renderCatalogue(catalogueFailing());
 
     expect(

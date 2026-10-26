@@ -3,6 +3,5 @@
   "catalogue": {
     "source": "demo",
     "demoScenario": "nominal"
-  },
-  "oidc": null
+  }
 }

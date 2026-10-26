@@ -6,7 +6,7 @@ const placeholderKeys = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'] as cons
 
 export function CatalogueSkeleton() {
   return (
-    <CardGrid hidden>
+    <CardGrid hiddenFromAssistiveTechnologies>
       {placeholderKeys.map((key, index) => (
         <CardGridItem key={key} index={index}>
           <ArticleCardSkeleton />

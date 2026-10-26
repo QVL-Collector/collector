@@ -2,7 +2,7 @@ import type { HttpClient } from '../../../api/httpClient';
 import type { CatalogueClient } from '../domain/catalogue';
 import { parseCataloguePage } from './cataloguePayload';
 
-export const publishedArticlesPath = '/v1/articles';
+const publishedArticlesPath = '/v1/articles';
 
 export function createHttpCatalogueClient(http: HttpClient): CatalogueClient {
   return {

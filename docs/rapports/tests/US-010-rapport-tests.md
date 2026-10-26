@@ -37,7 +37,7 @@ Tests : `web/src/acceptance/US-010/`
 | `npm run test:coverage` | Lignes 86,92 %, branches 86,66 %, fonctions 89,06 % ; 100 % des composants et hooks de `features/catalogue` |
 | `npm run lint` | 0 erreur, 0 avertissement |
 | `npm run typecheck` | 0 erreur |
-| `npm run format:check` | Conforme |
+| `npm run format:check` | Conforme sur une extraction en fins de ligne LF (imposées par `.gitattributes`) ; échec relevé en revue sur une extraction CRLF sous Windows (m5) |
 
 ## AC1 — Liste paginée des articles publiés
 
