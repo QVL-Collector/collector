@@ -2,7 +2,7 @@ module collector/sandbox/xp02
 
 go 1.26
 
-toolchain go1.26.3
+toolchain go1.26.10
 
 require (
 	github.com/jackc/pgx/v5 v5.7.5

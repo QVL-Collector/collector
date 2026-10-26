@@ -316,8 +316,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Installer les dépendances (verrou, sans script)
         run: npm ci --ignore-scripts
-      - name: Types (tsc --noEmit)
-        run: npx --no-install tsc --noEmit
+      - name: Types (tsc -b)
+        run: npm run typecheck
       - name: Règles ESLint obligatoires (jsx-a11y, react/no-danger)
         run: bash ../tools/ci/verifier-eslint.sh
       - name: ESLint
