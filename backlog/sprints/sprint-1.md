@@ -27,7 +27,7 @@ Ordre d'engagement = rang du backlog.
 | [US-001](../US-001-publication-depot-github.md) | Publier le dépôt sur GitHub sans fuite | DevOps | À faire | — |
 | [US-002](../US-002-pipeline-pr-ci-ok.md) | Pipeline de PR et vérification requise `ci-ok` | DevOps | En cours | US-001 |
 | [US-004](../US-004-environnement-aws-https.md) | Allumer, exposer en HTTPS et éteindre l'environnement AWS (X17, X20 bloquants) | DevOps | À faire | US-001, XP01, XP03 |
-| [US-003](../US-003-portes-securite-ci.md) | Portes de sécurité bloquantes dans la CI | DevOps | À faire | US-002 |
+| [US-003](../US-003-portes-securite-ci.md) | Portes de sécurité bloquantes dans la CI | DevOps | En cours | US-002 |
 | [US-005](../US-005-garde-fous-cout.md) | Garde-fous de coût | DevOps | À faire | US-004 |
 | [US-008](../US-008-connexion-keycloak.md) | Se connecter par le serveur d'autorisation | DevOps / Front | À faire | US-002, US-004 |
 | [US-006](../US-006-cloisonnement-cluster.md) | Cloisonnement du cluster | DevOps | À faire | US-004 |

@@ -66,7 +66,7 @@ Lecture : B = porte bloquante (pas de fusion ou pas de clôture) ; NB = non bloq
 ### I6 — Vulnérabilités et exceptions (sécurité ; ENF-05)
 
 - **Formule** : vulnérabilités ouvertes par sévérité et par service, selon les seuils de [devsecops.md](devsecops.md) § 3 (critique ou élevée corrigeable ; Go atteignable, catégorie à part) ; secrets détectés ; exceptions avec leur âge et leurs renouvellements ; vulnérabilités ouvertes au-delà du délai P1 ou P2.
-- **Outil et source** : SARIF et JSON de govulncheck, Trivy, npm audit, OSV-Scanner, gosec, Semgrep, gitleaks ; `.trivyignore.yaml` (`expired_at`) et fichier d'exceptions Semgrep daté ; état de première détection tenu dans le registre de l'audit de sécurité.
+- **Outil et source** : SARIF et JSON de govulncheck, Trivy, npm audit, OSV-Scanner, gosec, Semgrep, gitleaks ; `.trivyignore` (échéance `exp:`, champs contrôlés par `tools/ci/verifier-exceptions.sh`) ; exceptions Semgrep en ligne désactivées (`--disable-nosem`) ; état de première détection tenu dans le registre de l'audit de sécurité.
 - **Fréquence** : chaque PR et analyse quotidienne de `main`.
 - **Cible** : 0 critique ou élevée corrigeable, 0 Go atteignable, 0 exception échue. **Alerte** : modérées en hausse ; délai P1 ou P2 dépassé. **Porte** : B pour les seuils de § 3 et pour toute exception échue ; un `nosemgrep` sans entrée datée fait échouer le contrôle.
 - **Dette détectée** : dépendance vieillissante, exception acceptée puis oubliée.
