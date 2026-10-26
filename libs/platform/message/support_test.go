@@ -142,22 +142,31 @@ func expectAccepted(t testing.TB, validator *message.Validator, body []byte) {
 	}
 }
 
-func expectRejected(t testing.TB, validator *message.Validator, body []byte) *message.RejectionError {
+func rejectionOf(t testing.TB, validator *message.Validator, body []byte) *message.RejectionError {
 	t.Helper()
 	err := validator.Validate(body)
 	if err == nil {
 		t.Fatalf("message attendu refusé, accepté: %s", body)
 	}
-	rejected := rejection(t, err)
+	return rejection(t, err)
+}
+
+func expectKnownReason(t testing.TB, rejected *message.RejectionError) {
+	t.Helper()
 	if !knownReasons[rejected.Reason] {
 		t.Fatalf("raison hors liste: %q", rejected.Reason)
 	}
-	return rejected
 }
 
-func expectRejectedWith(t testing.TB, validator *message.Validator, body []byte, want message.Reason) *message.RejectionError {
+func expectRejected(t testing.TB, validator *message.Validator, body []byte) {
 	t.Helper()
-	rejected := expectRejected(t, validator, body)
+	expectKnownReason(t, rejectionOf(t, validator, body))
+}
+
+func expectRejectedWith(t testing.TB, validator *message.Validator, body []byte, want message.Reason) {
+	t.Helper()
+	rejected := rejectionOf(t, validator, body)
+	expectKnownReason(t, rejected)
 	if rejected.Reason != want {
 		t.Fatalf("raison attendue %q, obtenue %q (détail: %s)", want, rejected.Reason, rejected.Detail)
 	}
@@ -165,7 +174,18 @@ func expectRejectedWith(t testing.TB, validator *message.Validator, body []byte,
 	if !ok || reason != want {
 		t.Fatalf("ReasonOf attendu %q, obtenu %q (%v)", want, reason, ok)
 	}
-	return rejected
+}
+
+func expectRejectedWithoutLeak(t testing.TB, validator *message.Validator, body []byte) {
+	t.Helper()
+	expectRejected(t, validator, body)
+	expectDetailWithoutReceivedValues(t, rejectionOf(t, validator, body), body)
+}
+
+func expectRejectedWithReasonWithoutLeak(t testing.TB, validator *message.Validator, body []byte, want message.Reason) {
+	t.Helper()
+	expectRejectedWith(t, validator, body, want)
+	expectDetailWithoutReceivedValues(t, rejectionOf(t, validator, body), body)
 }
 
 func receivedValues(body []byte) []string {

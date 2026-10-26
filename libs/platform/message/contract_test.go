@@ -148,40 +148,54 @@ func TestUS012AC2_ChaqueExempleEstAccepteOuRefuseAvecSaRaison(t *testing.T) {
 	validator := newValidator(t, message.DefaultMaxSize)
 	examples := loadExamples(t)
 	for _, messageType := range []string{requestType, resultType} {
-		valid, invalid := 0, 0
-		for _, ex := range examples {
-			if strings.Contains(ex.name, "/"+messageType+"/") {
-				if ex.valid {
-					valid++
-				} else {
-					invalid++
-				}
-			}
-		}
-		if valid == 0 || invalid == 0 {
-			t.Fatalf("%s: exemples valides (%d) et invalides (%d) attendus", messageType, valid, invalid)
-		}
+		expectValidAndInvalidExamples(t, examples, messageType)
 	}
 	for _, ex := range examples {
 		t.Run(ex.name, func(t *testing.T) {
 			if ex.valid {
-				expectAccepted(t, validator, ex.body)
-				var data map[string]any
-				if _, err := validator.Decode(ex.body, &data); err != nil {
-					t.Fatalf("Decode refuse un exemple valide: %v", err)
-				}
+				expectValidExampleAccepted(t, validator, ex)
 				return
 			}
-			if !knownReasons[ex.reason] {
-				t.Fatalf("dossier de raison inconnu: %q", ex.reason)
-			}
-			rejected := expectRejectedWith(t, validator, ex.body, ex.reason)
-			expectDetailWithoutReceivedValues(t, rejected, ex.body)
-			var data map[string]any
-			if reason, _ := message.ReasonOf(decodeErr(validator, ex.body, &data)); reason != ex.reason {
-				t.Fatalf("Decode: raison attendue %q, obtenue %q", ex.reason, reason)
-			}
+			expectInvalidExampleRejected(t, validator, ex)
 		})
+	}
+}
+
+func expectValidAndInvalidExamples(t *testing.T, examples []example, messageType string) {
+	t.Helper()
+	valid, invalid := 0, 0
+	for _, ex := range examples {
+		switch {
+		case !strings.Contains(ex.name, "/"+messageType+"/"):
+		case ex.valid:
+			valid++
+		default:
+			invalid++
+		}
+	}
+	if valid == 0 || invalid == 0 {
+		t.Fatalf("%s: exemples valides (%d) et invalides (%d) attendus", messageType, valid, invalid)
+	}
+}
+
+func expectValidExampleAccepted(t *testing.T, validator *message.Validator, ex example) {
+	t.Helper()
+	expectAccepted(t, validator, ex.body)
+	var data map[string]any
+	if err := decodeErr(validator, ex.body, &data); err != nil {
+		t.Fatalf("Decode refuse un exemple valide: %v", err)
+	}
+}
+
+func expectInvalidExampleRejected(t *testing.T, validator *message.Validator, ex example) {
+	t.Helper()
+	if !knownReasons[ex.reason] {
+		t.Fatalf("dossier de raison inconnu: %q", ex.reason)
+	}
+	expectRejectedWithReasonWithoutLeak(t, validator, ex.body, ex.reason)
+	var data map[string]any
+	if reason, _ := message.ReasonOf(decodeErr(validator, ex.body, &data)); reason != ex.reason {
+		t.Fatalf("Decode: raison attendue %q, obtenue %q", ex.reason, reason)
 	}
 }
 
@@ -197,8 +211,7 @@ func TestUS012AC2_MessageAuDelaDeLaTailleConfigureeEstRefuseTailleDepassee(t *te
 	atLimit := append(bytes.Clone(base), bytes.Repeat([]byte(" "), limit-len(base))...)
 	expectAccepted(t, validator, atLimit)
 	overLimit := append(bytes.Clone(atLimit), ' ')
-	rejected := expectRejectedWith(t, validator, overLimit, message.ReasonTooLarge)
-	expectDetailWithoutReceivedValues(t, rejected, overLimit)
+	expectRejectedWithReasonWithoutLeak(t, validator, overLimit, message.ReasonTooLarge)
 }
 
 func TestUS012AC2_MessageAuDelaDeLaTailleParDefautEstRefuseTailleDepassee(t *testing.T) {
@@ -222,8 +235,7 @@ func TestUS012AC2_CorpsQuiNEstPasUnMessageJSONEstRefuse(t *testing.T) {
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
-			rejected := expectRejected(t, validator, []byte(body))
-			expectDetailWithoutReceivedValues(t, rejected, []byte(body))
+			expectRejectedWithoutLeak(t, validator, []byte(body))
 		})
 	}
 }
@@ -361,8 +373,7 @@ func TestUS012AC4_CleDupliqueeEstRefusee(t *testing.T) {
 			if !strings.Contains(body, "\n") {
 				t.Fatalf("préparation du cas impossible")
 			}
-			rejected := expectRejectedWith(t, validator, []byte(body), message.ReasonDuplicateKey)
-			expectDetailWithoutReceivedValues(t, rejected, []byte(body))
+			expectRejectedWithReasonWithoutLeak(t, validator, []byte(body), message.ReasonDuplicateKey)
 		})
 	}
 }
@@ -379,8 +390,7 @@ func TestUS012AC4_ChampInconnuEstRefuseAChaqueNiveau(t *testing.T) {
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
-			rejected := expectRejectedWith(t, validator, body, message.ReasonSchemaViolation)
-			expectDetailWithoutReceivedValues(t, rejected, body)
+			expectRejectedWithReasonWithoutLeak(t, validator, body, message.ReasonSchemaViolation)
 		})
 	}
 }
@@ -398,8 +408,7 @@ func TestUS012AC4_EmailDuVendeurEstRefuse(t *testing.T) {
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
-			rejected := expectRejectedWith(t, validator, body, message.ReasonSchemaViolation)
-			expectDetailWithoutReceivedValues(t, rejected, body)
+			expectRejectedWithReasonWithoutLeak(t, validator, body, message.ReasonSchemaViolation)
 		})
 	}
 }
@@ -411,19 +420,29 @@ func TestUS012AC5_MotifDesResultatsValidesEstUneCategorieSansRegleNiSeuil(t *tes
 		}
 		t.Run(ex.name, func(t *testing.T) {
 			data := dataOf(asMap(t, ex.body))
-			for key := range data {
-				if !slices.Contains([]string{"article_id", "revision", "rules_version", "issue", "reason"}, key) {
-					t.Fatalf("membre %q en plus de la catégorie de motif", key)
-				}
-			}
-			reason, present := data["reason"]
-			if !present {
-				return
-			}
-			if !slices.Contains(closedReasons, reason.(string)) {
-				t.Fatalf("motif %v hors catégories", reason)
-			}
+			expectOnlyResultMembers(t, data)
+			expectReasonIsClosedCategory(t, data)
 		})
+	}
+}
+
+func expectOnlyResultMembers(t *testing.T, data map[string]any) {
+	t.Helper()
+	for key := range data {
+		if !slices.Contains([]string{"article_id", "revision", "rules_version", "issue", "reason"}, key) {
+			t.Fatalf("membre %q en plus de la catégorie de motif", key)
+		}
+	}
+}
+
+func expectReasonIsClosedCategory(t *testing.T, data map[string]any) {
+	t.Helper()
+	reason, present := data["reason"]
+	if !present {
+		return
+	}
+	if category, ok := reason.(string); !ok || !slices.Contains(closedReasons, category) {
+		t.Fatalf("motif %v hors catégories", reason)
 	}
 }
 
@@ -449,8 +468,7 @@ func TestUS012AC5_ResultatDivulguantRegleOuSeuilEstRefuse(t *testing.T) {
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
-			rejected := expectRejectedWith(t, validator, body, message.ReasonSchemaViolation)
-			expectDetailWithoutReceivedValues(t, rejected, body)
+			expectRejectedWithReasonWithoutLeak(t, validator, body, message.ReasonSchemaViolation)
 		})
 	}
 }
@@ -475,8 +493,9 @@ func TestUS012AC2_RefusEstStableEtRaisonLisibleParReasonOf(t *testing.T) {
 		t.Fatalf("ReasonOf(nil) doit indiquer l'absence de refus, obtenu %q %v", reason, ok)
 	}
 	body := resultWith(t, func(d map[string]any) { dataOf(d)["issue"] = "approuve" })
-	first := expectRejected(t, validator, body)
-	second := expectRejected(t, validator, body)
+	first := rejectionOf(t, validator, body)
+	second := rejectionOf(t, validator, body)
+	expectKnownReason(t, first)
 	if first.Reason != second.Reason || first.Detail != second.Detail {
 		t.Fatalf("refus non déterministe: %v / %v", first, second)
 	}
@@ -487,8 +506,7 @@ func TestUS012AC2_RefusEstStableEtRaisonLisibleParReasonOf(t *testing.T) {
 
 func expectValidateAndDecodeRejectWith(t *testing.T, validator *message.Validator, body []byte, want message.Reason) {
 	t.Helper()
-	rejected := expectRejectedWith(t, validator, body, want)
-	expectDetailWithoutReceivedValues(t, rejected, body)
+	expectRejectedWithReasonWithoutLeak(t, validator, body, want)
 	var data map[string]any
 	if reason, _ := message.ReasonOf(decodeErr(validator, body, &data)); reason != want {
 		t.Fatalf("Decode: raison attendue %q, obtenue %q", want, reason)
