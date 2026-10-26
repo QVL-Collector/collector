@@ -99,4 +99,4 @@ desktop.ini
 *.webm
 
 # --- Rapports des outils de CI lancés sur le poste (tools/ci/outils.yml) ---
-rapports/
+/rapports/
