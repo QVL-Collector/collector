@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E3 Mise en vente contrôlée |
-| Statut | À faire |
+| Statut | Livrée |
 | Sprint | 1 (J4) |
 | Engagement | Ferme |
 | Estimation | 2 points |
@@ -73,5 +73,5 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 |---|---|
 | Rapport de test | |
 | Rapport de revue de code | |
-| Validation Martin | AAAA-MM-JJ |
-| Livraison (PR / merge) | |
+| Validation Martin | 2026-10-26 |
+| Livraison (PR / merge) | https://github.com/QVL-Collector/collector/pull/4 |
