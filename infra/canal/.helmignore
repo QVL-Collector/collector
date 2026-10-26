@@ -1,0 +1,10 @@
+# Seuls Chart.yaml, values.yaml, templates/ et broker/ entrent dans le chart.
+# .genere/ contient les identifiants de la session : il ne doit jamais etre empaquete.
+.genere/
+.env*
+outils/
+verification/
+compose.yml
+README.md
+*.md
+.git/

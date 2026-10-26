@@ -1,0 +1,31 @@
+# Valeurs du chart du canal. Aucun secret ici : utilisateurs, empreintes et cookie Erlang sont dans le
+# Secret "rabbitmq-interne", cree par outils/kubernetes.sh depuis l'entree standard (MC5, AC6).
+
+# Image epinglee par version et empreinte (meme valeur pour docker compose, lue par outils/lib.sh).
+image: rabbitmq:4.3.7-management@sha256:79fb281ef7e0a15e3c5e0e12e66e944cebbf14a129493ef464369abd2c48d01a
+
+# Secret du broker (00-utilisateurs.json, cookie-erlang), pose avant l'installation du chart.
+secretInterne: rabbitmq-interne
+
+ressources:
+  requests: { cpu: 250m, memory: 512Mi }
+  limits: { memory: 1Gi }
+
+# Stockage ephemere (D05) : survit au redemarrage du conteneur, pas a la replanification du pod.
+stockage:
+  donnees: 2Gi
+
+# MC3 : namespaces dont les pods joignent 5672 (une identite par service).
+clients:
+  - place-de-marche
+  - controle
+  - interactions
+
+# MC3, MC4 : seul l'operateur KEDA joint l'API de gestion (15672) ; console par port-forward.
+supervision:
+  namespace: keda
+  podLabels: { app: keda-operator }
+
+# MC3 : collecte des metriques (15692), fermee tant que D09 n'est pas installe.
+metriques:
+  namespaces: []

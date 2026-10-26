@@ -1,0 +1,101 @@
+# MC3, AC7 : refus par defaut dans le namespace du broker, puis
+#   5672  depuis les namespaces des services clients seulement ;
+#   15672 depuis l'operateur KEDA seul (console : kubectl port-forward depuis le poste) ;
+#   15692 depuis la collecte des metriques (D09), fermee si aucun namespace n'est liste ;
+#   4369, 25672 fermes a tout pod ; aucune sortie hors DNS.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: refus-par-defaut
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-amqp-services
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  {{- toYaml .Values.clients | nindent 18 }}
+      ports:
+        - { protocol: TCP, port: 5672 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-gestion-supervision
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: {{ .Values.supervision.namespace }} }
+          podSelector:
+            matchLabels:
+              {{- toYaml .Values.supervision.podLabels | nindent 14 }}
+      ports:
+        - { protocol: TCP, port: 15672 }
+{{- with .Values.metriques.namespaces }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-metriques
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  {{- toYaml . | nindent 18 }}
+      ports:
+        - { protocol: TCP, port: 15692 }
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-sortie-dns
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }

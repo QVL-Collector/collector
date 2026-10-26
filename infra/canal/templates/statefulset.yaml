@@ -1,0 +1,106 @@
+# Broker a une replique (D05). Les definitions sont montees fichier par fichier (subPath) : un volume
+# projete monte en repertoire expose ses sous-repertoires "..<horodatage>", que RabbitMQ tente
+# d'importer (echec eisdir constate en XP02 sur 4.3.7).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+spec:
+  serviceName: rabbitmq-noeuds
+  replicas: 1
+  selector:
+    matchLabels: { app: rabbitmq }
+  template:
+    metadata:
+      labels:
+        {{- include "canal.etiquettes" . | nindent 8 }}
+      annotations:
+        collector/empreinte-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: rabbitmq
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: cookie
+          image: {{ .Values.image }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "cp /secrets/cookie-erlang /var/lib/rabbitmq/.erlang.cookie && chmod 400 /var/lib/rabbitmq/.erlang.cookie"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: donnees, mountPath: /var/lib/rabbitmq }
+            - { name: cookie, mountPath: /secrets, readOnly: true }
+      containers:
+        - name: rabbitmq
+          image: {{ .Values.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: amqp, containerPort: 5672 }
+            - { name: gestion, containerPort: 15672 }
+            - { name: metriques, containerPort: 15692 }
+            - { name: epmd, containerPort: 4369 }
+            - { name: distribution, containerPort: 25672 }
+          env:
+            - { name: RABBITMQ_NODENAME, value: rabbit@rabbitmq-0 }
+          resources:
+            {{- toYaml .Values.ressources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          startupProbe:
+            exec: { command: ["rabbitmq-diagnostics", "-q", "ping"] }
+            periodSeconds: 5
+            timeoutSeconds: 15
+            failureThreshold: 36
+          readinessProbe:
+            exec: { command: ["/bin/sh", "-c", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"] }
+            periodSeconds: 10
+            timeoutSeconds: 15
+          livenessProbe:
+            exec: { command: ["rabbitmq-diagnostics", "-q", "ping"] }
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 3
+          volumeMounts:
+            - { name: donnees, mountPath: /var/lib/rabbitmq }
+            - { name: tmp, mountPath: /tmp }
+            - { name: journaux, mountPath: /var/log/rabbitmq }
+            - { name: config, mountPath: /etc/rabbitmq/conf.d/10-collector.conf, subPath: 10-collector.conf, readOnly: true }
+            - { name: config, mountPath: /etc/rabbitmq/enabled_plugins, subPath: enabled_plugins, readOnly: true }
+            - { name: config, mountPath: /etc/rabbitmq/definitions/10-topologie.json, subPath: 10-topologie.json, readOnly: true }
+            - { name: utilisateurs, mountPath: /etc/rabbitmq/definitions/00-utilisateurs.json, subPath: 00-utilisateurs.json, readOnly: true }
+      volumes:
+        - name: donnees
+          emptyDir: { sizeLimit: {{ .Values.stockage.donnees }} }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: journaux
+          emptyDir: { sizeLimit: 256Mi }
+        - name: config
+          configMap:
+            name: rabbitmq-config
+        - name: cookie
+          secret:
+            secretName: {{ .Values.secretInterne }}
+            defaultMode: 0440
+            items: [{ key: cookie-erlang, path: cookie-erlang }]
+        - name: utilisateurs
+          secret:
+            secretName: {{ .Values.secretInterne }}
+            defaultMode: 0440
+            items: [{ key: 00-utilisateurs.json, path: 00-utilisateurs.json }]
