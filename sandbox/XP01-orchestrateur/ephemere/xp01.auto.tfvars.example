@@ -1,0 +1,12 @@
+# Copier en xp01.auto.tfvars (ignoré par git) pour surcharger les valeurs par défaut.
+# orchestrateur, session et ip_admin sont fournis par up.sh : ne pas les mettre ici.
+
+# Variante ECS : images épinglées par empreinte (obligatoires pour ecs).
+# image_test  = "registre/service-http-test@sha256:<empreinte>"
+# image_sonde = "public.ecr.aws/aws-cli/aws-cli@sha256:<empreinte>"
+
+# Variante EKS : 1 = repli MS3 (IMDS fermé aux pods), 2 = MS3 principal (IMDS ouvert, filtré par politique réseau).
+# imds_limite_sauts = 1
+
+# Essai de densité, session EKS 2.
+# delegation_prefixes = true

@@ -1,6 +1,8 @@
 # --- Secrets et environnements ---
 .env*
 !.env.example
+# Identifiants et empreintes générés à chaque session des bacs à sable
+.genere/
 
 # Clés et certificats
 *.pem
@@ -33,6 +35,10 @@ kubeconfig*
 !*.tfvars.example
 crash.log
 crash.*.log
+.terraform.tfstate.lock.info
+# Bac à sable : fichiers de session, journaux d'apply, sauvegardes d'état
+sandbox/**/.session/
+sandbox/**/.etat-sauvegardes/
 override.tf
 override.tf.json
 *_override.tf
