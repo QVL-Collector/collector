@@ -17,6 +17,44 @@ export const en: Translation = {
       description: 'Please reload the page in a moment.',
     },
   },
+  auth: {
+    signIn: 'Sign in',
+    signOut: 'Sign out',
+    accountLabel: 'Your account',
+    unknownUser: 'Signed-in user',
+    signInFailed: 'The sign-in service cannot be reached. Please try again in a moment.',
+    signOutFailed:
+      'The sign-in service could not confirm the sign-out. This browser has forgotten your session.',
+    roles: {
+      admin: 'Administrator',
+      vendeur: 'Seller',
+      acheteur: 'Buyer',
+      none: 'No role',
+    },
+    callback: {
+      documentTitle: 'Sign-in · Collector',
+      pending: 'Signing you in…',
+      title: 'Sign-in did not complete',
+      description: 'Your session could not be opened. Start again with the “Sign in” button.',
+    },
+    gate: {
+      redirecting: 'Redirecting to the sign-in page…',
+      unavailableTitle: 'The sign-in service is unavailable',
+      unavailableDescription: 'Check your connection, then try again.',
+      retry: 'Try again',
+    },
+  },
+  accessDenied: {
+    documentTitle: 'Restricted access · Collector',
+    title: 'Restricted access',
+    description: 'Your account does not have the role required to open this area.',
+  },
+  seller: {
+    documentTitle: 'Seller area · Collector',
+    title: 'Seller area',
+    welcome: 'Welcome, {{name}}. Your listings will appear here.',
+    navigation: 'Seller area',
+  },
   common: {
     backToCatalogue: 'Back to the catalogue',
     pagination: {

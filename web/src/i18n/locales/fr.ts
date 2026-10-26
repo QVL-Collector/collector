@@ -15,6 +15,45 @@ export const fr = {
       description: 'Rechargez la page dans quelques instants.',
     },
   },
+  auth: {
+    signIn: 'Se connecter',
+    signOut: 'Se déconnecter',
+    accountLabel: 'Votre compte',
+    unknownUser: 'Utilisateur connecté',
+    signInFailed: 'Le service de connexion est injoignable. Réessayez dans quelques instants.',
+    signOutFailed:
+      'La déconnexion n’a pas pu être confirmée par le service de connexion. Ce navigateur a oublié votre session.',
+    roles: {
+      admin: 'Administrateur',
+      vendeur: 'Vendeur',
+      acheteur: 'Acheteur',
+      none: 'Sans rôle',
+    },
+    callback: {
+      documentTitle: 'Connexion · Collector',
+      pending: 'Connexion en cours…',
+      title: 'La connexion n’a pas abouti',
+      description:
+        'Votre session n’a pas pu être ouverte. Reprenez la connexion avec le bouton « Se connecter ».',
+    },
+    gate: {
+      redirecting: 'Redirection vers la page de connexion…',
+      unavailableTitle: 'Le service de connexion est indisponible',
+      unavailableDescription: 'Vérifiez votre connexion, puis réessayez.',
+      retry: 'Réessayer',
+    },
+  },
+  accessDenied: {
+    documentTitle: 'Accès réservé · Collector',
+    title: 'Accès réservé',
+    description: 'Votre compte n’a pas le rôle requis pour ouvrir cet espace.',
+  },
+  seller: {
+    documentTitle: 'Espace vendeur · Collector',
+    title: 'Espace vendeur',
+    welcome: 'Bienvenue, {{name}}. Vos annonces apparaîtront ici.',
+    navigation: 'Espace vendeur',
+  },
   common: {
     backToCatalogue: 'Retour au catalogue',
     pagination: {

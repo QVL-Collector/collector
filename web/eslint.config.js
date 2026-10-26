@@ -64,6 +64,16 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/auth/createOidcStateStore.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        { object: 'window', property: 'localStorage', message: storageMessage },
+        { object: 'document', property: 'cookie', message: storageMessage },
+      ],
+    },
+  },
+  {
     files: ['**/*.d.ts'],
     rules: { '@typescript-eslint/consistent-type-definitions': 'off' },
   },

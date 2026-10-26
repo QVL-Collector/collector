@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import type { Root } from 'react-dom/client';
+import { createOidcSession } from '../auth/createOidcSession';
 import { loadRuntimeConfig } from '../config/loadRuntimeConfig';
 import { initI18n } from '../i18n/initI18n';
 import { detectInitialLanguage } from '../i18n/languages';
@@ -22,7 +23,7 @@ export async function startApplication(root: Root): Promise<void> {
   await initI18n(detectInitialLanguage());
   try {
     const config = await loadRuntimeConfig();
-    const services = await createAppServices(config);
+    const services = await createAppServices(config, createOidcSession(config.oidc));
     root.render(
       <StrictMode>
         <App services={services} />

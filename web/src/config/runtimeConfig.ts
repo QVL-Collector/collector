@@ -1,3 +1,4 @@
+import { parseOidcConfig, type OidcConfig } from '../auth/oidcConfig';
 import { expectOneOf, expectRecord, expectString, InvalidPayloadError } from '../shared/payload';
 
 export const catalogueSources = ['api', 'demo'] as const;
@@ -14,6 +15,7 @@ export type CatalogueConfig = {
 export type RuntimeConfig = {
   readonly marketplaceApiUrl: string;
   readonly catalogue: CatalogueConfig;
+  readonly oidc: OidcConfig;
 };
 
 const sameOriginPathPattern = /^(\/[A-Za-z0-9._~-]+)*$/;
@@ -42,5 +44,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfig {
   return {
     marketplaceApiUrl: parseSameOriginPath(root.marketplaceApiUrl, 'marketplaceApiUrl'),
     catalogue: parseCatalogueConfig(root.catalogue),
+    oidc: parseOidcConfig(root.oidc),
   };
 }

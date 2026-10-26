@@ -6,6 +6,7 @@ import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { LanguageSwitcher } from '../../ui/components/LanguageSwitcher';
+import { AccountControl } from './AccountControl';
 import { useLanguageSwitcher } from './useLanguageSwitcher';
 
 export function AppHeader() {
@@ -41,12 +42,15 @@ export function AppHeader() {
           >
             {t('app.name')}
           </Link>
-          <LanguageSwitcher
-            label={label}
-            value={language}
-            options={options}
-            onChange={changeLanguage}
-          />
+          <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 2 }} minWidth={0}>
+            <LanguageSwitcher
+              label={label}
+              value={language}
+              options={options}
+              onChange={changeLanguage}
+            />
+            <AccountControl />
+          </Stack>
         </Stack>
       </Container>
     </AppBar>
