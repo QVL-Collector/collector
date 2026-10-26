@@ -53,6 +53,117 @@ export const fr = {
     title: 'Espace vendeur',
     welcome: 'Bienvenue, {{name}}. Vos annonces apparaîtront ici.',
     navigation: 'Espace vendeur',
+    untitled: 'Article sans titre',
+    notProvided: 'Non renseigné',
+    newArticle: 'Nouvel article',
+    backToList: 'Retour à mes articles',
+    states: {
+      brouillon: 'Brouillon',
+      en_controle: 'En contrôle',
+      publie: 'Publié',
+      refuse: 'Refusé',
+      a_verifier: 'À vérifier',
+    },
+    stateDetails: {
+      brouillon: 'Invisible au catalogue tant que l’annonce n’est pas soumise puis publiée.',
+      en_controle:
+        'Contrôle automatique en cours. Cette page se met à jour d’elle-même dès le résultat.',
+      publie: 'L’annonce est visible dans le catalogue.',
+      refuse: 'Corrigez l’annonce, enregistrez-la, puis soumettez-la de nouveau.',
+      a_verifier:
+        'Un administrateur doit examiner l’annonce. Elle reste invisible au catalogue d’ici là.',
+    },
+    reason: 'Motif : {{reason}}',
+    announcements: {
+      stateChanged: '« {{title}} » : {{state}}.',
+      stateChangedWithReason: '« {{title}} » : {{state}}, motif : {{reason}}.',
+    },
+    list: {
+      title: 'Mes articles',
+      paginationLabel: 'Pagination de mes articles',
+      loading: 'Chargement de vos articles en cours',
+      loaded_one: '{{count}} article',
+      loaded_other: '{{count}} articles',
+      updatedAt: 'Modifié le {{date}}',
+      noPrice: 'Prix non renseigné',
+      empty: {
+        title: 'Aucun article pour le moment',
+        description:
+          'Créez un brouillon : il reste invisible au catalogue jusqu’à sa publication.',
+      },
+      error: {
+        title: 'Vos articles sont momentanément indisponibles',
+        description: 'Vérifiez votre connexion, puis réessayez.',
+        retry: 'Réessayer',
+      },
+    },
+    editor: {
+      newDocumentTitle: 'Nouvel article · Collector',
+      newSubtitle:
+        'Préparez votre annonce. Elle reste un brouillon invisible au catalogue tant que vous ne la soumettez pas.',
+      documentTitle: '{{title}} · Collector',
+      loading: 'Chargement de l’article en cours',
+      readOnly: 'L’annonce n’est pas modifiable dans son état actuel.',
+      notFound: {
+        title: 'Article introuvable',
+        description: 'Cet article n’existe pas ou n’appartient pas à votre compte.',
+      },
+      error: {
+        title: 'L’article est momentanément indisponible',
+        description: 'Vérifiez votre connexion, puis réessayez.',
+        retry: 'Réessayer',
+      },
+    },
+    form: {
+      label: 'Contenu de l’annonce',
+      hint:
+        'Un brouillon peut rester incomplet. Titre, description, catégorie et prix sont exigés pour la publication.',
+      title: 'Titre',
+      description: 'Description',
+      category: 'Catégorie',
+      noCategory: 'Aucune catégorie',
+      categoriesUnavailable: 'Les catégories sont momentanément indisponibles.',
+      price: 'Prix (€)',
+      shippingCost: 'Frais de port (€)',
+      amountHint: 'Exemple : 12,50',
+      characterCount: '{{length}} sur {{max}} caractères',
+      create: 'Créer le brouillon',
+      save: 'Enregistrer le brouillon',
+      saved: 'Brouillon enregistré, révision {{revision}}.',
+      invalid_one: 'Le formulaire contient {{count}} erreur : corrigez le champ signalé.',
+      invalid_other: 'Le formulaire contient {{count}} erreurs : corrigez les champs signalés.',
+      locked:
+        'L’annonce n’est plus modifiable dans son état actuel. La page a été mise à jour.',
+      failure: 'L’enregistrement a échoué. Vérifiez votre connexion, puis réessayez.',
+      conflict: {
+        title: 'Cet article a été modifié entre-temps',
+        description:
+          'Il a changé depuis son ouverture (révision {{revision}}), par exemple dans un autre onglet. Vos modifications n’ont pas été enregistrées pour ne rien écraser : rechargez la dernière version, puis refaites vos changements.',
+        reload: 'Recharger la dernière version',
+      },
+      errors: {
+        obligatoire: 'Ce champ est obligatoire.',
+        invalide: 'Valeur invalide. Exemple de montant : 12,50.',
+        hors_limites: 'Valeur hors des limites autorisées.',
+        trop_long: 'Texte trop long.',
+        caractere_interdit: 'Ce texte contient un caractère non autorisé.',
+        negatif: 'Le montant ne peut pas être négatif.',
+        au_dela_du_plafond: 'Montant au-delà du plafond autorisé.',
+        devise_non_prise_en_charge: 'Devise non prise en charge.',
+        categorie_inconnue: 'Catégorie inconnue.',
+      },
+    },
+    submission: {
+      title: 'État de l’annonce',
+      submit: 'Soumettre au contrôle',
+      unsavedChanges: 'Enregistrez vos modifications avant de soumettre l’annonce.',
+      polling: 'Contrôle en cours, mise à jour automatique…',
+      conflict:
+        'L’article a changé depuis son affichage. Il vient d’être rechargé : vérifiez-le, puis soumettez-le de nouveau.',
+      locked:
+        'L’annonce ne peut pas être soumise dans son état actuel. Elle vient d’être rechargée.',
+      failure: 'La soumission a échoué. Vérifiez votre connexion, puis réessayez.',
+    },
   },
   common: {
     backToCatalogue: 'Retour au catalogue',

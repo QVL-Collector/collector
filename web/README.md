@@ -39,7 +39,7 @@ Un composant ne contient que du JSX ; état, effets et appels vivent dans un hoo
 | Clé                      | Valeurs                                                                 | Rôle                                                                               |
 | ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `marketplaceApiUrl`      | chemin de même origine, ex. `/marche`                                   | Préfixe de la Place de marché ; une URL absolue est refusée                        |
-| `catalogue.source`       | `api`, `demo`                                                           | Client HTTP réel ou adaptateur de démonstration chargé à la demande                |
+| `catalogue.source`       | `api`, `demo`                                                           | Client HTTP réel ou adaptateur de démonstration (catalogue et espace vendeur)      |
 | `catalogue.demoScenario` | `nominal`, `empty`, `error`                                             | États du catalogue rejouables sans back                                            |
 | `oidc.authority`         | URL de l'émetteur, ex. `https://auth.<domaine>/realms/collector`        | HTTPS obligatoire (HTTP admis sur `localhost` seulement), sans requête ni fragment |
 | `oidc.clientId`          | `collector-web`                                                         | Client public du realm                                                             |
@@ -56,6 +56,21 @@ Le contrat OpenAPI n'existe pas encore (US-009, US-013). Hypothèse isolée dans
 - erreurs en `application/problem+json` (RFC 9457) ; le front n'en lit que le statut HTTP (pas de nouvel essai sur 4xx).
 
 La réponse est validée champ par champ avant affichage ; un écart de contrat produit l'état d'erreur. Seul `cataloguePayload.ts` change quand l'OpenAPI sera publiée.
+
+## Espace vendeur (US-009, US-013)
+
+Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, isolé dans `src/features/seller/api/` (`sellerArticlePayload.ts` valide chaque réponse).
+
+| Route                       | Écran                                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `/vendeur`                  | « Mes articles » (`GET /v1/vendeur/articles`), état, motif traduit, date de modification                 |
+| `/vendeur/articles/nouveau` | Création d'un brouillon (`POST /v1/vendeur/articles`), catégories de `GET /v1/categories`                |
+| `/vendeur/articles/:id`     | Modification (`PUT`, révision lue envoyée), « Soumettre au contrôle » (`POST …/soumission`), état suivi |
+
+- Erreurs `application/problem+json` lues par `src/api/problemDetails.ts` : `erreurs[].champ` est rattaché au champ du formulaire (message par `code`, focus sur le premier champ en erreur, résumé en `role="alert"`).
+- 409 `revision-perimee` : rien n'est écrasé, l'écran explique le conflit et propose de recharger la dernière version ; 409 `article-non-modifiable` ou `article-non-soumettable` : l'article est relu.
+- Soumission bloquée tant que des modifications ne sont pas enregistrées. Pendant `en_controle`, l'article est relu toutes les 2 s ; chaque changement d'état est annoncé dans une zone `role="status"` (AC10 de US-013).
+- Démonstration (`source: demo`) : faux client vendeur en mémoire, contrôle simulé en 2,5 s (incomplet → refusé, catégorie « Objets divers » → à vérifier, sinon publié), et un brouillon « Album de timbres » qui répond 409 à la première écriture pour rejouer le conflit.
 
 ## Sécurité
 
