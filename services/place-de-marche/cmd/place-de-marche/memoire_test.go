@@ -22,6 +22,7 @@ type stockageEnMemoire struct {
 	articles   map[annonces.ArticleID]annonces.Article
 	categories []annonces.Category
 	instant    time.Time
+	demandes   []annonces.ReviewRequest
 }
 
 func nouveauStockageEnMemoire(categories []annonces.Category) *stockageEnMemoire {
@@ -124,4 +125,52 @@ func (s *stockageEnMemoire) ListCategories(_ context.Context) ([]annonces.Catego
 
 func (s *stockageEnMemoire) CategoryExists(_ context.Context, id annonces.CategoryID) (bool, error) {
 	return s.categorie(&id) != nil, nil
+}
+
+func (s *stockageEnMemoire) Submit(_ context.Context, vendeur annonces.SellerID, id annonces.ArticleID, attendue annonces.Revision) (annonces.Article, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	article, ok := s.articles[id]
+	if !ok || article.Seller != vendeur {
+		return annonces.Article{}, annonces.ErrArticleNotFound
+	}
+	if !article.Status.Submittable() {
+		return annonces.Article{}, annonces.ErrArticleNotSubmittable
+	}
+	if article.Revision != attendue {
+		return annonces.Article{}, annonces.ErrStaleRevision
+	}
+	article.Status = annonces.StatusUnderReview
+	article.Revision++
+	article.Reason = nil
+	article.UpdatedAt = s.maintenant()
+	s.articles[id] = article
+	s.demandes = append(s.demandes, annonces.ReviewRequest{
+		Article:     article,
+		Seller:      annonces.SellerStatus{MemberSince: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
+		SubmittedAt: article.UpdatedAt,
+	})
+	return article, nil
+}
+
+func (s *stockageEnMemoire) ApplyReview(_ context.Context, issue annonces.ReviewOutcome) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	article, ok := s.articles[issue.Article]
+	if !ok || article.Status != annonces.StatusUnderReview || article.Revision != issue.Revision {
+		return false, nil
+	}
+	article.Status = issue.Status
+	article.Reason = issue.Reason
+	article.UpdatedAt = s.maintenant()
+	s.articles[issue.Article] = article
+	return true, nil
+}
+
+func (s *stockageEnMemoire) retirerDemandes() []annonces.ReviewRequest {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	demandes := s.demandes
+	s.demandes = nil
+	return demandes
 }

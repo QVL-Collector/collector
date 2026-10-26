@@ -79,7 +79,7 @@ func verifierEchange(t *testing.T, routeur routers.Router, ech echange) {
 
 func TestUS009ReponsesConformesAuContratOpenAPI(t *testing.T) {
 	e := demarrerEnMemoire(t)
-	routeur := chargerContrat(t, e.serveur.URL)
+	routeur := chargerContrat(t, e.adresse)
 	jouerTousLesStatuts(t, e)
 	for _, ech := range e.historique() {
 		verifierEchange(t, routeur, ech)

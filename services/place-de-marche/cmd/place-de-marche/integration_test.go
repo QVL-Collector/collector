@@ -16,6 +16,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
 	"collector/services/place-de-marche/internal/annonces"
+	"collector/services/place-de-marche/internal/annonces/controle"
 	"collector/services/place-de-marche/internal/annonces/stockage"
 	"collector/services/place-de-marche/internal/migrations"
 )
@@ -142,7 +143,7 @@ func demarrerSurPostgreSQL(t *testing.T) (*environnement, basePostgreSQL, *pgxpo
 		t.Fatalf("connexion en %s : %v", roleExecution, err)
 	}
 	t.Cleanup(pool.Close)
-	depot := stockage.NewStore(pool)
+	depot := stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)))
 	return demarrer(t, annonces.NewService(depot, depot)), base, pool
 }
 
@@ -161,10 +162,12 @@ func verifierDroitsMinimaux(t *testing.T, base basePostgreSQL, pool *pgxpool.Poo
 	exigerRefusDeDroit(t, pool, "DROP TABLE article")
 	exigerRefusDeDroit(t, pool, "ALTER TABLE article ADD COLUMN intrus integer")
 	exigerRefusDeDroit(t, pool, "TRUNCATE article")
+	exigerRefusDeDroit(t, pool, "DELETE FROM outbox")
+	exigerRefusDeDroit(t, pool, "DELETE FROM resultat_controle")
 	var hors, possedes int
 	err := base.maitre.QueryRow(t.Context(), `
 		SELECT
-			count(*) FILTER (WHERE c.relname NOT IN ('article', 'categorie') AND has_table_privilege($1, c.oid, 'SELECT,INSERT,UPDATE,DELETE')),
+			count(*) FILTER (WHERE c.relname NOT IN ('article', 'categorie', 'outbox', 'resultat_controle') AND has_table_privilege($1, c.oid, 'SELECT,INSERT,UPDATE,DELETE')),
 			count(*) FILTER (WHERE pg_get_userbyid(c.relowner) = $1)
 		FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')`, roleExecution).Scan(&hors, &possedes)
@@ -184,7 +187,7 @@ func TestUS009IntegrationPostgreSQL(t *testing.T) {
 		})
 	}
 	t.Run("réponses conformes au contrat OpenAPI sur PostgreSQL", func(t *testing.T) {
-		routeur := chargerContrat(t, e.serveur.URL)
+		routeur := chargerContrat(t, e.adresse)
 		for _, ech := range e.historique() {
 			verifierEchange(t, routeur, ech)
 		}
