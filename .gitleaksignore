@@ -1,0 +1,2 @@
+# Faux jeton JWT servant de donnée piège au test de masquage des journaux (US-009, MO3) ; reconstruit par concaténation depuis le commit suivant.
+482b6df0258bbb5143b973fda040721fc1c2339e:libs/platform/logging/mask_test.go:jwt:19

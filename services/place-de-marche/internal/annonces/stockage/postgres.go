@@ -1,0 +1,253 @@
+package stockage
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"collector/services/place-de-marche/internal/annonces"
+)
+
+const articleColumns = `a.id, a.vendeur_id, a.etat, a.revision, a.titre, a.description,
+	a.categorie_id, c.libelle, a.prix_centimes, a.frais_port_centimes, a.cree_le, a.modifie_le`
+
+const insertDraftQuery = `
+WITH cree AS (
+	INSERT INTO article (vendeur_id, etat, revision, titre, description, categorie_id, prix_centimes, frais_port_centimes)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	RETURNING *
+)
+SELECT ` + articleColumns + `
+FROM cree AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const updateDraftQuery = `
+WITH modifie AS (
+	UPDATE article
+	SET titre = $5, description = $6, categorie_id = $7, prix_centimes = $8, frais_port_centimes = $9,
+		revision = revision + 1, modifie_le = now()
+	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = $4
+	RETURNING *
+)
+SELECT ` + articleColumns + `
+FROM modifie AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const findOwnedQuery = `
+SELECT ` + articleColumns + `
+FROM article AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id
+WHERE a.id = $1 AND a.vendeur_id = $2`
+
+const listOwnedQuery = `
+SELECT ` + articleColumns + `
+FROM article AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id
+WHERE a.vendeur_id = $1
+ORDER BY a.modifie_le DESC, a.id DESC
+LIMIT $2 OFFSET $3`
+
+const (
+	countOwnedQuery     = `SELECT count(*) FROM article WHERE vendeur_id = $1`
+	ownedStateQuery     = `SELECT etat, revision FROM article WHERE id = $1 AND vendeur_id = $2`
+	listCategoriesQuery = `SELECT id, libelle FROM categorie ORDER BY libelle, id`
+	categoryExistsQuery = `SELECT EXISTS (SELECT 1 FROM categorie WHERE id = $1)`
+)
+
+type Store struct {
+	pool *pgxpool.Pool
+}
+
+func NewStore(pool *pgxpool.Pool) *Store {
+	return &Store{pool: pool}
+}
+
+func (s *Store) CreateDraft(ctx context.Context, seller annonces.SellerID, content annonces.Content) (annonces.Article, error) {
+	columns := contentColumns(content)
+	row := s.pool.QueryRow(ctx, insertDraftQuery,
+		uuid.UUID(seller), string(annonces.StatusDraft), int(annonces.FirstRevision),
+		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
+	)
+	article, err := scanArticle(row)
+	if err != nil {
+		return annonces.Article{}, fmt.Errorf("création du brouillon : %w", err)
+	}
+	return article, nil
+}
+
+func (s *Store) UpdateDraft(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
+	columns := contentColumns(content)
+	row := s.pool.QueryRow(ctx, updateDraftQuery,
+		uuid.UUID(id), uuid.UUID(seller), int(expected), string(annonces.StatusDraft),
+		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
+	)
+	article, err := scanArticle(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.Article{}, s.explainRefusedUpdate(ctx, seller, id)
+	}
+	if err != nil {
+		return annonces.Article{}, fmt.Errorf("modification du brouillon : %w", err)
+	}
+	return article, nil
+}
+
+func (s *Store) explainRefusedUpdate(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID) error {
+	var (
+		status   string
+		revision int
+	)
+	err := s.pool.QueryRow(ctx, ownedStateQuery, uuid.UUID(id), uuid.UUID(seller)).Scan(&status, &revision)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.ErrArticleNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lecture de l'état de l'article : %w", err)
+	}
+	if !annonces.Status(status).Editable() {
+		return annonces.ErrArticleNotEditable
+	}
+	return annonces.ErrStaleRevision
+}
+
+func (s *Store) FindOwned(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID) (annonces.Article, error) {
+	article, err := scanArticle(s.pool.QueryRow(ctx, findOwnedQuery, uuid.UUID(id), uuid.UUID(seller)))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.Article{}, annonces.ErrArticleNotFound
+	}
+	if err != nil {
+		return annonces.Article{}, fmt.Errorf("lecture de l'article : %w", err)
+	}
+	return article, nil
+}
+
+func (s *Store) ListOwned(ctx context.Context, seller annonces.SellerID, page annonces.PageRequest) (annonces.ArticlePage, error) {
+	var total int
+	if err := s.pool.QueryRow(ctx, countOwnedQuery, uuid.UUID(seller)).Scan(&total); err != nil {
+		return annonces.ArticlePage{}, fmt.Errorf("décompte des articles : %w", err)
+	}
+	rows, err := s.pool.Query(ctx, listOwnedQuery, uuid.UUID(seller), page.Size, page.Offset())
+	if err != nil {
+		return annonces.ArticlePage{}, fmt.Errorf("liste des articles : %w", err)
+	}
+	articles, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (annonces.Article, error) {
+		return scanArticle(row)
+	})
+	if err != nil {
+		return annonces.ArticlePage{}, fmt.Errorf("lecture des articles : %w", err)
+	}
+	return annonces.ArticlePage{Articles: articles, Total: total}, nil
+}
+
+func (s *Store) ListCategories(ctx context.Context) ([]annonces.Category, error) {
+	rows, err := s.pool.Query(ctx, listCategoriesQuery)
+	if err != nil {
+		return nil, fmt.Errorf("liste des catégories : %w", err)
+	}
+	categories, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (annonces.Category, error) {
+		var id, label string
+		err := row.Scan(&id, &label)
+		return annonces.Category{ID: annonces.CategoryID(id), Label: label}, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("lecture des catégories : %w", err)
+	}
+	return categories, nil
+}
+
+func (s *Store) CategoryExists(ctx context.Context, id annonces.CategoryID) (bool, error) {
+	var exists bool
+	if err := s.pool.QueryRow(ctx, categoryExistsQuery, string(id)).Scan(&exists); err != nil {
+		return false, fmt.Errorf("recherche de la catégorie : %w", err)
+	}
+	return exists, nil
+}
+
+type articleRow struct {
+	id               uuid.UUID
+	seller           uuid.UUID
+	status           string
+	revision         int
+	title            string
+	description      string
+	categoryID       *string
+	categoryLabel    *string
+	priceCents       *int64
+	shippingFeeCents *int64
+	createdAt        time.Time
+	updatedAt        time.Time
+}
+
+func scanArticle(row pgx.Row) (annonces.Article, error) {
+	var r articleRow
+	err := row.Scan(&r.id, &r.seller, &r.status, &r.revision, &r.title, &r.description,
+		&r.categoryID, &r.categoryLabel, &r.priceCents, &r.shippingFeeCents, &r.createdAt, &r.updatedAt)
+	if err != nil {
+		return annonces.Article{}, err
+	}
+	return r.article(), nil
+}
+
+func (r articleRow) article() annonces.Article {
+	return annonces.Article{
+		ID:          annonces.ArticleID(r.id),
+		Seller:      annonces.SellerID(r.seller),
+		Status:      annonces.Status(r.status),
+		Revision:    annonces.Revision(r.revision),
+		Title:       r.title,
+		Description: r.description,
+		Category:    category(r.categoryID, r.categoryLabel),
+		Price:       euros(r.priceCents),
+		ShippingFee: euros(r.shippingFeeCents),
+		CreatedAt:   r.createdAt,
+		UpdatedAt:   r.updatedAt,
+	}
+}
+
+func category(id, label *string) *annonces.Category {
+	if id == nil || label == nil {
+		return nil
+	}
+	return &annonces.Category{ID: annonces.CategoryID(*id), Label: *label}
+}
+
+func euros(cents *int64) *annonces.Money {
+	if cents == nil {
+		return nil
+	}
+	return &annonces.Money{Cents: *cents, Currency: annonces.Euro}
+}
+
+type draftColumns struct {
+	title            string
+	description      string
+	categoryID       *string
+	priceCents       *int64
+	shippingFeeCents *int64
+}
+
+func contentColumns(content annonces.Content) draftColumns {
+	return draftColumns{
+		title:            content.Title,
+		description:      content.Description,
+		categoryID:       categoryColumn(content.CategoryID),
+		priceCents:       centsColumn(content.Price),
+		shippingFeeCents: centsColumn(content.ShippingFee),
+	}
+}
+
+func categoryColumn(id *annonces.CategoryID) *string {
+	if id == nil {
+		return nil
+	}
+	value := string(*id)
+	return &value
+}
+
+func centsColumn(money *annonces.Money) *int64 {
+	if money == nil {
+		return nil
+	}
+	cents := money.Cents
+	return &cents
+}

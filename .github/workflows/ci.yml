@@ -219,7 +219,7 @@ jobs:
         run: echo "nom=${MODULE//\//-}" >> "$GITHUB_OUTPUT"
       - name: Vérifier les dépendances
         working-directory: ${{ matrix.module }}
-        run: go mod verify
+        run: bash "${GITHUB_WORKSPACE}/tools/ci/verifier-modules.sh"
       - name: go vet
         working-directory: ${{ matrix.module }}
         run: go vet ./...
@@ -231,7 +231,7 @@ jobs:
           args: --config=${{ github.workspace }}/.golangci.yml
       - name: Tests unitaires (race, couverture)
         working-directory: ${{ matrix.module }}
-        run: go test -race -covermode=atomic -coverprofile=couverture.out ./...
+        run: go test -race -covermode=atomic -coverpkg=./... -coverprofile=couverture.out ./...
       - name: Publier la couverture (non bloquante au sprint 1)
         working-directory: ${{ matrix.module }}
         run: |
