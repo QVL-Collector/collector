@@ -23,7 +23,7 @@ Le nom du répertoire est le `type` du message, le nom du fichier sa `version` :
 | `id` | UUID du message, conservé en cas de rejeu |
 | `type` | Type du message |
 | `version` | Version du contrat du type (entier) |
-| `emitted_at` | Date d'émission, RFC 3339, en UTC |
+| `emitted_at` | Date d'émission, RFC 3339 en UTC (`T` et `Z` majuscules, sans seconde intercalaire), comme `submitted_at` |
 | `correlation_id` | UUID de corrélation, repris de la demande dans le résultat |
 | `data` | Objet propre au type |
 

@@ -28,7 +28,8 @@
         "rules_version": {
           "description": "Version du jeu de règles appliqué ; elle évolue sans changer la version du contrat.",
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 2147483647
         },
         "issue": { "$ref": "#/$defs/issue" },
         "reason": { "$ref": "#/$defs/motif" }

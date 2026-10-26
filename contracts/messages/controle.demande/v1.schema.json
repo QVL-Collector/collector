@@ -27,8 +27,7 @@
         },
         "submitted_at": {
           "description": "Date de la soumission, référence des calculs d'ancienneté.",
-          "type": "string",
-          "format": "date-time"
+          "$ref": "../enveloppe-v1.schema.json#/$defs/horodatage_utc"
         },
         "seller": { "$ref": "#/$defs/vendeur" },
         "listing": { "$ref": "#/$defs/annonce" }

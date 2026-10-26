@@ -15,6 +15,8 @@ import (
 
 type schemaNode = map[string]any
 
+const unicodeEscapedReasonKey = `\` + "u0072eason"
+
 func readSchema(t *testing.T, relative string) schemaNode {
 	t.Helper()
 	body, err := fs.ReadFile(contractsFS(), path.Join(examplesRoot, relative))
@@ -334,7 +336,7 @@ func TestUS012AC3_VersionInconnueRefuseeALEmission(t *testing.T) {
 	data := map[string]any{"article_id": "3f1c2a8e-5b7d-4e2a-9c1f-6d8b0a4e7c21", "revision": 1, "rules_version": 1, "issue": "publie"}
 	envelope, err := message.NewEnvelope(message.Contract{Type: resultType, Version: 2}, "7a9d2e14-c6b3-4f81-a0d5-e2c47b19f863", data, time.Now().UTC())
 	if err != nil {
-		return
+		t.Fatalf("NewEnvelope: %v", err)
 	}
 	if _, err := validator.Encode(envelope); err == nil {
 		t.Fatalf("Encode a émis un message de version inconnue")
@@ -350,7 +352,7 @@ func TestUS012AC4_CleDupliqueeEstRefusee(t *testing.T) {
 		"type en double":                     strings.Replace(result, `"version": 1,`, `"version": 1, "type": "controle.demande",`, 1),
 		"data en double":                     strings.Replace(result, `"data": {`, `"data": {}, "data": {`, 1),
 		"motif en double de même valeur":     strings.Replace(result, `"reason": "annonce_incomplete"`, `"reason": "annonce_incomplete", "reason": "annonce_incomplete"`, 1),
-		"cle echappee en unicode":            strings.Replace(result, `"reason": "annonce_incomplete"`, `"reason": "annonce_incomplete", "reason": "prix_a_confirmer"`, 1),
+		"cle echappee en unicode":            strings.Replace(result, `"reason": "annonce_incomplete"`, `"reason": "annonce_incomplete", "`+unicodeEscapedReasonKey+`": "prix_a_confirmer"`, 1),
 		"compte en double":                   strings.Replace(request, `"suspended": false`, `"suspended": false, "account_id": "9b1d3f5a-7c9e-4b2d-a4f6-1c3e5a7b9d2f"`, 1),
 		"photos en double":                   strings.Replace(request, `"photo_count": 2`, `"photo_count": 2, "photo_count": 0`, 1),
 	}
@@ -480,5 +482,51 @@ func TestUS012AC2_RefusEstStableEtRaisonLisibleParReasonOf(t *testing.T) {
 	}
 	if json.Valid([]byte(first.Detail)) && strings.HasPrefix(strings.TrimSpace(first.Detail), "{") {
 		t.Fatalf("le détail recopie le message")
+	}
+}
+
+func expectValidateAndDecodeRejectWith(t *testing.T, validator *message.Validator, body []byte, want message.Reason) {
+	t.Helper()
+	rejected := expectRejectedWith(t, validator, body, want)
+	expectDetailWithoutReceivedValues(t, rejected, body)
+	var data map[string]any
+	if reason, _ := message.ReasonOf(decodeErr(validator, body, &data)); reason != want {
+		t.Fatalf("Decode: raison attendue %q, obtenue %q", want, reason)
+	}
+}
+
+func TestUS012AC4_DateDEmissionHorsFormeStricteEstRefuseeDesLaValidation(t *testing.T) {
+	validator := newValidator(t, message.DefaultMaxSize)
+	for name, emittedAt := range map[string]string{
+		"seconde intercalaire": "2016-12-31T23:59:60Z",
+		"t et z minuscules":    "2026-11-02t09:15:00z",
+		"t minuscule":          "2026-11-02t09:15:00Z",
+		"z minuscule":          "2026-11-02T09:15:00z",
+	} {
+		for messageName, build := range map[string]func(*testing.T, func(map[string]any)) []byte{requestType: requestWith, resultType: resultWith} {
+			body := build(t, func(document map[string]any) { document["emitted_at"] = emittedAt })
+			t.Run(messageName+"/"+name, func(t *testing.T) {
+				expectValidateAndDecodeRejectWith(t, validator, body, message.ReasonSchemaViolation)
+			})
+		}
+	}
+}
+
+func TestUS012AC4_VersionDesReglesAuDelaDuMaximumEstRefuseeParLeSchema(t *testing.T) {
+	validator := newValidator(t, message.DefaultMaxSize)
+	result := string(readExample(t, resultType, validDir, "refuse-annonce-incomplete.json"))
+	for name, rulesVersion := range map[string]string{
+		"au-delà de int32":  "2147483648",
+		"au-delà de int64":  "9223372036854775808",
+		"vingt chiffres":    "99999999999999999999",
+		"notation décimale": "1e30",
+	} {
+		t.Run(name, func(t *testing.T) {
+			body := []byte(strings.Replace(result, `"rules_version": 1,`, `"rules_version": `+rulesVersion+`,`, 1))
+			if bytes.Equal(body, []byte(result)) {
+				t.Fatalf("préparation du cas impossible")
+			}
+			expectValidateAndDecodeRejectWith(t, validator, body, message.ReasonSchemaViolation)
+		})
 	}
 }

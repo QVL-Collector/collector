@@ -63,6 +63,10 @@ func (v *Validator) Decode(body []byte, data any) (Envelope, error) {
 		return Envelope{}, reject(ReasonMalformed, "enveloppe non décodable")
 	}
 	if err := json.Unmarshal(envelope.Data, data); err != nil {
+		var invalidTarget *json.InvalidUnmarshalError
+		if errors.As(err, &invalidTarget) {
+			return Envelope{}, fmt.Errorf("cible de décodage invalide : %w", err)
+		}
 		return Envelope{}, reject(ReasonMalformed, "données non décodables dans le type attendu")
 	}
 	return envelope, nil

@@ -7,7 +7,7 @@
 | Date | 2026-10-26 |
 | Fonction | Test |
 | Référentiel | AC de l'US, [tests.md](../../processus/tests.md), [contracts/README.md](../../../contracts/README.md) |
-| Verdict | **Non conforme sur un point mineur** : AC1 à AC5 respectés ; le détail des refus `contrat_inconnu` recopie le `type` reçu (anomalie A1, mineure) |
+| Verdict | **Conforme** : tous les AC sont couverts et conformes ; anomalie A1 (mineure) corrigée et revérifiée ; retours 4 et 5 de la [revue de code](../revues/US-012-revue-code.md) traités |
 
 ## 1. Livrables de test
 
@@ -29,9 +29,9 @@ Le validateur est construit sur `os.DirFS(contracts/)` (même arborescence que `
 | Commande (dans `libs/platform`) | Résultat |
 |---|---|
 | `go test ./... -race` | Non exécutable sur le poste : `-race requires cgo` (pas de gcc, `CGO_ENABLED=0`). À exécuter en CI |
-| `go test ./... -count=1 -coverprofile=cover.out -v` | 175 tests et sous-tests verts, 4 sous-tests rouges (anomalie A1) |
-| `go test -run=^$ -fuzz=FuzzValidate -fuzztime=30s ./message` | **PASS**, 1 843 811 exécutions, 154 entrées intéressantes, aucune panique ni propriété violée |
-| `go tool cover -func=cover.out` | **84,7 %** des instructions du paquet `message` |
+| `go test ./... -count=1 -coverprofile=cover.out -v` | Campagne initiale : 175 verts, 4 rouges (A1). Après correction Back et retours de revue : **194 tests et sous-tests verts, 0 rouge** |
+| `go test -run=^$ -fuzz=FuzzValidate -fuzztime=30s ./message` | **PASS** (initial : 1 843 811 exécutions ; relance après correction : 523 020 exécutions, 200 entrées intéressantes), aucune panique ni propriété violée |
+| `go tool cover -func=cover.out` | **83,5 %** des instructions du paquet `message` (84,7 % avant la correction Back) |
 | `go vet ./...` | Aucun constat |
 
 Exemples chargés : `controle.demande` 3 valides, 15 invalides ; `controle.resultat` 3 valides, 13 invalides (dont 5 ajoutés).
@@ -53,7 +53,7 @@ Exemples chargés : `controle.demande` 3 valides, 15 invalides ; `controle.resul
 | Scénario | Test | Résultat |
 |---|---|---|
 | Given les 34 exemples When `Validate` et `Decode` Then valides acceptés, invalides refusés avec la raison du dossier (`ReasonOf` et `RejectionError`) | `TestUS012AC2_ChaqueExempleEstAccepteOuRefuseAvecSaRaison` | Conforme pour l'acceptation et les raisons (34/34) |
-| Même test : le détail du refus ne recopie aucune valeur reçue (chaînes et nombres de 3 caractères et plus) | idem | **Non conforme** pour les 4 exemples `contrat_inconnu` dont le type est présent : anomalie A1 |
+| Même test : le détail du refus ne recopie aucune valeur reçue (chaînes et nombres de 3 caractères et plus) | idem | Conforme après correction (initialement non conforme pour 4 exemples `contrat_inconnu` : anomalie A1, corrigée) |
 | Given une limite configurée When le message fait exactement la limite Then accepté ; When un octet de plus Then `taille_depassee` | `TestUS012AC2_MessageAuDelaDeLaTailleConfigureeEstRefuseTailleDepassee` | Conforme |
 | Given la taille par défaut (64 Kio) When une description de 64 Kio Then `taille_depassee` | `TestUS012AC2_MessageAuDelaDeLaTailleParDefautEstRefuseTailleDepassee` | Conforme |
 | Given un corps vide, `null`, tableau, `{}`, texte, UTF-8 invalide, deux messages Then refusé avec une raison de la liste | `TestUS012AC2_CorpsQuiNEstPasUnMessageJSONEstRefuse` | Conforme |
@@ -68,16 +68,18 @@ Exemples chargés : `controle.demande` 3 valides, 15 invalides ; `controle.resul
 | Version 0, -1, 2, 99999, 1.5, `"v1"`, `null`, `true`, pour la demande et le résultat → refusé | `TestUS012AC3_VersionInconnueEstRefusee` | Conforme |
 | Type vide, casse différente, espace final, `controle`, `enveloppe-v1` → refusé | `TestUS012AC3_TypeInconnuEstRefuse` | Conforme |
 | `Encode` d'un résultat à issue `approuve` → refusé ; issue `publie` → émis puis accepté | `TestUS012AC3_EncodeRefuseDEmettreUneIssueHorsListe` | Conforme |
-| `Encode` d'un résultat en version 2 → refusé | `TestUS012AC3_VersionInconnueRefuseeALEmission` | Conforme |
+| `Encode` d'un résultat en version 2 → refusé (un échec de `NewEnvelope` fait désormais échouer le test, retour de revue 5) | `TestUS012AC3_VersionInconnueRefuseeALEmission` | Conforme |
 | Fuzzing : tout message accepté a type et version connus, issue et motif dans les listes | `FuzzValidate` | Conforme (1,8 M exécutions) |
 
 ### AC4 — Clé dupliquée, champ inconnu ou email de vendeur : refusé
 
 | Scénario | Test | Résultat |
 |---|---|---|
-| Doublon de `version`, `type`, `data`, `reason` de même valeur, `reason` doublé via l'échappement `reason`, `account_id`, `photo_count` → `cle_dupliquee` | `TestUS012AC4_CleDupliqueeEstRefusee` | Conforme |
+| Doublon de `version`, `type`, `data`, `reason` de même valeur, `reason` doublé via la clé `reason` dont le `r` est écrit en échappement JSON Unicode (U+0072) (retour de revue 4 : l'échappement manquait dans la version initiale), `account_id`, `photo_count` → `cle_dupliquee` | `TestUS012AC4_CleDupliqueeEstRefusee` | Conforme |
 | Champ inconnu dans l'enveloppe, les données du résultat, de la demande, le vendeur, l'annonce, clé vide → `schema_non_respecte` | `TestUS012AC4_ChampInconnuEstRefuseAChaqueNiveau` | Conforme |
 | Email dans le vendeur, les données, l'enveloppe, l'annonce, comme `account_id`, dans le résultat → `schema_non_respecte`, sans recopie de l'email | `TestUS012AC4_EmailDuVendeurEstRefuse` | Conforme |
+| `emitted_at` en seconde intercalaire (`23:59:60Z`), `t`/`z` minuscules (ensemble ou séparément), demande et résultat → `schema_non_respecte` dès `Validate`, même raison au `Decode` | `TestUS012AC4_DateDEmissionHorsFormeStricteEstRefuseeDesLaValidation` | Conforme |
+| `rules_version` à 2147483648, 2^63, 20 chiffres, `1e30` → `schema_non_respecte` dès `Validate`, même raison au `Decode` | `TestUS012AC4_VersionDesReglesAuDelaDuMaximumEstRefuseeParLeSchema` | Conforme |
 | Fuzzing : aucune réponse hors des cinq raisons, aucun email de vendeur accepté, aucune panique | `FuzzValidate` | Conforme |
 
 ### AC5 — Le motif donne une catégorie, jamais la règle ni le seuil
@@ -91,7 +93,9 @@ Exemples chargés : `controle.demande` 3 valides, 15 invalides ; `controle.resul
 
 ## 4. Anomalies
 
-### A1 — Le détail d'un refus `contrat_inconnu` recopie le type reçu — mineure
+### A1 — Le détail d'un refus `contrat_inconnu` recopie le type reçu — mineure — **corrigée**
+
+- **Statut** : corrigée par le Back ; revérifiée le 2026-10-26, les 4 sous-tests concernés sont verts.
 
 - **Référence** : [contracts/README.md](../../../contracts/README.md) § Validation à la réception : « un détail qui nomme l'emplacement et le mot-clé fautifs sans recopier la valeur reçue ». Aucun AC n'est violé (AC2 exige la raison, qui est correcte), d'où la sévérité mineure.
 - **Attendu** : le détail ne contient aucune valeur du message reçu.
@@ -106,4 +110,4 @@ Exemples chargés : `controle.demande` 3 valides, 15 invalides ; `controle.resul
 
 ## 6. Conclusion
 
-AC1, AC3, AC4 et AC5 sont couverts et conformes. AC2 est conforme sur l'acceptation et les raisons de refus ; la seule anomalie (A1, mineure) porte sur la recopie du type reçu dans le détail des refus `contrat_inconnu`, contraire à la documentation du contrat.
+Tous les AC sont couverts et conformes. L'anomalie A1 (mineure) est corrigée et revérifiée. Les retours de revue côté Test (cas d'échappement Unicode réel, échec explicite de `NewEnvelope`) sont traités, et les cas `emitted_at` stricts et `rules_version` borné passent après la correction Back.
