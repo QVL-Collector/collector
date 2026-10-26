@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E1 Chaîne de livraison |
-| Statut | En cours |
+| Statut | Livrée |
 | Sprint | 1 (J4) |
 | Engagement | Ferme |
 | Estimation | 3 points |
@@ -80,8 +80,8 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 |---|---|
 | Rapport de test | |
 | Rapport de revue de code | |
-| Validation Martin | AAAA-MM-JJ |
-| Livraison (PR / merge) | |
+| Validation Martin | 2026-10-26 |
+| Livraison (PR / merge) | https://github.com/QVL-Collector/collector/pull/1 |
 
 ### Réalisation et preuves restantes
 

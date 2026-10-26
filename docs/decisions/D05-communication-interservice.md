@@ -339,6 +339,8 @@ Fonction : Faisabilité — 2026-10-26. Références : avis back de [D04](D04-st
 
 Date : 2026-10-26
 
+> **Complément du 2026-10-26 (validation d'US-012), texte saisi dans les messages** : le message `controle.demande` v1 porte le titre et la description de l'annonce, avec une longueur bornée (200 et 5 000 caractères). Sans eux, le Contrôle ne peut pas détecter les coordonnées personnelles exigées par D01 et US-018. C'est un écart assumé à l'avis sécurité (« ni texte saisi »). Il est compensé par trois règles : aucune donnée de contact du vendeur dans le message, aucun refus qui recopie une valeur reçue, et des messages jamais journalisés en clair.
+
 ## Conséquences
 
 La recommandation est retenue ; ses conséquences :
