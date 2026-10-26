@@ -57,9 +57,9 @@ La réponse est validée champ par champ avant affichage ; un écart de contrat 
 
 - Aucun HTML libre : `react/no-danger`, `no-unsanitized`, `no-eval` en erreur ; un titre contenant du balisage s'affiche comme du texte (US-010, AC4). Le jeu de démonstration en contient deux.
 - `localStorage`, `sessionStorage` et `document.cookie` interdits au lint : les jetons resteront en mémoire (D06).
-- CSP posée par nginx sur toutes les réponses, 404 comprises : `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (Emotion, D04), `connect-src 'self' ${COLLECTOR_AUTH_ORIGIN}`, `frame-ancestors 'none'`. Polices auto-hébergées, `assetsInlineLimit: 0`.
+- CSP posée par nginx sur toutes les réponses, 404 comprises : `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (Emotion, D04), `connect-src 'self' ${COLLECTOR_IDP_ORIGIN}`, `frame-ancestors 'none'`. Polices auto-hébergées, `assetsInlineLimit: 0`.
 - HSTS est posé par l'écouteur de l'ALB, pas ici (D08, ME1).
-- Image : `COLLECTOR_AUTH_ORIGIN` injecté au démarrage par les modèles nginx. En système de fichiers en lecture seule, monter un `emptyDir` sur `/tmp` et sur `/etc/nginx/conf.d`.
+- Image : `COLLECTOR_IDP_ORIGIN` injecté au démarrage par les modèles nginx. En système de fichiers en lecture seule, monter un `emptyDir` sur `/tmp` et sur `/etc/nginx/conf.d`.
 
 ## Point d'extension de la connexion (US-008)
 
