@@ -1,0 +1,15 @@
+# Configuration et topologie versionnees (broker/), sans utilisateur ni empreinte.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+data:
+  10-collector.conf: |-
+{{ .Files.Get "broker/conf.d/10-collector.conf" | indent 4 }}
+  enabled_plugins: |-
+{{ .Files.Get "broker/enabled_plugins" | indent 4 }}
+  10-topologie.json: |-
+{{ .Files.Get "broker/definitions/10-topologie.json" | indent 4 }}

@@ -1,0 +1,8 @@
+.genere/
+.env*
+outils/
+verification/
+compose.yml
+README.md
+*.md
+.git/

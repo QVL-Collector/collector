@@ -1,0 +1,42 @@
+# Canal en local (docker compose) : broker seul, memes conf.d et definitions qu'en cluster (D05).
+# Lancement par outils/local.sh up (identifiants generes, image lue dans values.yaml) ; jamais a nu.
+# Sans politiques reseau : AC7 et la partie reseau de MC3 se prouvent en cluster seulement.
+name: collector-canal
+
+services:
+  rabbitmq:
+    image: "${RABBITMQ_IMAGE:?image non chargee, passer par outils/local.sh}"
+    hostname: rabbitmq
+    entrypoint:
+      - /bin/sh
+      - -c
+      - install -m 400 -o rabbitmq -g rabbitmq /run/secrets/cookie_erlang /var/lib/rabbitmq/.erlang.cookie && exec docker-entrypoint.sh rabbitmq-server
+    secrets:
+      - cookie_erlang
+    volumes:
+      - ./broker/conf.d:/etc/rabbitmq/conf.d:ro
+      - ./broker/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./broker/definitions/10-topologie.json:/etc/rabbitmq/definitions/10-topologie.json:ro
+      - ./.genere/00-utilisateurs.json:/etc/rabbitmq/definitions/00-utilisateurs.json:ro
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+    networks: [canal]
+
+networks:
+  canal:
+    name: collector_canal
+
+secrets:
+  cookie_erlang:
+    file: ./.genere/cookie-erlang

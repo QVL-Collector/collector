@@ -1,0 +1,39 @@
+# Services internes seulement : ni NodePort ni LoadBalancer, aucune regle d'ALB (MC3, AC7).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector: { app: rabbitmq }
+  ports:
+    - { name: amqp, port: 5672, targetPort: 5672 }
+    - { name: gestion, port: 15672, targetPort: 15672 }
+    - { name: metriques, port: 15692, targetPort: 15692 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-noeuds
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "canal.etiquettes" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: { app: rabbitmq }
+  ports:
+    - { name: epmd, port: 4369, targetPort: 4369 }
+    - { name: distribution, port: 25672, targetPort: 25672 }

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: collector-canal
+description: Broker RabbitMQ du canal asynchrone Collector (D05, US-011), topologie et droits par le fichier de definitions
+type: application
+version: 0.1.0
+appVersion: "4.3.7"
