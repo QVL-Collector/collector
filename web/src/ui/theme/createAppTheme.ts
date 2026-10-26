@@ -52,18 +52,26 @@ const typography: ThemeOptions['typography'] = {
   button: { textTransform: 'none', fontWeight: 500 },
 };
 
+const focusRing = {
+  outline: `0.1875rem solid ${themeVariables.focusRing}`,
+  outlineOffset: '0.125rem',
+};
+
 function components(reducedMotion: boolean): ThemeOptions['components'] {
   return {
     MuiCssBaseline: {
       styleOverrides: {
-        ':focus-visible': {
-          outline: `0.1875rem solid ${themeVariables.focusRing}`,
-          outlineOffset: '0.125rem',
-        },
+        ':focus-visible': focusRing,
       },
     },
     MuiButtonBase: {
       defaultProps: { disableRipple: reducedMotion },
+      styleOverrides: {
+        root: { '&.Mui-focusVisible': { ...focusRing, zIndex: 1 } },
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: { root: { color: themeVariables.textSecondary } },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },

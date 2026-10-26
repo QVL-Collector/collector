@@ -1,5 +1,8 @@
 {
   "realm": "collector",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["fr", "en"],
+  "defaultLocale": "fr",
   "displayName": "Collector (XP03)",
   "enabled": true,
   "sslRequired": "external",

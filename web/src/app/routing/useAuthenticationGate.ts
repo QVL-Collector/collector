@@ -4,6 +4,7 @@ import type { AuthState } from '../../auth/AuthSession';
 import type { CollectorRole } from '../../auth/collectorRoles';
 import { useAuthSession } from '../../auth/useAuthSession';
 import { useAuthState } from '../../auth/useAuthState';
+import { useLanguage } from '../../i18n/useLanguage';
 import { usePageRestored } from '../../ui/hooks/usePageRestored';
 
 export type AuthenticationGateStatus = 'granted' | 'forbidden' | 'redirecting' | 'unavailable';
@@ -31,6 +32,7 @@ export function useAuthenticationGate(requiredRole?: CollectorRole): Authenticat
   const session = useAuthSession();
   const state = useAuthState();
   const { pathname, search } = useLocation();
+  const { language } = useLanguage();
   const [unavailable, setUnavailable] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const anonymous = state.status === 'anonymous';
@@ -40,7 +42,7 @@ export function useAuthenticationGate(requiredRole?: CollectorRole): Authenticat
       return undefined;
     }
     let active = true;
-    session.signIn(`${pathname}${search}`).catch(() => {
+    session.signIn({ returnPath: `${pathname}${search}`, language }).catch(() => {
       if (active) {
         setUnavailable(true);
       }
@@ -48,7 +50,7 @@ export function useAuthenticationGate(requiredRole?: CollectorRole): Authenticat
     return () => {
       active = false;
     };
-  }, [anonymous, session, pathname, search, attempt]);
+  }, [anonymous, session, pathname, search, language, attempt]);
 
   const retry = useCallback(() => {
     setUnavailable(false);

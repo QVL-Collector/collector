@@ -322,6 +322,8 @@ jobs:
         run: bash ../tools/ci/verifier-eslint.sh
       - name: ESLint
         run: npx --no-install eslint . --max-warnings=0
+      - name: Parité des traductions FR/EN
+        run: npm run i18n:check
       - name: Tests unitaires (Vitest, couverture)
         run: npx --no-install vitest run --coverage.enabled --coverage.reporter=text-summary --coverage.reporter=json-summary
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

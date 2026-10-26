@@ -90,6 +90,16 @@ export const fr = {
       retry: 'Réessayer',
     },
   },
+  control: {
+    reasons: {
+      annonce_incomplete: 'Annonce incomplète',
+      coordonnees_detectees: 'Coordonnées détectées',
+      compte_non_autorise: 'Compte non autorisé à vendre',
+      prix_a_confirmer: 'Prix à confirmer',
+      vendeur_a_verifier: 'Vendeur à vérifier',
+      categorie_inconnue: 'Catégorie inconnue',
+    },
+  },
   notFound: {
     documentTitle: 'Page introuvable · Collector',
     title: 'Page introuvable',

@@ -3,7 +3,14 @@ import type { AuthSession } from './AuthSession';
 import { createAuthStateStore } from './createAuthStateStore';
 import { createUserManagerSettings } from './createUserManagerSettings';
 import type { OidcConfig } from './oidcConfig';
-import { toSafeReturnPath } from './returnPath';
+import {
+  readFailedSignInLanguage,
+  readLanguage,
+  readReturnPath,
+  toSignInState,
+  type SignInIntent,
+  type SignInOutcome,
+} from './signInIntent';
 
 function ignoreFailure(): undefined {
   return undefined;
@@ -16,7 +23,7 @@ export function createOidcSession(
   const manager = new UserManager(createUserManagerSettings(config, origin));
   const store = createAuthStateStore();
   let pendingRedirect: Promise<void> | null = null;
-  let pendingCallback: Promise<string> | null = null;
+  let pendingCallback: Promise<SignInOutcome> | null = null;
 
   manager.events.addUserLoaded(store.publish);
   manager.events.addUserUnloaded(() => {
@@ -32,12 +39,15 @@ export function createOidcSession(
     }
   });
 
-  function signIn(returnPath: string): Promise<void> {
+  function signIn(intent: SignInIntent): Promise<void> {
     if (pendingRedirect !== null) {
       return pendingRedirect;
     }
     const redirect = manager
-      .signinRedirect({ state: toSafeReturnPath(returnPath, origin) })
+      .signinRedirect({
+        state: toSignInState(intent, origin),
+        extraQueryParams: { ui_locales: intent.language },
+      })
       .finally(() => {
         if (pendingRedirect === redirect) {
           pendingRedirect = null;
@@ -57,11 +67,21 @@ export function createOidcSession(
     }
   }
 
-  function completeSignIn(): Promise<string> {
-    pendingCallback ??= manager.signinRedirectCallback().then((user) => {
-      store.publish(user);
-      return toSafeReturnPath(user.state, origin);
-    });
+  function completeSignIn(): Promise<SignInOutcome> {
+    pendingCallback ??= manager.signinRedirectCallback().then(
+      (user): SignInOutcome => {
+        store.publish(user);
+        return {
+          status: 'completed',
+          returnPath: readReturnPath(user.state, origin),
+          language: readLanguage(user.state),
+        };
+      },
+      (error: unknown): SignInOutcome => ({
+        status: 'failed',
+        language: readFailedSignInLanguage(error),
+      }),
+    );
     return pendingCallback;
   }
 
