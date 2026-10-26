@@ -1,0 +1,6 @@
+# Configuration gitleaks du dépôt : règles par défaut, lue par le hook pre-commit et par la CI (ES-06).
+# Toute exclusion ajoutée ici est justifiée en commentaire et relue par la fonction Sécurité.
+title = "collector"
+
+[extend]
+useDefault = true

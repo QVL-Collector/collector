@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Hook pre-commit : refuse un commit dont les changements indexés contiennent un secret (gitleaks, ES-06, US-002 AC6).
+# Installation, une fois par clone : git config core.hooksPath tools/git-hooks
+# Utilise gitleaks installé sur le poste, sinon l'image épinglée dans tools/ci/outils.yml (Docker requis).
+# Aucun contournement n'est prévu : un faux positif se traite dans .gitleaks.toml, relu par la fonction Sécurité.
+
+set -euo pipefail
+
+RACINE="$(git rev-parse --show-toplevel)"
+
+if command -v gitleaks > /dev/null 2>&1; then
+  exec gitleaks git --pre-commit --staged --redact --no-banner --config "$RACINE/.gitleaks.toml" "$RACINE"
+fi
+
+if command -v docker > /dev/null 2>&1; then
+  IMAGE="$(sed -n 's/^ *image: *\(ghcr\.io\/gitleaks\/gitleaks:.*\)$/\1/p' "$RACINE/tools/ci/outils.yml")"
+  if [[ -z "$IMAGE" ]]; then
+    echo "pre-commit : image gitleaks introuvable dans tools/ci/outils.yml" >&2
+    exit 1
+  fi
+  git diff --cached --no-color --unified=0 \
+    | MSYS_NO_PATHCONV=1 docker run --rm -i -v "$RACINE/.gitleaks.toml:/config/.gitleaks.toml:ro" "$IMAGE" \
+        stdin --redact --no-banner --config /config/.gitleaks.toml
+  exit $?
+fi
+
+echo "pre-commit : gitleaks absent et Docker indisponible ; installer l'un des deux (voir README, « Hook pre-commit »)." >&2
+exit 1
