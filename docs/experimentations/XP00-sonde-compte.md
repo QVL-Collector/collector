@@ -49,9 +49,10 @@ Critères fixés avant l'exécution. « Bloquant » = empêche les XP cloud qui 
 | Helm | 4.1.3 | Présent |
 | Docker | 28.5.1 | Présent |
 | curl | 8.17.0 | Présent |
-| k3d | — | **Absent**, à installer (étape 0.1), version à consigner |
-| k6 | — | **Absent**, à installer (étape 0.2), version à consigner (outil de tir de D13) |
-| dig, jq | — | Absents, non requis : `nslookup` et `--query` de la CLI les remplacent |
+| k3d | 5.9.0 (k3s v1.35.5-k3s1 par défaut) | Installé le 2026-10-26 (winget `k3d.k3d`) |
+| k6 | 2.2.0 | Installé le 2026-10-26 (winget `GrafanaLabs.k6`), version figée pour D13 |
+| jq | 1.8.2 | Installé le 2026-10-26 (winget `jqlang.jq`), confort ; `--query` de la CLI reste la référence |
+| dig | — | Absent, non requis : `nslookup` le remplace |
 
 ### Noms et étiquettes de la sonde
 
