@@ -231,7 +231,7 @@ jobs:
           args: --config=${{ github.workspace }}/.golangci.yml
       - name: Tests unitaires (race, couverture)
         working-directory: ${{ matrix.module }}
-        run: go test -race -covermode=atomic -coverprofile=couverture.out ./...
+        run: go test -race -covermode=atomic -coverpkg=./... -coverprofile=couverture.out ./...
       - name: Publier la couverture (non bloquante au sprint 1)
         working-directory: ${{ matrix.module }}
         run: |
