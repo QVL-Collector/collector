@@ -308,6 +308,8 @@ Fonction : Sécurité — 2026-10-26. Références : [exigences-securite.md](../
 
 > **« J'ai déjà un domaine »** : chaîne 1 avec le domaine que Martin possède déjà. Un sous-domaine dédié au projet est délégué à une zone Route 53 ; repli D2 (DNS chez le registrar) si la sonde refuse Route 53. Certificat ACM générique et zone dans la couche persistante, alias vers l'ALB dans la couche éphémère, ALB créé par Terraform sans contrôleur d'entrée, front nginx-unprivileged (F1), front et API sur la même origine. Mesures de sécurité ME1 à ME10, dont ME4 et ME8 avant toute ouverture de l'ALB à Internet ; ALB restreint à l'adresse de Martin hors démonstration. Statut **Candidate** jusqu'à la sonde Route 53 / ACM et aux critères XE1 à XE5 (D14).
 >
+> **Domaine** (précision de Martin, 2026-10-26) : `qvl-project.com`, enregistré et géré chez Cloudflare. Le projet utilise le sous-domaine dédié `collector.qvl-project.com`, pour rester séparé des projets personnels de Martin : délégation à une zone Route 53 par des enregistrements NS posés dans Cloudflare (DNS seul, sans proxy). Noms : `collector.qvl-project.com` (front et API), `auth.collector.qvl-project.com` (Keycloak) ; certificat ACM pour `collector.qvl-project.com` et `*.collector.qvl-project.com`, validé dans la zone Route 53. Repli D2 : enregistrements posés directement dans Cloudflare.
+>
 > Conséquence immédiate : le repli « sans domaine stable » (sslip.io) de D06 est caduc avec un ALB ; il ne survit qu'en chaîne 2, si ACM est refusé.
 
 Date : 2026-10-26
