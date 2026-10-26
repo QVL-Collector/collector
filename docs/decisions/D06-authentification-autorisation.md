@@ -307,7 +307,7 @@ Fonction : Faisabilité — 2026-10-26. Périmètre : option A et V1, mesures MA
   - Extinction : suppression sans fenêtre de récupération, sinon le nom du secret est bloqué à l'`up` suivant.
 - **Sous-domaine `auth.`** :
   - Zone Route 53 et certificat ACM générique dans la couche persistante (0,50 $ par mois) ; enregistrement alias vers le nouvel ALB écrit par l'IaC à chaque `up`, TTL de 60 s.
-  - Repli sans domaine stable (sslip.io) : l'émetteur change à chaque session. Il est déjà une variable unique injectée dans `KC_HOSTNAME`, les URI de redirection du realm, le `config.json` du front et la configuration des services, puisque le local l'exige aussi. Le repli ne coûte donc rien en code ; il coûte un certificat Let's Encrypt par session (limite de 5 identiques par semaine) et des URL à recopier pour la soutenance.
+  - Repli sans domaine stable (sslip.io) : caduc depuis [D08](D08-exposition-tls-domaine.md), car un ALB n'a pas d'adresse fixe. Martin utilise un domaine qu'il possède déjà ; les replis sont ceux de D08 (DNS chez le registrar, puis chaîne 2 sur NLB). L'émetteur reste une variable unique injectée dans `KC_HOSTNAME`, les URI de redirection, le `config.json` du front et la configuration des services.
 - **Liste blanche de l'ALB** (MA7) :
   - Une règle par hôte `auth.<domaine>`, en deux ou trois règles (5 chemins au plus par condition) ; réponse 404 par défaut. `hostname-admin` non défini.
   - Test automatisé après chaque déploiement, intégré à X17 : 200 sur le document de découverte et les pages de connexion ; 404 sur `/admin/`, `/realms/master/`, `/realms/collector/account` ; port 9000 injoignable.
