@@ -30,8 +30,6 @@ namespaces() {
 }
 
 manifeste_secret() {
-  # manifeste_secret <namespace> <nom> ; entree standard : lignes "<cle> <valeur en base64>".
-  # Le manifeste part sur l'entree standard de kubectl : aucune valeur en argument ni sur disque.
   printf 'apiVersion: v1\nkind: Secret\ntype: Opaque\nmetadata:\n  name: %s\n  namespace: %s\n  labels:\n    %s\ndata:\n' \
     "$2" "$1" "${ETIQUETTE/=/: }"
   local cle valeur
@@ -59,16 +57,22 @@ secrets() {
   journal "Secrets poses : $NS_CANAL/rabbitmq-interne, canal-amqp par service, $NS_SUPERVISION_CIBLE/canal-supervision"
 }
 
+empreinte_secret_interne() {
+  { kc -n "$NS_CANAL" get secret rabbitmq-interne -o jsonpath='{.data}' 2>/dev/null || true; } | sha256sum | cut -d' ' -f1
+}
+
 up() {
   namespaces
   [[ -f "$MDP_FILE" ]] || "$CANAL_DIR/outils/identifiants.sh"
-  local deja=0
+  local deja=0 avant apres
   kc -n "$NS_CANAL" get statefulset rabbitmq >/dev/null 2>&1 && deja=1
+  avant="$(empreinte_secret_interne)"
   secrets
+  apres="$(empreinte_secret_interne)"
   hm upgrade --install "$RELEASE" "$(chemin_hote "$CANAL_DIR")" --namespace "$NS_CANAL" \
     --wait --timeout 6m >/dev/null
-  if [[ $deja -eq 1 ]]; then
-    # Nouveaux utilisateurs : les definitions ne sont importees qu'au demarrage du broker.
+  if [[ $deja -eq 1 && "$avant" != "$apres" ]]; then
+    journal "Identifiants changes : redemarrage du broker (files en emptyDir perdues)"
     kc -n "$NS_CANAL" rollout restart statefulset/rabbitmq >/dev/null
   fi
   kc -n "$NS_CANAL" rollout status statefulset/rabbitmq --timeout=360s >/dev/null
