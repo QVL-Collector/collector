@@ -10,7 +10,7 @@
 | [D04](../decisions/D04-stack.md), avis sécurité | Outillage CI par langage, interdits de code (Go, React) |
 | [PILOTAGE.md](../PILOTAGE.md) | Rôles (§2), circuit d'une US (§3.3), Definition of Done (§5), conventions git (§6), données sensibles (§7) |
 
-**Indépendance vis-à-vis de la forge.** La forge git, l'outil de CI, le registre d'images et le mode de déploiement sont en cours d'instruction (**D10**). Ce document décrit les contrôles et leurs portes ; leur traduction en fichiers de pipeline se fera **selon D10**. Contrainte déjà posée par MS1 : la CI construit et pousse les images, le déploiement part du poste d'exploitation.
+**Forge et pipeline.** Forge, CI, registre et déploiement sont fixés par [D10](../decisions/D10-forge-ci-cd.md) : GitHub public et GitHub Actions, images sur GHCR signées par cosign, déploiement GitOps par Flux (déploiement depuis le poste gardé en filet). La CI ne touche jamais AWS (MS1). Le pipeline détaillé est dans [cicd.md](cicd.md).
 
 ## 1. Vue d'ensemble
 
@@ -56,7 +56,7 @@ Légende de la colonne Porte : **B** = bloquant (fusion ou déploiement refusé)
 | Détection de secrets avant commit | gitleaks en hook pre-commit | B (local) | Hook installé, documenté dans le README | DevOps |
 | Interdits de code D04 : `CGO_ENABLED=0`, aucune option `Skip*` des vérificateurs de jetons, aucun moteur de regex à retour arrière, aucun `dangerouslySetInnerHTML` | Lint dans l'éditeur, repris en Build | NB (local) | — | Back, Front |
 | Vérification des jetons uniquement par `libs/platform/` (MA4, MA6) ; validation stricte des messages (MC6) | Revue de code | M | Rapport de revue de l'US | Revue de code |
-| Branche par US, pas de push direct sur `main`, revue avant fusion (ES-32) | Protection de branche selon D10 | B | Configuration de la forge | DevOps |
+| Branche par US, pas de push direct sur `main`, revue avant fusion (ES-32) | Protection de branche GitHub (D10) | B | Configuration de la forge | DevOps |
 | Aucun secret ni donnée réelle dans le dépôt, `.env.example` fictif (PILOTAGE §7) | Relecture du diff | M | Case DoD cochée | Back, Front, DevOps |
 
 ### 2.3 Build
@@ -70,7 +70,7 @@ Légende de la colonne Porte : **B** = bloquant (fusion ou déploiement refusé)
 | Analyse statique front | ESLint : `react/no-danger`, `react/jsx-no-script-url`, `no-unsanitized/*`, `no-eval`, `no-implied-eval`, `no-new-func` | B | Rapport archivé | Front |
 | Règles projet (interdits de D04, `import "C"`, `regexp2`) | Semgrep, règles versionnées | B | Rapport archivé | Sécurité (règles), DevOps (job) |
 | Secrets sur tout l'historique, puis à chaque fusion | gitleaks | B | Rapport archivé | DevOps |
-| Actions et images de CI figées par empreinte | Selon D10 | M | Définition du pipeline relue | DevOps |
+| Actions et images de CI figées par empreinte | GitHub Actions (D10) | M | Définition du pipeline relue | DevOps |
 
 ### 2.4 Test
 
@@ -88,18 +88,18 @@ Légende de la colonne Porte : **B** = bloquant (fusion ou déploiement refusé)
 
 | Mesure | Outil candidat | Porte | Preuve produite | Fonction |
 |---|---|---|---|---|
-| Image construite une seule fois, identifiée par son empreinte, promue telle quelle (ES-32) | Registre selon D10 | B | Empreinte de l'image liée au commit | DevOps |
-| Nomenclature logicielle de chaque image | Syft (SPDX ou CycloneDX) | NB | SBOM archivée avec la version | DevOps |
+| Image construite une seule fois, identifiée par son empreinte, promue telle quelle (ES-32) | GHCR (D10) | B | Empreinte de l'image liée au commit | DevOps |
+| Nomenclature logicielle de chaque image | Trivy (CycloneDX) | NB | SBOM archivée avec la version | DevOps |
 | Images de base `scratch` ou distroless `nonroot` ; Keycloak figé par empreinte (MA14) ; charts et modules épinglés (MS9) | Revue du Dockerfile et du chart | M | Dockerfile, valeurs du chart | DevOps |
-| Signature de l'image (optionnelle dans le POC) | cosign | NB | Signature dans le registre | DevOps |
+| Signature de l'image (D10) | cosign | B | Signature dans le registre | DevOps |
 | Validation de la livraison par Martin, CI verte, revue faite (DoD) | Circuit PILOTAGE §3.3 | M | Statut « Validée Martin » de l'US | Lead Developer |
 
 ### 2.6 Deploy
 
 | Mesure | Outil candidat | Porte | Preuve produite | Fonction |
 |---|---|---|---|---|
-| Déploiement depuis le poste ; API du cluster limitée à l'adresse du poste (MS1) | Script `up`, IaC | B | Sortie du script | DevOps |
-| Image déployée par empreinte ; signature vérifiée si cosign retenu | `kubectl`, cosign | B | Manifest appliqué | DevOps |
+| Déploiement tiré par Flux depuis `env/demo` (filet : depuis le poste) ; API du cluster limitée à l'adresse du poste (MS1) | Flux, script `up`, IaC | B | État de réconciliation Flux | DevOps |
+| Image déployée par empreinte ; signature vérifiée avant application | Flux, cosign | B | Manifest appliqué | DevOps |
 | Secrets générés à chaque session, injectés par l'entrée standard, jamais en valeur Helm ni en argument (MS6, MC4, MC5, MD2, MA10) | Secrets Manager, `kubectl` | B | Inventaire des Secrets du Deployment | DevOps |
 | Admission : PSS « restricted », refus des Services `LoadBalancer` et NodePorts hors liste, quotas (MS5) | ValidatingAdmissionPolicy | B | Refus constaté d'un manifest non conforme | DevOps |
 | Politiques réseau en refus par défaut (MS4, MC3, MC7, MA8) | NetworkPolicy | B | Test de refus | DevOps |
@@ -115,7 +115,7 @@ Légende de la colonne Porte : **B** = bloquant (fusion ou déploiement refusé)
 | Rotation : secrets régénérés à chaque `up` ; rotation du jeton de rafraîchissement (MA11) | Script `up`, realm | M | Inventaire des Secrets | DevOps |
 | Rejeu de l'outbox par Job tracé, fenêtre plafonnée (MC9) | Job Kubernetes | M | Journal du Job | DevOps |
 | Plafonds de mise à l'échelle et alerte de coût (MS10) | HPA, KEDA, budget AWS | M | Configuration relevée | DevOps |
-| Mise à jour : version corrective de sécurité de Go, Keycloak, AMI des nœuds (MS9, MA14) | Outil de mise à jour selon D10 | NB | PR de mise à jour | DevOps, Back |
+| Mise à jour : version corrective de sécurité de Go, Keycloak, AMI des nœuds (MS9, MA14) | Dependabot ou Renovate (D10) | NB | PR de mise à jour | DevOps, Back |
 
 ### 2.8 Monitor
 
@@ -125,7 +125,7 @@ Légende de la colonne Porte : **B** = bloquant (fusion ou déploiement refusé)
 | Aucune donnée sensible en journal : jetons, URL présignées, en-tête d'acheteur masqués (MA6, MD7) | Recherche dans les journaux | M | Extrait vérifié en fin de sprint | Sécurité |
 | Alertes : messages mis à l'écart, outbox non publiée (MC8), échecs de connexion en rafale (MA13) | Alertes selon D09 | NB | Alertes déclenchées en test de charge | DevOps |
 | Analyse dynamique non intrusive de l'environnement déployé : en-têtes, CSP (MD8), erreurs | ZAP baseline | NB (constats au registre) | Rapport ZAP archivé | Sécurité |
-| Nouvelle analyse de `main` et des images déployées sans changement de code (CVE publiées après coup) | govulncheck, Trivy, planifiés selon D10 | NB (ouvre un constat) | Rapport daté | DevOps |
+| Nouvelle analyse de `main` et des images déployées sans changement de code (CVE publiées après coup) | govulncheck, Trivy, planifiés dans GitHub Actions (D10) | NB (ouvre un constat) | Rapport daté | DevOps |
 | Audit de sécurité de fin de sprint et audit V1 | Registre, matrice exigence → preuve | M | `docs/audits/sprint-N-securite.md` | Sécurité |
 
 ## 3. Gestion des vulnérabilités
@@ -152,7 +152,7 @@ Légende de la colonne Porte : **B** = bloquant (fusion ou déploiement refusé)
 
 Le CVSS mesure une sévérité technique : une vulnérabilité sur un composant non exposé ou sans donnée sensible peut descendre d'un niveau, avec une justification écrite (§1.3).
 
-**Exceptions tracées.** Toute exception à une porte bloquante est versionnée dans le dépôt (fichier d'exceptions de l'outil, par exemple `.trivyignore`, emplacement selon D10) avec :
+**Exceptions tracées.** Toute exception à une porte bloquante est versionnée dans le dépôt (fichier d'exceptions de l'outil, par exemple `.trivyignore`, à la racine du dépôt) avec :
 
 | Champ | Contenu |
 |---|---|
@@ -194,7 +194,7 @@ Martin est prévenu dès la qualification. La nature éphémère des sessions (e
 
 | Mesure | Objet | Étape(s) |
 |---|---|---|
-| MS1 | API du cluster limitée au poste, déploiement depuis le poste | Deploy |
+| MS1 | API du cluster limitée au poste, aucun identifiant AWS dans la CI (Flux) | Deploy |
 | MS2 | Nœuds privés, ALB HTTPS, liste blanche de chemins | Deploy (contrôle post-déploiement) |
 | MS3 | IMDSv2, accès IMDS restreint | Deploy, Operate |
 | MS4 | Politiques réseau en refus par défaut | Deploy |
@@ -237,7 +237,7 @@ Martin est prévenu dès la qualification. La nature éphémère des sessions (e
 
 ## 7. Points ouverts
 
-- Forge, outil de CI, registre, outil de mise à jour des dépendances et emplacement des rapports : **selon D10**.
+- Forge, outil de CI, registre, outil de mise à jour des dépendances et emplacement des rapports : **GitHub (D10)**.
 - Composante d'observabilité et alertes : **selon D09**. Exposition, domaine et certificat : **selon D08**.
-- Signature des images (cosign) : optionnelle dans le POC, recommandée en V1.
+- Signature des images (cosign) : retenue par D10, vérifiée au déploiement ; revérification continue dans le cluster en V1.
 - Le schéma détaillé du pipeline (M4) relève de `docs/processus/cicd.md`, qui reprendra les portes de ce document.
