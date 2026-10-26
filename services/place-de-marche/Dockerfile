@@ -7,7 +7,7 @@ WORKDIR /src
 COPY libs/platform/go.mod libs/platform/go.sum libs/platform/
 COPY services/place-de-marche/go.mod services/place-de-marche/go.sum services/place-de-marche/
 WORKDIR /src/services/place-de-marche
-RUN go mod download && go mod verify
+RUN go mod download
 WORKDIR /src
 COPY libs/platform/ libs/platform/
 COPY services/place-de-marche/ services/place-de-marche/
