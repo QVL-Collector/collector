@@ -13,10 +13,14 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 
 ## Démarrer / arrêter
 
-> À compléter après la décision D11 (IaC, allumage/extinction, garde-fou coût).
+Rien ne tourne en continu : l'environnement AWS est allumé pour un usage précis, puis éteint ([D11](docs/decisions/D11-iac-allumage-cout.md)).
 
-Principe déjà acté : rien ne tourne en continu. L'environnement est allumé pour un usage précis, puis éteint.
-Scripts prévus dans [tools/](tools/) : `up.sh`, `down.sh`, `status.sh`, `demo.sh`.
+```bash
+bash tools/up.sh eks --debut-lab 13:05   # heure locale du « Start Lab »
+bash tools/down.sh                       # à terminer avant « End Lab »
+```
+
+IaC dans [infra/](infra/README.md), scripts dans [tools/](tools/README.md). `demo.sh` et `bootstrap.sh` sont à venir.
 
 ## Contribuer : hook pre-commit et CI
 

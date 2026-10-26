@@ -90,3 +90,19 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 | Rapport de revue de code | |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |
+
+### Avancement au 2026-10-26 (avant les verdicts XP)
+
+Fait sur la branche, sans aucune action AWS (`init -backend=false`, `fmt`, `validate`, `shellcheck` verts) :
+
+- `infra/persistant/` : zone, certificat, CNAME de validation et budget repris par blocs `import` ; CAA `amazon.com` (ME7) ajouté ; `persistant.auto.tfvars` à renseigner avant le premier `plan`.
+- `infra/ephemere/` : tronc commun promu de `sandbox/XP01-orchestrateur/` (réseau, ALB avec HSTS, DNS, RDS) ; orchestrateur paramétrable `eks` ou `ecs` ; IMDS à 2 sauts par défaut (D03) ; plafonds G4 (AC6).
+- `tools/up.sh`, `down.sh`, `inventaire.sh`, `lib.sh` : G1 à G5, refus sous 75 min (AC3), journal de session `docs/mesures/sessions.csv`, rappel de finir `down.sh` avant « End Lab » (XP00 S8b).
+
+Reste à faire après les verdicts du 2026-11-02 :
+
+- **Choix EKS ou ECS (XP01)** : retirer la variante écartée de `infra/ephemere/` ; pour ECS, décrire tâches et services du front ; reporter durées et densité mesurées (`delegation_prefixes`, `imds_limite_sauts` si G4 échoue).
+- **Couche persistante** : premier `plan` puis `apply` des imports (vérifier zéro remplacement) ; bucket des photos et groupes de journaux applicatif et d'audit (AC1, D09) ; `tools/bootstrap.sh`.
+- **Preuve HTTPS (AC2, AC7, XP03)** : front nginx par `helm upgrade` ; HTTPS 200 en 45 min au plus ; rapport TLS (redirection 80, TLS 1.0/1.1 refusés, HSTS) archivé.
+- **X17 (AC8) et X20 (AC9)** : script de contrôle après déploiement (balayage externe, `kubectl` hors plage, inventaire des load balancers et Services, liste blanche ME8, recherche des secrets dans `terraform show -json`, releases, journaux et images), rejoué par chaque `up` (AC11) ; ouverture de l'ALB (`alb_ouvert`) refusée tant qu'il n'est pas vert (AC10).
+- **AC4 et AC5** : deux `up` et deux `down` chronométrés (X4, X5) ; affichage nœuds, pods et coût (`status.sh` de l'AC5).
