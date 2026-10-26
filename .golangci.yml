@@ -1,0 +1,25 @@
+# Configuration commune à tous les modules Go (services/*, libs/*) ; appelée par la CI avec --config (D04, D10, D12).
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - gosec
+    - exhaustive
+    - gocognit
+    - errorlint
+    - bodyclose
+  settings:
+    gocognit:
+      min-complexity: 15
+    exhaustive:
+      default-signifies-exhaustive: false
+  exclusions:
+    generated: strict
+
+formatters:
+  enable:
+    - gofmt
