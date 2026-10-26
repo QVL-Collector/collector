@@ -1,11 +1,5 @@
-"""Sonde du canal apres deploiement (US-011 : AC2, AC4, AC5, MC1, MC2, MC8).
-
-Chaque cas ouvre sa propre connexion avec une identite et tente une operation.
-Sortie : une ligne par cas, champs separes par '|' :
-    ac|cas|identite|attendu|obtenu|atteint
-Mots de passe lus dans l'environnement (MDP_MARCHE, ...), jamais en argument.
-Scenarios : droits, ecartes, reseau <hote:port:ouvert|ferme>...
-"""
+"""Usage : sonde.py droits|ecartes|reseau <hote:port:ouvert|ferme>...
+Sortie : ac|cas|identite|attendu|obtenu|atteint ; mots de passe lus dans MDP_<IDENTITE>."""
 
 import os
 import socket
@@ -49,8 +43,6 @@ INTERDIT_EN_LECTURE = {
     "keda": ["controle.demandes"],
 }
 USURPE = {"marche": "controle", "controle": "marche"}
-# queue.purge depend du droit "read" : un consommateur peut vider sa propre file (residuel documente),
-# jamais celle d'un autre service.
 FILE_D_UN_AUTRE = {
     "marche": "controle.demandes",
     "controle": "interactions.publication-decidee",
@@ -60,8 +52,6 @@ FILE_D_UN_AUTRE = {
 
 
 def joignable(hote, port, delai):
-    """Vrai si une connexion TCP aboutit avant le delai. Un pod neuf n'entre dans les politiques
-    reseau qu'apres quelques secondes (synchronisation du controleur) : on attend, sans conclure trop tot."""
     fin = time.monotonic() + delai
     while True:
         try:
@@ -106,6 +96,8 @@ def tenter(operation, identite):
         return "403 ACCESS_REFUSED (authentification)"
     except AMQPConnectionError as e:
         return "connexion impossible : %s" % type(e).__name__
+    except Exception as e:
+        return "erreur %s" % type(e).__name__
     finally:
         if conn is not None and conn.is_open:
             conn.close()
@@ -181,10 +173,7 @@ def droits():
             marque = "temoin-" + str(uuid.uuid4())
             cas("AC2", "publication:%s/%s" % (echange, cle), producteur, "OK",
                 tenter(publier(echange, cle, user_id=producteur, message_id=marque), producteur))
-            try:
-                obtenu = tenter(lire_marque(file, marque, producteur), lecteur)
-            except (LookupError, RuntimeError) as e:
-                obtenu = "KO %s" % e
+            obtenu = tenter(lire_marque(file, marque, producteur), lecteur)
             cas("AC2", "livraison:%s" % file, lecteur, "OK", obtenu)
 
     for identite, sujets in INTERDIT_EN_ECRITURE.items():
@@ -222,9 +211,6 @@ def droits():
 
 
 def ecartes():
-    """MC8 : un message toujours rejete part dans .ecartes apres exactement LIMITE_LIVRAISONS
-    livraisons, sans bloquer le message suivant. Consommation par basic.consume : le compteur
-    des files quorum n'avance pas avec basic.get (constat XP02 sur 4.3.7)."""
     joignable(HOTE, PORT, 30)
     marque = "ecarte-" + str(uuid.uuid4())
     suivant = "suivant-" + str(uuid.uuid4())
