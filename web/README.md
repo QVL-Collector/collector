@@ -13,6 +13,7 @@ Node 24 et npm 11. Dépendances en versions exactes.
 | `npm run typecheck`               | Vérification des types                                               |
 | `npm run lint`                    | ESLint, zéro avertissement toléré                                    |
 | `npm run format:check`            | Prettier                                                             |
+| `npm run i18n:check`              | Parité des traductions FR/EN (clés, textes vides, variables)         |
 | `npm test`                        | Vitest (jsdom), rapport JUnit dans `test-results/`                   |
 | `npm run test:coverage`           | Couverture v8 (`text`, `json-summary`, `lcov`)                       |
 | `npm run build`                   | Types puis build de production dans `dist/`                          |
@@ -83,6 +84,11 @@ Le rôle affiché n'est qu'un confort d'interface : aucune décision d'autorisat
 
 ## Internationalisation et accessibilité
 
-- Français par défaut, anglais ; changement de langue sans rechargement, `lang` de `<html>` et textes internes MUI suivis.
-- `src/i18n/locales/en.ts` est typé sur `fr.ts` : une clé manquante ou en trop casse la compilation. `i18next/no-literal-string` bloque le texte en dur dans le JSX.
-- Lien d'évitement, titre de page et focus sur le `h1` à chaque navigation, annonces dans une zone `role="status"`, cibles tactiles de 2,75 rem, focus visible, animations coupées sous `prefers-reduced-motion`.
+- Français par défaut (langue du navigateur sinon), anglais ; changement de langue sans rechargement, `lang` de `<html>` et textes internes MUI suivis.
+- Langue conservée pendant la session sans aucun stockage (D06) : elle voyage dans le `state` OIDC de la connexion et est réappliquée au retour sur `/rappel`, succès ou échec ; `ui_locales` est transmis au serveur d'autorisation. Un rechargement complet repart de la langue du navigateur (US-025).
+- Motifs du contrôle (`src/shared/controlReason.ts`, liste fermée du contrat) traduits par `useControlReasonLabel` ; montants par `useMoneyFormatter` (`Intl`, `fr-FR` ou `en-GB`).
+- `src/i18n/locales/en.ts` est typé sur `fr.ts` : une clé manquante ou en trop casse la compilation. `npm run i18n:check` (Node 24, sans dépendance) bloque aussi les textes vides et les variables `{{…}}` différentes d'une langue à l'autre.
+- Texte en dur bloqué au lint : `i18next/no-literal-string` dans le JSX, `no-restricted-syntax` sur les attributs lus par les aides techniques (`aria-label`, `title`, `alt`, `label`…).
+- Lien d'évitement, titre de page et focus sur le `h1` à chaque navigation, annonces dans une zone `role="status"`, cibles tactiles de 2,75 rem, animations coupées sous `prefers-reduced-motion`.
+- Focus visible partout, ondulation coupée comprise : anneau de 0,1875 rem sur `:focus-visible` et sur `.Mui-focusVisible` des `ButtonBase`.
+- Contrastes : `src/ui/theme/themeContrastPairs.ts` déclare les couples de jetons utilisés (texte 4,5:1, non-texte 3:1) et `contrast.ts` calcule le rapport WCAG ; jsdom ne calculant pas les contrastes, c'est la preuve automatisée hors navigateur. Le gris par défaut des `ToggleButton` (4,4:1) est remplacé par `textSecondary`.

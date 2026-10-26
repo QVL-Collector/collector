@@ -9,6 +9,33 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 const storageMessage = 'Jetons et données de session en mémoire uniquement (D06).';
+const literalTextMessage =
+  'Texte visible ou lu par les aides techniques : passer par t() (ENF-30).';
+const accessibleTextAttributes = [
+  'aria-label',
+  'aria-description',
+  'aria-placeholder',
+  'aria-roledescription',
+  'aria-valuetext',
+  'alt',
+  'title',
+  'placeholder',
+  'label',
+  'helperText',
+  'subtitle',
+  'description',
+  'message',
+].join('|');
+const textAttribute = `JSXAttribute[name.name=/^(${accessibleTextAttributes})$/]`;
+const literalText = ':matches(Literal, TemplateLiteral[expressions.length=0])';
+const stringText = ':matches(Literal[raw=/^[\'"]/], TemplateLiteral[expressions.length=0])';
+const textComposition =
+  ":matches(ConditionalExpression, LogicalExpression, BinaryExpression[operator='+'])";
+const literalTextSelectors = [
+  `${textAttribute} > ${literalText}`,
+  `${textAttribute} > JSXExpressionContainer > ${literalText}`,
+  `${textAttribute} > JSXExpressionContainer ${textComposition} > ${stringText}`,
+].map((selector) => ({ selector, message: literalTextMessage }));
 
 export default tseslint.config(
   { ignores: ['dist', 'coverage', 'test-results', 'node_modules'] },
@@ -31,6 +58,12 @@ export default tseslint.config(
   {
     files: ['src/**/*.tsx'],
     ...i18next.configs['flat/recommended'],
+  },
+  {
+    files: ['src/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': ['error', ...literalTextSelectors],
+    },
   },
   {
     plugins: { 'react-hooks': reactHooks },

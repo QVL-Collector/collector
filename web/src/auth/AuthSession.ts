@@ -1,4 +1,5 @@
 import type { CollectorRole } from './collectorRoles';
+import type { SignInIntent, SignInOutcome } from './signInIntent';
 
 export type AuthUser = {
   readonly displayName: string | null;
@@ -13,9 +14,9 @@ export type AuthSession = {
   readonly getAccessToken: () => string | null;
   readonly getState: () => AuthState;
   readonly subscribe: (listener: () => void) => () => void;
-  readonly signIn: (returnPath: string) => Promise<void>;
+  readonly signIn: (intent: SignInIntent) => Promise<void>;
   readonly signOut: () => Promise<void>;
-  readonly completeSignIn: () => Promise<string>;
+  readonly completeSignIn: () => Promise<SignInOutcome>;
 };
 
 export const anonymousState: AuthState = { status: 'anonymous' };

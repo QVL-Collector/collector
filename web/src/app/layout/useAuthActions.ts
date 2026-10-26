@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useLocation } from 'react-router';
 import { useAuthSession } from '../../auth/useAuthSession';
+import { useLanguage } from '../../i18n/useLanguage';
 import { usePageRestored } from '../../ui/hooks/usePageRestored';
 
 export type AuthAction = 'signIn' | 'signOut';
@@ -17,6 +18,7 @@ export type AuthActionsModel = {
 export function useAuthActions(): AuthActionsModel {
   const session = useAuthSession();
   const { pathname, search } = useLocation();
+  const { language } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [failedAction, setFailedAction] = useState<AuthAction | null>(null);
   const [failureVisible, setFailureVisible] = useState(false);
@@ -32,8 +34,8 @@ export function useAuthActions(): AuthActionsModel {
   }, []);
 
   const signIn = useCallback(() => {
-    run('signIn', () => session.signIn(`${pathname}${search}`));
-  }, [run, session, pathname, search]);
+    run('signIn', () => session.signIn({ returnPath: `${pathname}${search}`, language }));
+  }, [run, session, pathname, search, language]);
 
   const signOut = useCallback(() => {
     run('signOut', session.signOut);

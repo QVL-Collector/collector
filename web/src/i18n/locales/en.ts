@@ -90,6 +90,16 @@ export const en: Translation = {
       retry: 'Try again',
     },
   },
+  control: {
+    reasons: {
+      annonce_incomplete: 'Incomplete listing',
+      coordonnees_detectees: 'Contact details detected',
+      compte_non_autorise: 'Account not allowed to sell',
+      prix_a_confirmer: 'Price to be confirmed',
+      vendeur_a_verifier: 'Seller to be reviewed',
+      categorie_inconnue: 'Unknown category',
+    },
+  },
   notFound: {
     documentTitle: 'Page not found · Collector',
     title: 'Page not found',
