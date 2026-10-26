@@ -1,0 +1,8 @@
+{
+  "marketplaceApiUrl": "/marche",
+  "catalogue": {
+    "source": "demo",
+    "demoScenario": "nominal"
+  },
+  "oidc": null
+}

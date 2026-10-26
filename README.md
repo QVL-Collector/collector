@@ -104,7 +104,7 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 | Emplacement | Contenu | État |
 |---|---|---|
 | [services/](services/) | Un dossier par service déployable (selon D02 et D04) | À venir |
-| [web/](web/) | Front | À venir |
+| [web/](web/) | Front React : socle et catalogue public (US-010) | En cours |
 | [tests/acceptance/](tests/acceptance/) | Tests d'acceptation (issus des AC des US) | À venir |
 | [tests/charge/](tests/charge/) | Scénarios de test de charge | À venir |
 | [infra/](infra/) | IaC et déploiement (selon D03 et D11) | À venir |

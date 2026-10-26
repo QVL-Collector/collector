@@ -1,0 +1,16 @@
+export const themeVariables = {
+  brandPrimary: '#1F4E5F',
+  brandPrimaryDark: '#163A47',
+  brandPrimaryLight: '#4F7A8A',
+  brandAccent: '#A84B24',
+  brandAccentDark: '#7F3719',
+  brandAccentLight: '#C9734D',
+  onBrand: '#FFFFFF',
+  surfaceBackground: '#F7F4EF',
+  surfacePaper: '#FFFFFF',
+  textPrimary: '#1C1B1A',
+  textSecondary: '#55514C',
+  divider: '#E3DDD3',
+  error: '#B3261E',
+  focusRing: '#1F4E5F',
+} as const;
