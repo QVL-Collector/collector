@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	jetonPiege       = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwaWVnZSJ9.c2lnbmF0dXJlLXBpZWdlZQ"
+	jetonPiege       = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9" + "." + "eyJzdWIiOiJwaWVnZSJ9" + "." + "c2lnbmF0dXJlLXBpZWdlZQ"
 	opaquePiege      = "opaque-piege-7f3a9c"
 	piegeDeConnexion = "ValeurPiegeeDeConnexion42"
 	chaineConnexion  = "postgres://marche_execution:" + piegeDeConnexion + "@base.collector.test:5432/marche?sslmode=verify-full"
