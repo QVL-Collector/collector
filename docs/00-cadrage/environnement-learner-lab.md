@@ -258,6 +258,24 @@ aws s3api get-object-lock-configuration --bucket <bucket>   # SCP présente ?
 
 Chaque réponse `AccessDenied` doit mentionner une **policy d'identité ou une SCP**. Si elle cite **`voc-cancel-cred`**, la session est expirée : il ne s'agit pas d'une interdiction.
 
+### Constats sur le compte du projet (sonde XP00 du 2026-10-26)
+
+Détail et commandes : [XP00](../experimentations/XP00-sonde-compte.md).
+
+| Point | Constat |
+|---|---|
+| Budget | 50 $, région us-east-1 |
+| IAM | `LabRole` et `LabInstanceProfile` seulement, sans `LabEks*`. `iam:GetRole` est autorisé. La confiance de `LabRole` couvre `eks`, `eks-fargate-pods`, `ecs-tasks`, `ec2`, `scheduler`, `rds` et `elasticloadbalancing` |
+| EKS | 1.34 à 1.37 en support standard ; add-ons gérés, dont `metrics-server` |
+| ECS Fargate | Tâche lancée et terminée avec le code 0 sous `LabRole` |
+| Quotas | `GetServiceQuota` refusé ; `max-instances` = 20 |
+| Route 53, ACM | Zone publique créée ; certificat validé par DNS en moins de 5 min |
+| EventBridge Scheduler | `iam:PassRole` de `LabRole` autorisé ; suppression programmée exécutée en session |
+| AWS Budgets | Création de budget et d'alertes autorisée |
+| RDS, Secrets Manager | PostgreSQL 18.3 par défaut, chiffrement et Multi-AZ proposés ; suppression de secret sans délai autorisée |
+| S3 | SCP présente (Object Lock refusé) ; blocage public et politique de bucket autorisés |
+| CloudWatch Logs, Cognito | Logs Insights et création de pool autorisés |
+
 ---
 
 ## Sources (datées)

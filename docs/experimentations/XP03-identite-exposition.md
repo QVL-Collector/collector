@@ -54,7 +54,7 @@ XE5 (limitation de débit) est reportée en AC du sprint 1 (option B de D14), bl
 |---|---|---|
 | Keycloak (image officielle, construite en mode optimisé) | à fixer avant exécution, par empreinte | À fixer |
 | Registre de l'image optimisée | GHCR privé (D10) ou dépôt ECR de bac à sable supprimé en fin de session | À fixer |
-| PostgreSQL local / RDS | version de XP00 S10 | À fixer |
+| PostgreSQL local / RDS | 18.3 (XP00 S10) ; image locale `postgres:18.3` épinglée par empreinte | Fixée |
 | Caddy (proxy local) | à fixer avant exécution | À fixer |
 | Provider Terraform AWS | celui de XP01 ; vérifier qu'il expose les attributs d'en-têtes de réponse de l'écouteur (HSTS) | À vérifier |
 | Outil d'analyse TLS | image `testssl.sh` épinglée par empreinte | À fixer |

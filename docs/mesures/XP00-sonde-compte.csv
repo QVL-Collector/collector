@@ -1,0 +1,26 @@
+horodatage_utc;xp;point;commande;resultat;code_erreur;politique_citee;decision
+2026-10-26T13:35Z;XP00;S1;lecture du bandeau du lab;OK;;;budget 50 $ : sessions a la demande, G5 a 70 % decisif
+2026-10-26T13:36Z;XP00;S2;sts get-caller-identity;OK;;;
+2026-10-26T13:36Z;XP00;S2;iam list-roles Lab*;OK;;;LabRole seul, pas de LabEks*
+2026-10-26T13:36Z;XP00;S2;iam get-role LabRole;OK;;;confiance eks, ecs-tasks, ec2, scheduler presente
+2026-10-26T13:37Z;XP00;S2;inventaire initial;OK;;;aucune ressource facturable
+2026-10-26T13:38Z;XP00;S6;route53 create-hosted-zone;OK;;;zone persistante
+2026-10-26T13:40Z;XP00;S6;cloudflare POST dns_records NS x4;OK;;;delegation posee
+2026-10-26T13:41Z;XP00;S7;acm request-certificate;OK;;;
+2026-10-26T13:41Z;XP00;S3;eks describe-cluster-versions;OK;;;1.35 en support standard
+2026-10-26T13:41Z;XP00;S3;eks describe-addon-versions;OK;;;add-ons geres, metrics-server inclus
+2026-10-26T13:41Z;XP00;S3;ssm get-parameter AMI 1.35;OK;;;
+2026-10-26T13:42Z;XP00;S5;service-quotas get-service-quota;REFUS;AccessDeniedException;no identity-based policy;plafond prudent 4 vCPU Fargate
+2026-10-26T13:42Z;XP00;S5;ec2 describe-account-attributes max-instances;OK;;;20 instances
+2026-10-26T13:43Z;XP00;S4;ecs run-task (1er essai);ERREUR;InvalidParameterException;;rejoue
+2026-10-26T13:46Z;XP00;S4;ecs run-task (2e essai);OK;;;comparatif EKS/Fargate maintenu
+2026-10-26T13:49Z;XP00;S10;rds parameter group force_ssl;OK;;;PostgreSQL 18.3 epingle pour XP01
+2026-10-26T13:49Z;XP00;S10;secretsmanager create/delete sans delai;OK;;;
+2026-10-26T13:50Z;XP00;S11;s3api get-object-lock-configuration;REFUS;AccessDenied;service control policy;bucket en CLI (D11)
+2026-10-26T13:50Z;XP00;S11;presign HTTPS / HTTP;OK;;;200 / 403
+2026-10-26T13:51Z;XP00;S12;logs start-query;OK;;;Logs Insights disponible
+2026-10-26T13:51Z;XP00;S13;cognito create/delete user pool;OK;;;repli B de D06 maintenu
+2026-10-26T13:51Z;XP00;S7;acm describe-certificate;OK;;;ISSUED, XE1 et XE2 atteints
+2026-10-26T13:52Z;XP00;S8a;scheduler create-schedule x15a;OK;;;PassRole vers Scheduler autorise
+2026-10-26T13:53Z;XP00;S9;budgets create-budget;OK;;;G6 en place
+2026-10-26T13:58Z;XP00;S8a;ec2 describe-security-groups;OK;InvalidGroup.NotFound;;G1 tenu en session

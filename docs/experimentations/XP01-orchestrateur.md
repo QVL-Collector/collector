@@ -82,13 +82,13 @@ Limite déclarée : la mise à l'échelle sur la file (X8, XC6) n'est mesurée q
 | AWS CLI | 2.33.24 | Fixée |
 | kubectl | 1.34.1 (aligner sur 1.35 si disponible) | Fixée |
 | Helm | 4.1.3 | Fixée |
-| k3d / image k3s | relevées en XP00 ; image k3s 1.35.x par empreinte | À fixer avant exécution |
-| EKS | 1.35 (S3 de XP00) | À confirmer par XP00 |
-| Add-ons `vpc-cni`, `coredns`, `kube-proxy`, `metrics-server` | versions par défaut relevées en S3 | À fixer avant exécution |
-| AMI des nœuds | Amazon Linux 2023 optimisée EKS, identifiant relevé en S3 | À fixer avant exécution |
-| PostgreSQL RDS | version par défaut relevée en S10 | À fixer avant exécution |
+| k3d / image k3s | k3d 5.9.0 ; k3s v1.35.5-k3s1 (défaut de k3d), image épinglée par empreinte | Image à épingler |
+| EKS | 1.35, support standard jusqu'au 2027-03-27 (XP00 S3) ; 1.37 disponible | Fixée |
+| Add-ons `vpc-cni`, `coredns`, `kube-proxy`, `metrics-server` | v1.22.4-eksbuild.8, v1.13.2-eksbuild.59, v1.35.3-eksbuild.59, v0.9.0-eksbuild.14 (XP00 S3) | Fixée |
+| AMI des nœuds | Amazon Linux 2023 optimisée EKS 1.35, paramètre SSM `recommended` relu à chaque `up` (`ami-06c28983cd518f095` le 2026-10-26) | Fixée |
+| PostgreSQL RDS | 18.3, famille `postgres18` (XP00 S10) | Fixée |
 | Service HTTP de test | image consommant de la CPU par requête, épinglée par empreinte | À fixer avant exécution |
-| k6 | relevée en XP00 | À fixer avant exécution |
+| k6 | 2.2.0 | Fixée |
 | Image de test des sondes réseau | image `curl` officielle épinglée par empreinte | À fixer avant exécution |
 
 ## Technos et interactions

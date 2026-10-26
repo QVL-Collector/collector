@@ -414,7 +414,7 @@ La décision de Martin est enregistrée ci-dessus ; ses conséquences :
 - **D14** : X4, X5, X13, X14 et X15 mesurés avec ces scripts ; ajout à la sonde du premier jour : `manage_master_user_password`, création d'un budget AWS, `iam:PassRole` de `LabRole` vers Scheduler.
 - **Sécurité** : [exigences-securite.md](../securite/exigences-securite.md) : ES-29 précisée (alerte de coût par G5, G6 si disponible) ; ES-05 pour l'IaC.
 - **Exploitation** : `docs/exploitation.md` (procédures, reprise après expiration, jour J) et section « Démarrer / arrêter » du README ; `docs/mesures/couts.csv` alimenté à chaque session.
-- **Coût** : ≈ 0,34 $/h, ≈ 1,35 $ par session, ≈ 38 $ sur le projet, ≈ 47 $ avec marge ; à rapprocher du budget réel le premier jour.
+- **Coût** : ≈ 0,34 $/h, ≈ 1,35 $ par session, ≈ 38 $ sur le projet, ≈ 47 $ avec marge. Budget réel relevé par XP00 le 2026-10-26 : **50 $**. La marge tombe sous 10 % : sessions en allumage à la demande, seuil G5 à 70 % décisif, réserve de rejeu de D14 comme variable d'ajustement, coût réel suivi dans `docs/mesures/couts.csv` à chaque session.
 - **Effort** : IaC 2 à 3 j (D03) ; scripts, inventaire, garde-fou et journal 1,5 à 2 j ; analyse en CI 0,25 j.
 - **Index** : D11 à mettre à jour dans [INDEX.md](INDEX.md).
 
