@@ -1,0 +1,24 @@
+{
+  "id": "1d7f5e2b-3c4a-4b9d-8f0e-6a5b4c3d2e1f",
+  "type": "controle.demande",
+  "version": 1,
+  "emitted_at": "2026-11-02T10:02:41Z",
+  "correlation_id": "2c8e4a61-9b7d-4f3e-a5c1-d0e2f4a6b8c9",
+  "data": {
+    "article_id": "8a2d4f6b-1c3e-4a5b-9d7f-0e2c4a6b8d1f",
+    "revision": 3,
+    "submitted_at": "2026-11-02T10:02:40Z",
+    "seller": {
+      "account_id": "5c8e1d3f-2a4b-4c6d-8e9f-0a1b2c3d4e5f",
+      "member_since": "2025-03-14",
+      "suspended": false
+    },
+    "listing": {
+      "title": "Carte Pokémon Dracaufeu édition 1",
+      "description": "",
+      "category_code": null,
+      "price_cents": null,
+      "photo_count": 0
+    }
+  }
+}

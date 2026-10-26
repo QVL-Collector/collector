@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Enveloppe commune des messages du canal, v1",
+  "description": "Membres communs à tout message échangé sur le canal. Le contexte de trace W3C voyage dans les en-têtes du message, pas dans le corps.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "version", "emitted_at", "correlation_id", "data"],
+  "properties": {
+    "id": {
+      "description": "Identifiant unique du message, conservé tel quel en cas de rejeu.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "description": "Type du message ; avec la version, désigne le schéma qui s'applique.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "version": {
+      "description": "Version du contrat du type de message.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "emitted_at": {
+      "description": "Date d'émission.",
+      "$ref": "#/$defs/horodatage_utc"
+    },
+    "correlation_id": {
+      "description": "Identifiant de corrélation propagé de la demande au résultat.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "data": {
+      "description": "Contenu propre au type de message, défini par son schéma.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "horodatage_utc": {
+      "description": "Date RFC 3339 en UTC : T et Z majuscules, secondes de 00 à 59, fraction d'au plus 9 chiffres.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+    }
+  }
+}

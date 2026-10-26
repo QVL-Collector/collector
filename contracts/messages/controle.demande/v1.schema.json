@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Demande de contrôle de publication, contrat v1",
+  "description": "Émise par la Place de marché vers le Contrôle de publication (échange controle.demandes, clé de routage v1). Porte toutes les données utiles aux règles : le Contrôle ne lit ni base, ni stockage, ni horloge. Données minimales : aucun email, nom ni coordonnée du vendeur.",
+  "allOf": [{ "$ref": "../enveloppe-v1.schema.json" }],
+  "properties": {
+    "type": { "const": "controle.demande" },
+    "version": { "const": 1 },
+    "data": { "$ref": "#/$defs/demande" }
+  },
+  "$defs": {
+    "demande": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["article_id", "revision", "submitted_at", "seller", "listing"],
+      "properties": {
+        "article_id": {
+          "description": "Identifiant de l'article contrôlé.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "revision": {
+          "description": "Révision de l'article soumise au contrôle ; le résultat la reprend pour écarter un résultat périmé.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "submitted_at": {
+          "description": "Date de la soumission, référence des calculs d'ancienneté.",
+          "$ref": "../enveloppe-v1.schema.json#/$defs/horodatage_utc"
+        },
+        "seller": { "$ref": "#/$defs/vendeur" },
+        "listing": { "$ref": "#/$defs/annonce" }
+      }
+    },
+    "vendeur": {
+      "description": "Statut du vendeur, réduit aux attributs utiles aux règles.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["account_id", "member_since", "suspended"],
+      "properties": {
+        "account_id": {
+          "description": "Identifiant opaque du compte vendeur.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "member_since": {
+          "description": "Date d'ouverture du compte vendeur.",
+          "type": "string",
+          "format": "date"
+        },
+        "suspended": {
+          "description": "Vrai si le compte est suspendu.",
+          "type": "boolean"
+        }
+      }
+    },
+    "annonce": {
+      "description": "Contenu de l'annonce soumis aux règles. Un texte vide, une catégorie ou un prix à null signalent une saisie absente, que le Contrôle juge.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "description", "category_code", "price_cents", "photo_count"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "category_code": {
+          "description": "Code de la catégorie, issu du jeu de catégories de référence.",
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "price_cents": {
+          "description": "Prix de l'article en centimes d'euro, frais de port exclus.",
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "photo_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    }
+  }
+}

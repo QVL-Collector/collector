@@ -1,0 +1,24 @@
+{
+  "id": "0b6e4c3a-1f2d-4a8b-9e7c-5d3a2b1c0f9e",
+  "type": "controle.demande",
+  "version": 0,
+  "emitted_at": "2026-11-02T09:15:00.123Z",
+  "correlation_id": "7a9d2e14-c6b3-4f81-a0d5-e2c47b19f863",
+  "data": {
+    "article_id": "3f1c2a8e-5b7d-4e2a-9c1f-6d8b0a4e7c21",
+    "revision": 1,
+    "submitted_at": "2026-11-02T09:14:59Z",
+    "seller": {
+      "account_id": "5c8e1d3f-2a4b-4c6d-8e9f-0a1b2c3d4e5f",
+      "member_since": "2025-03-14",
+      "suspended": false
+    },
+    "listing": {
+      "title": "Figurine Goldorak 1978 en boîte d'origine",
+      "description": "Figurine en métal, boîte d'origine, légères traces d'usure sur un coin.",
+      "category_code": "figurines",
+      "price_cents": 12500,
+      "photo_count": 2
+    }
+  }
+}

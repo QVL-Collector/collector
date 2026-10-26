@@ -1,0 +1,11 @@
+{
+  "id": "0b6e4c3a-1f2d-4a8b-9e7c-5d3a2b1c0f9e",
+  "type": "controle.demande.prioritaire",
+  "version": 1,
+  "emitted_at": "2026-11-02T09:15:00.123Z",
+  "correlation_id": "7a9d2e14-c6b3-4f81-a0d5-e2c47b19f863",
+  "data": {
+    "article_id": "3f1c2a8e-5b7d-4e2a-9c1f-6d8b0a4e7c21",
+    "revision": 1
+  }
+}
