@@ -6,7 +6,7 @@ toolchain go1.26.3
 
 require (
 	github.com/jackc/pgx/v5 v5.7.5
-	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/rabbitmq/amqp091-go v1.14.0
 )
 
 require (
