@@ -1,0 +1,115 @@
+# G7-4 (X19), MA8 : Keycloak joignable seulement par le service de test (jeu de cles) et par
+# Transactions (jetons) ; base joignable par Keycloak seul ; "reserver" (8081) par Transactions seul.
+# Sur EKS, l'ALB (NodePort) s'ajoute aux sources autorisees de Keycloak.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: refus-par-defaut
+  namespace: identite-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-dns
+  namespace: identite-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-entree
+  namespace: identite-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector:
+    matchLabels: { app: keycloak }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: pdm-test }
+          podSelector:
+            matchLabels: { app: verificateur }
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: transactions-test }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-vers-postgres
+  namespace: identite-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector:
+    matchLabels: { app: keycloak }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app: postgres }
+      ports:
+        - { protocol: TCP, port: 5432 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-entree
+  namespace: identite-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector:
+    matchLabels: { app: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: keycloak }
+      ports:
+        - { protocol: TCP, port: 5432 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verificateur-entree-sortie
+  namespace: pdm-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector:
+    matchLabels: { app: verificateur }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: transactions-test }
+      ports:
+        - { protocol: TCP, port: 8081 }
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: identite-test }
+          podSelector:
+            matchLabels: { app: keycloak }
+      ports:
+        - { protocol: TCP, port: 8080 }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }

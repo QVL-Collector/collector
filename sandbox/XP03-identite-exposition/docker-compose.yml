@@ -1,0 +1,94 @@
+# XP03 - Local : Keycloak (image optimisee), PostgreSQL 18.3, service de test verifiant le jeton
+# (Envoy), Caddy en "tls internal" sur collector.localhost et auth.collector.localhost.
+# Lancement : scripts/compose.sh up (identifiants, image, rendu de la configuration du verificateur).
+name: xp03
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?versions.env non charge}
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${MDP_POSTGRES:?.env non charge}
+    # Base neuve a chaque lancement (K2) : aucun volume nomme.
+    tmpfs:
+      - /var/lib/postgresql:size=512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks: [donnees]
+
+  keycloak:
+    image: ${KEYCLOAK_IMAGE}
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${MDP_POSTGRES}
+      KC_HOSTNAME: ${URL_AUTH}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin-temporaire
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${MDP_KC_BOOTSTRAP}
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=70
+      # Emplacements ${...} du realm (MX1, MA1) : valeurs de la session.
+      URL_FRONT: ${URL_FRONT}
+      SECRET_TRANSACTIONS: ${SECRET_TRANSACTIONS}
+      SECRET_AUTRE: ${SECRET_AUTRE}
+      MDP_ACHETEUR: ${MDP_ACHETEUR}
+      MDP_VENDEUR: ${MDP_VENDEUR}
+      MDP_ADMIN_TEST: ${MDP_ADMIN_TEST}
+      GRAINE_OTP: ${GRAINE_OTP}
+    volumes:
+      - ./realm/collector-realm.json:/opt/keycloak/data/import/collector-realm.json:ro
+    mem_limit: 1280m
+    mem_reservation: 768m
+    healthcheck:
+      test:
+        - CMD-SHELL
+        # Image sans curl ni grep : requete HTTP par /dev/tcp de bash sur le port de gestion 9000.
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 &&
+          read -r l <&3 && case "$$l" in *" 200 "*) exit 0 ;; *) exit 1 ;; esac
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+    networks: [donnees, interne]
+
+  verificateur:
+    image: ${ENVOY_IMAGE}
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "warn"]
+    volumes:
+      - ./.genere/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    networks: [interne]
+
+  caddy:
+    image: ${CADDY_IMAGE}
+    depends_on:
+      keycloak: { condition: service_healthy }
+    environment:
+      HOTE_AUTH: ${HOTE_AUTH}
+      HOTE_FRONT: ${HOTE_FRONT}
+      AMONT_KEYCLOAK: keycloak:8080
+    ports:
+      - "127.0.0.1:${PORT_HTTP}:80"
+      - "127.0.0.1:${PORT_HTTPS}:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-donnees:/data
+    networks: [interne]
+
+networks:
+  donnees:
+    name: xp03_donnees
+    internal: true
+  interne:
+    name: xp03_interne
+
+volumes:
+  caddy-donnees:

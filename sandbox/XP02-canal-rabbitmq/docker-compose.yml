@@ -1,0 +1,44 @@
+# XP02 - Local 1 : broker RabbitMQ seul, memes conf.d et definitions qu'en cluster.
+# Lancement : scripts/compose.sh up (genere les identifiants si besoin). Jamais "docker compose up" a nu :
+# le script passe versions.env et verifie la presence de .env et .genere/.
+name: xp02
+
+services:
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:?versions.env non charge}
+    hostname: rabbitmq
+    # Le cookie Erlang est copie a l'emplacement attendu avec des droits stricts, puis
+    # l'entrypoint officiel reprend la main (passage a l'utilisateur rabbitmq par gosu).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - install -m 400 -o rabbitmq -g rabbitmq /run/secrets/cookie_erlang /var/lib/rabbitmq/.erlang.cookie && exec docker-entrypoint.sh rabbitmq-server
+    secrets:
+      - cookie_erlang
+    volumes:
+      - ./broker/conf.d:/etc/rabbitmq/conf.d:ro
+      - ./broker/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./broker/definitions/10-topologie.json:/etc/rabbitmq/definitions/10-topologie.json:ro
+      - ./.genere/00-utilisateurs.json:/etc/rabbitmq/definitions/00-utilisateurs.json:ro
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+    networks: [canal]
+
+networks:
+  canal:
+    name: xp02_canal
+
+secrets:
+  cookie_erlang:
+    file: ./.genere/cookie-erlang

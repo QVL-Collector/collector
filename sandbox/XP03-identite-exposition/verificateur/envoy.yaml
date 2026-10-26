@@ -1,0 +1,142 @@
+# Service de test verifiant le jeton (K3, MA4, MA5), par configuration seulement :
+#   jwt_authn : signature (jeu de cles lu a l'adresse interne de Keycloak), iss public exact (ME6),
+#               aud place-de-marche, exp avec 30 s de tolerance ;
+#   rbac      : /reserver exige typ Bearer, azp transactions et la portee reserver ;
+#               /achat (route d'acheteur, MA5) exige typ Bearer, azp collector-web et le role acheteur.
+# Tout refus (403 du rbac compris) est rendu en 401 sans detail. Port interne 8081, jamais route
+# par le proxy ni par l'ALB. Gabarit rendu par les scripts (__ISSUER__, __KEYCLOAK_HOTE__,
+# __KEYCLOAK_PORT__) dans .genere/envoy.yaml.
+static_resources:
+  listeners:
+    - name: interne
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8081 }
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: verificateur
+                normalize_path: true
+                merge_slashes: true
+                path_with_escaped_slashes_action: REJECT_REQUEST
+                local_reply_config:
+                  mappers:
+                    - filter:
+                        status_code_filter:
+                          comparison:
+                            op: EQ
+                            value: { default_value: 403, runtime_key: verificateur.refus }
+                      status_code: 401
+                      body: { inline_string: "refus\n" }
+                    - filter:
+                        status_code_filter:
+                          comparison:
+                            op: EQ
+                            value: { default_value: 401, runtime_key: verificateur.non_authentifie }
+                      body: { inline_string: "refus\n" }
+                route_config:
+                  name: interne
+                  virtual_hosts:
+                    - name: interne
+                      domains: ["*"]
+                      routes:
+                        - match: { path: /reserver }
+                          direct_response: { status: 200, body: { inline_string: "reservation acceptee\n" } }
+                          typed_per_filter_config:
+                            envoy.filters.http.rbac:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+                              rbac:
+                                rules:
+                                  action: ALLOW
+                                  policies:
+                                    jeton-de-service-transactions:
+                                      permissions: [{ any: true }]
+                                      principals:
+                                        - and_ids:
+                                            ids:
+                                              - metadata:
+                                                  filter: envoy.filters.http.jwt_authn
+                                                  path: [{ key: jwt }, { key: typ }]
+                                                  value: { string_match: { exact: Bearer } }
+                                              - metadata:
+                                                  filter: envoy.filters.http.jwt_authn
+                                                  path: [{ key: jwt }, { key: azp }]
+                                                  value: { string_match: { exact: transactions } }
+                                              - metadata:
+                                                  filter: envoy.filters.http.jwt_authn
+                                                  path: [{ key: jwt }, { key: scope }]
+                                                  value: { string_match: { safe_regex: { regex: "(^|.* )reserver( .*|$)" } } }
+                        - match: { path: /achat }
+                          direct_response: { status: 200, body: { inline_string: "route acheteur acceptee\n" } }
+                          typed_per_filter_config:
+                            envoy.filters.http.rbac:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+                              rbac:
+                                rules:
+                                  action: ALLOW
+                                  policies:
+                                    jeton-acheteur:
+                                      permissions: [{ any: true }]
+                                      principals:
+                                        - and_ids:
+                                            ids:
+                                              - metadata:
+                                                  filter: envoy.filters.http.jwt_authn
+                                                  path: [{ key: jwt }, { key: typ }]
+                                                  value: { string_match: { exact: Bearer } }
+                                              - metadata:
+                                                  filter: envoy.filters.http.jwt_authn
+                                                  path: [{ key: jwt }, { key: azp }]
+                                                  value: { string_match: { exact: collector-web } }
+                                              - metadata:
+                                                  filter: envoy.filters.http.jwt_authn
+                                                  path: [{ key: jwt }, { key: realm_access }, { key: roles }]
+                                                  value: { list_match: { one_of: { string_match: { exact: acheteur } } } }
+                        - match: { prefix: / }
+                          direct_response: { status: 404 }
+                          typed_per_filter_config:
+                            envoy.filters.http.jwt_authn:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+                              disabled: true
+                http_filters:
+                  - name: envoy.filters.http.jwt_authn
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+                      providers:
+                        keycloak-collector:
+                          issuer: __ISSUER__
+                          audiences: [place-de-marche]
+                          clock_skew_seconds: 30
+                          forward: false
+                          payload_in_metadata: jwt
+                          remote_jwks:
+                            http_uri:
+                              uri: http://__KEYCLOAK_HOTE__:__KEYCLOAK_PORT__/realms/collector/protocol/openid-connect/certs
+                              cluster: keycloak
+                              timeout: 5s
+                            cache_duration: 300s
+                            retry_policy: { num_retries: 3 }
+                      rules:
+                        - match: { prefix: / }
+                          requires: { provider_name: keycloak-collector }
+                  - name: envoy.filters.http.rbac
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+                      rules:
+                        action: DENY
+                        policies: {}
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: keycloak
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: keycloak
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: __KEYCLOAK_HOTE__, port_value: __KEYCLOAK_PORT__ }

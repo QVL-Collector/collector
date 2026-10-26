@@ -1,0 +1,78 @@
+# XC6 : mise a l'echelle de la file controle.demandes par KEDA (scaler rabbitmq, mode http,
+# identite keda-monitoring). Cible : consommateur lent de test (PerfTest, identite svc-controle,
+# 200 ms par message), independant de go/. Secrets crees par k3d.sh (jamais versionnes) :
+#   controle-test/canal-amqp     cle AMQP_URL (svc-controle)
+#   controle-test/keda-rabbitmq  cle host (URL de l'API de gestion avec keda-monitoring)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consommateur-lent
+  namespace: controle-test
+  labels: { app: consommateur-lent, app.kubernetes.io/part-of: xp02 }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: consommateur-lent }
+  template:
+    metadata:
+      labels: { app: consommateur-lent, app.kubernetes.io/part-of: xp02 }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2000
+        runAsGroup: 2000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: perftest
+          image: PERFTEST_IMAGE
+          args: ["--exchange", "controle.demandes", "--queue", "controle.demandes", "--predeclared",
+                 "--skip-binding-queues", "--producers", "0", "--consumers", "1", "--qos", "1",
+                 "--consumer-latency", "200000", "--interval", "10"]
+          env:
+            - name: URI
+              valueFrom: { secretKeyRef: { name: canal-amqp, key: AMQP_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: rabbitmq-supervision
+  namespace: controle-test
+  labels: { app.kubernetes.io/part-of: xp02 }
+spec:
+  secretTargetRef:
+    - { parameter: host, name: keda-rabbitmq, key: host }
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: consommateur-lent
+  namespace: controle-test
+  labels: { app.kubernetes.io/part-of: xp02 }
+spec:
+  scaleTargetRef:
+    name: consommateur-lent
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  pollingInterval: 5
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: http
+        mode: QueueLength
+        value: "5"
+        queueName: controle.demandes
+        vhostName: collector
+      authenticationRef:
+        name: rabbitmq-supervision
