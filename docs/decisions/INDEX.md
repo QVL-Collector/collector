@@ -18,9 +18,9 @@ Sessions : S1 = D01 · S2 = D02 · S3 = D03 + D04 · S4 = D05 à D11 · S5 = D12
 | D09 | Observabilité | S4 | Décidée | C5, C6 | D03 | [D09-observabilite.md](D09-observabilite.md) |
 | D10 | Forge git, CI/CD, registry, déploiement, portes DevSecOps | S4 | Décidée | C4, C7, C8, C6 | D03, D04 | [D10-forge-ci-cd.md](D10-forge-ci-cd.md) |
 | D11 | IaC, allumage/extinction, garde-fou coût | S4 | Décidée | C5, C10 | D03, D10 | [D11-iac-allumage-cout.md](D11-iac-allumage-cout.md) |
-| D12 | Au moins 4 indicateurs qualité et outils de mesure | S5 | À instruire | C6 | D04, D09, D10 | |
-| D13 | Stratégie de test et outil de charge | S5 | À instruire | C7, C5 | D01, D04, D10 | |
-| D14 | Périmètre des expérimentations bac à sable | S5 | À instruire | C1 | D03, D05, D06, D09, D10 | |
+| D12 | Au moins 4 indicateurs qualité et outils de mesure | S5 | Décidée | C6 | D04, D09, D10 | [D12-indicateurs-qualite.md](D12-indicateurs-qualite.md) |
+| D13 | Stratégie de test et outil de charge | S5 | Décidée | C7, C5 | D01, D04, D10 | [D13-strategie-tests-charge.md](D13-strategie-tests-charge.md) |
+| D14 | Périmètre des expérimentations bac à sable | S5 | Décidée | C1 | D03, D05, D06, D09, D10 | [D14-experimentations.md](D14-experimentations.md) |
 
 ## Synthèse des décisions tranchées
 
@@ -39,3 +39,6 @@ Le choix retenu et sa raison, en bref. Le détail (options, avis, conséquences)
 | D09 | Prometheus et Grafana dans le cluster pour les métriques, CloudWatch Logs via Fluent Bit pour les journaux et l'audit. | Montrer l'autoscaling en direct pendant la démo, tout en gardant une trace d'audit hors du cluster qui survit à chaque extinction ; pile allégée pour tenir sur deux nœuds. |
 | D10 | GitHub public, images sur GHCR signées par cosign, déploiement GitOps par Flux (filet : déploiement depuis le poste), portes DevSecOps bloquantes. | Sans fédération OIDC vers AWS, seul un déploiement tiré par le cluster rend la livraison continue automatique sans identifiants AWS dans la CI ; le dépôt public lève les quotas de CI et de registre. |
 | D11 | Terraform épinglé, état local chiffré par l'appareil, deux couches persistante et éphémère, scripts up/down/status/demo, destruction programmée et inventaire bloquant. | Le budget du Learner Lab interdit tout fonctionnement continu : l'environnement doit se recréer en ~40 min et disparaître sans résidu ; l'état local résiste à l'expiration des identifiants et reste hors de portée de LabRole. |
+| D12 | Sept indicateurs (critères d'acceptation couverts, latence p95 et mise à l'échelle, fiabilité, couverture, complexité et duplication, vulnérabilités, DORA réduit) mesurés par les outils de la CI ; couverture « pas de baisse » à 0,5 point près. | Couvrir les quatre objectifs de qualité de la grille plus la sécurité, chaque indicateur relié à une forme de dette ; outils natifs pour éviter un service tiers et un jeton sur un dépôt public. |
+| D13 | Stratégie à 15 types de tests avec tests négatifs de sécurité ; k6 depuis le poste à travers l'ALB, jetons préparés juste avant le tir ; limite de débit relevée pour la seule adresse de Martin pendant le tir. | Prouver le parcours métier et la montée en charge sans fausser la mesure (générateur hors du cluster) ni affaiblir la sécurité de l'environnement de démonstration ouvert au public. |
+| D14 | Sonde du compte puis trois expérimentations : EKS contre ECS Fargate, RabbitMQ dans l'orchestrateur, Keycloak + ALB + ACM + Route 53 ; critères de sécurité bloquants ; du 2026-10-27 au 2026-11-02. | Fonder l'adoption d'EKS (ou son rejet) sur des mesures comparées, conformément à C1, en tenant le calendrier et le budget du Learner Lab ; l'IaC du bac à sable est reprise par le POC. |

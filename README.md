@@ -7,7 +7,7 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 
 ## État actuel
 
-- **Phase** : décisions techniques en cours (jalon J2) : S4 close (D05 à D11), S5 à venir (D12 à D14).
+- **Phase** : décisions techniques closes (J2, D01 à D14). Jalon en cours : J3, sonde du compte AWS, bac à sable et documents de process.
 - **Décisions** : Session S3 close : [D03](docs/decisions/D03-hebergement-orchestration.md) en statut Candidate (EKS, repli ECS Fargate, comparatif en bac à sable), [D04](docs/decisions/D04-stack.md) décidée (Go, React + TypeScript + MUI). Contraintes de l'environnement : [environnement-learner-lab.md](docs/00-cadrage/environnement-learner-lab.md). Prochaine étape : S4 (D05 à D11). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
 - **Code** : aucun service, front ou infrastructure pour l'instant.
 
