@@ -24,3 +24,5 @@ horodatage_utc;xp;point;commande;resultat;code_erreur;politique_citee;decision
 2026-10-26T13:52Z;XP00;S8a;scheduler create-schedule x15a;OK;;;PassRole vers Scheduler autorise
 2026-10-26T13:53Z;XP00;S9;budgets create-budget;OK;;;G6 en place
 2026-10-26T13:58Z;XP00;S8a;ec2 describe-security-groups;OK;InvalidGroup.NotFound;;G1 tenu en session
+2026-10-26T14:09Z;XP00;S8b;scheduler x15b, lab arrete;REFUS;Client.UnauthorizedOperation;LabRole sans droits lab arrete;G1 limitee a la session
+2026-10-26T14:22Z;XP00;Fin;inventaire final apres S8b;OK;;;reste zone, certificat, budget
