@@ -21,3 +21,14 @@ Sessions : S1 = D01 · S2 = D02 · S3 = D03 + D04 · S4 = D05 à D11 · S5 = D12
 | D12 | Au moins 4 indicateurs qualité et outils de mesure | S5 | À instruire | C6 | D04, D09, D10 | |
 | D13 | Stratégie de test et outil de charge | S5 | À instruire | C7, C5 | D01, D04, D10 | |
 | D14 | Périmètre des expérimentations bac à sable | S5 | À instruire | C1 | D03, D05, D06, D09, D10 | |
+
+## Synthèse des décisions tranchées
+
+Le choix retenu et sa raison, en bref. Le détail (options, avis, conséquences) est dans chaque fichier.
+
+| ID | Choix retenu | Raison |
+|---|---|---|
+| D01 | Fonctionnalité du POC : mise en vente d'un article avec contrôle automatisé de publication (option « A enrichie »). | C'est le cœur de la valeur de Collector (la confiance) ; elle porte un échange asynchrone, un contrat versionné qui servira de branchement à l'outil de fraude, et 5 bonnes pratiques de sécurité démontrables. |
+| D02 | 4 services : Place de marché, Transactions, Interactions, Contrôle de publication ; les 4 sont déployés dans le POC (option P2), premier sprint en walking skeleton WS-2. | Isoler la finance dès la V1, faire évoluer et mettre à l'échelle chaque domaine séparément ; déployer les 4 services montre l'architecture cible complète. Choix fait contre la recommandation de l'architecte (monolithe modulaire), en connaissance du surcoût. |
+| D03 | Amazon EKS (node group géré, HPA et KEDA), statut Candidate ; repli ECS sur Fargate ; comparaison des deux en bac à sable. | Orchestrateur managé conforme à la consigne, mise à l'échelle par domaine démontrable ; l'expérimentation (critères X1 à X21) tranche entre EKS et Fargate sur des mesures, sous les contraintes du Learner Lab. |
+| D04 | Go pour les 4 services ; React, TypeScript et MUI pour le front statique. | Rester dans le périmètre des experts de l'équipe (Go au back, React + TypeScript + MUI au front) ; Go donne en plus des binaires légers qui démarrent vite, utile à l'autoscaling. La montée en compétence React est inscrite comme compétence à acquérir (C9). |

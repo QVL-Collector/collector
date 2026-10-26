@@ -593,26 +593,26 @@ Date : 2026-10-09
 
 ## Conséquences
 
-Au conditionnel : elles ne vaudraient que si Martin retient l'option A.
+Martin a retenu l'option A en statut Candidate : ces conséquences s'appliquent, sous réserve de l'expérimentation (D14). Contraintes du Learner Lab : [environnement-learner-lab.md](../00-cadrage/environnement-learner-lab.md).
 
-- **Statut et expérimentation** : D03 passerait en `Candidate (XPnn)`. La sonde du compte et la session de configuration AWS précéderaient l'expérimentation ([PILOTAGE.md](../PILOTAGE.md) § 3.2).
+- **Statut et expérimentation** : D03 passe en `Candidate (XPnn)`. La sonde du compte et la session de configuration AWS précèdent l'expérimentation ([PILOTAGE.md](../PILOTAGE.md) § 3.2).
 - **D05 — Canal** :
-  - le broker serait un conteneur à une instance dans le cluster, joint par un Service interne et protégé par une politique réseau ;
-  - un canal managé autorisé par les seuls rôles AWS (SQS, SNS, EventBridge) ne donnerait pas d'identité par service sous `LabRole` (D02) ;
-  - le broker retenu devrait disposer d'un scaler KEDA (RabbitMQ, NATS JetStream et Kafka en ont) ;
-  - sans volume persistant, son état serait perdu si son pod était replanifié. Le mécanisme anti-perte de D05 (renvoi des articles restés « en contrôle », émission fiable des événements) devrait couvrir ce cas ; sinon, D05 demanderait le pilote EBS CSI ;
-  - l'expérimentation du canal pourrait partager le cluster de test de D03 : la consigne cite « broker de messages déployé dans un orchestrateur ».
+  - le broker est un conteneur à une instance dans le cluster, joint par un Service interne et protégé par une politique réseau ;
+  - un canal managé autorisé par les seuls rôles AWS (SQS, SNS, EventBridge) ne donne pas d'identité par service sous `LabRole` (D02) ;
+  - le broker retenu doit disposer d'un scaler KEDA (RabbitMQ, NATS JetStream et Kafka en ont) ;
+  - sans volume persistant, son état est perdu si son pod est replanifié. Le mécanisme anti-perte de D05 (renvoi des articles restés « en contrôle », émission fiable des événements) doit couvrir ce cas ; sinon, D05 demande le pilote EBS CSI ;
+  - l'expérimentation du canal peut partager le cluster de test de D03 : la consigne cite « broker de messages déployé dans un orchestrateur ».
 - **D06 — Serveur d'autorisation** :
   - en conteneur dans le cluster, avec son espace dans RDS, exposé par l'ALB pour ses seules pages de connexion, console d'administration non routée ;
-  - son URL d'émetteur devrait rester stable d'une session à l'autre malgré la recréation de l'ALB (D08) ;
-  - Cognito retirerait un conteneur d'environ 1 Go, mais il est absent du Readme 2025 [?], et ses jetons de service portent des scopes plutôt qu'une audience : à confronter à ES-38.
-- **D07 — Données** : RDS PostgreSQL db.t3.micro Single-AZ, hors du cluster, en sous-réseaux privés, un compte par service. Créé en parallèle du cluster, il ne serait pas sur le chemin critique de l'allumage. Bucket S3 créé hors du provider Terraform (SCP) ; accès des pods par le rôle du nœud (X6).
+  - son URL d'émetteur doit rester stable d'une session à l'autre malgré la recréation de l'ALB (D08) ;
+  - Cognito retire un conteneur d'environ 1 Go, mais il est absent du Readme 2025 [?], et ses jetons de service portent des scopes plutôt qu'une audience : à confronter à ES-38.
+- **D07 — Données** : RDS PostgreSQL db.t3.micro Single-AZ, hors du cluster, en sous-réseaux privés, un compte par service. Créé en parallèle du cluster, il n'est pas sur le chemin critique de l'allumage. Bucket S3 créé hors du provider Terraform (SCP) ; accès des pods par le rôle du nœud (X6).
 - **D08 — Exposition** :
   - ALB créé par l'IaC, certificat ACM et domaine externe, CloudFront étant indisponible ;
   - routage par règles d'ALB vers les NodePorts, ou vers un contrôleur d'entrée maintenu si la limitation de débit ou les en-têtes l'exigent (pas ingress-nginx) ;
   - route « réserver » sur un Service interne, jamais routée par l'ALB, vérifiée par l'inventaire des points d'entrée ;
   - origine des photos.
-- **D09 — Observabilité** : metrics-server serait déjà présent pour le HPA. Collecte des journaux vers CloudWatch Logs par un DaemonSet utilisant le rôle du nœud [?], ou pile auto-hébergée dans le cluster, qui demanderait un nœud de plus. Rétention courte des journaux, pour le coût.
+- **D09 — Observabilité** : metrics-server est déjà présent pour le HPA. Collecte des journaux vers CloudWatch Logs par un DaemonSet utilisant le rôle du nœud [?], ou pile auto-hébergée dans le cluster, qui demande un nœud de plus. Rétention courte des journaux, pour le coût.
 - **D10 — Chaîne de livraison** : images poussées vers ECR avec les identifiants de l'utilisateur ; déploiement par `helm upgrade`, avec des identifiants de session recopiés à chaque session (fédération OIDC impossible) ou depuis le poste ; un chart commun, des valeurs par service et par environnement.
 - **D11 — IaC et coût** :
   - deux couches, persistante et éphémère ;
@@ -626,7 +626,7 @@ Au conditionnel : elles ne vaudraient que si Martin retient l'option A.
 - **D14 — Expérimentations** : une expérimentation « orchestrateur », locale puis sur EKS, avec les critères X1 à X21 ; comparaison avec B optionnelle ; mutualisation possible avec l'expérimentation du canal.
 - **Architecture** : § 9 d'[architecture-technique.md](../architecture/architecture-technique.md) ; schéma technique dans `docs/architecture/schemas/`.
 - **Sécurité** : révision d'[exigences-securite.md](../securite/exigences-securite.md) pour les menaces propres à l'orchestrateur (IMDS, API Kubernetes, NodePorts, Secrets Kubernetes), l'écart ES-26 et les points uniques de défaillance du POC.
-- **Compétences (C9)** : Kubernetes entrerait dans la cartographie ; action de formation candidate « Kubernetes pour développeurs » (déploiement, sondes, HPA, politiques réseau).
+- **Compétences (C9)** : Kubernetes entre dans la cartographie ; action de formation candidate « Kubernetes pour développeurs » (déploiement, sondes, HPA, politiques réseau).
 - **README** : section « Démarrer / arrêter », après D11.
 
 ## À savoir défendre en soutenance
