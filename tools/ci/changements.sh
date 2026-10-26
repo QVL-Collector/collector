@@ -9,6 +9,7 @@
 #   go          true si au moins un module Go est concerné
 #   web         true si le front existe et est concerné
 #   outillage   true si les workflows ou les scripts sont concernés
+#   analyse     true si un fichier hors documentation est concerné (Semgrep, Trivy config et dépendances)
 #
 # Règles : services/<service>/** déclenche ce service ; libs/**, contracts/** et l'outillage de CI
 # déclenchent tous les modules ; hors pull_request (push sur main, planification), tout s'exécute.
@@ -61,6 +62,7 @@ fi
 GLOBAL_GO=false
 WEB=false
 OUTILLAGE=false
+ANALYSE=false
 declare -A MODULES_TOUCHES=()
 
 for f in "${FICHIERS[@]}"; do
@@ -77,6 +79,10 @@ for f in "${FICHIERS[@]}"; do
   case "$f" in
     *.sh|tools/*) OUTILLAGE=true ;;
   esac
+  case "$f" in
+    docs/*|backlog/*|presentation/*|*.md) ;;
+    *) ANALYSE=true ;;
+  esac
   if [[ "$f" == services/*/* ]]; then
     reste="${f#services/}"
     MODULES_TOUCHES["services/${reste%%/*}"]=1
@@ -84,7 +90,7 @@ for f in "${FICHIERS[@]}"; do
 done
 
 if [[ "$TOUT" == true ]]; then
-  GLOBAL_GO=true; WEB=true; OUTILLAGE=true
+  GLOBAL_GO=true; WEB=true; OUTILLAGE=true; ANALYSE=true
 fi
 
 MODULES=()
@@ -109,6 +115,7 @@ ecrire_sortie modules_go "$JSON"
 ecrire_sortie go "$GO"
 ecrire_sortie web "$WEB"
 ecrire_sortie outillage "$OUTILLAGE"
+ecrire_sortie analyse "$ANALYSE"
 
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   {
@@ -119,5 +126,6 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     echo "| Modules Go | ${JSON} |"
     echo "| Front (web/) | ${WEB} |"
     echo "| Workflows et scripts | ${OUTILLAGE} |"
+    echo "| Analyse statique et configuration | ${ANALYSE} |"
   } >> "$GITHUB_STEP_SUMMARY"
 fi

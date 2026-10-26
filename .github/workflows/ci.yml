@@ -1,5 +1,6 @@
 # Pipeline de PR et de main (D10, docs/processus/cicd.md).
 # Un seul workflow : les jobs concernés sont choisis par le job « changements » ; « ci-ok » est la vérification requise unique.
+# Portes de sécurité : journaux publics limités à des compteurs, détail en SARIF dans l'onglet sécurité (MQ5).
 name: CI
 
 on:
@@ -7,6 +8,8 @@ on:
     branches: [main]
   push:
     branches: [main]
+  schedule:
+    - cron: "17 5 * * *"
   workflow_dispatch:
 
 permissions: {}
@@ -19,7 +22,9 @@ env:
   GOWORK: "off"
   GOFLAGS: -mod=readonly
   GOLANGCI_LINT_VERSION: v2.15.0
+  GOVULNCHECK_VERSION: v1.9.0
   NODE_VERSION: "24"
+  SARIF_PUBLIABLE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
 jobs:
   changements:
@@ -33,6 +38,7 @@ jobs:
       go: ${{ steps.filtre.outputs.go }}
       web: ${{ steps.filtre.outputs.web }}
       outillage: ${{ steps.filtre.outputs.outillage }}
+      analyse: ${{ steps.filtre.outputs.analyse }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -69,6 +75,122 @@ jobs:
           mapfile -t scripts < <(git ls-files '*.sh' 'tools/git-hooks/*' | grep -v '^sandbox/')
           docker compose -f tools/ci/outils.yml run --rm shellcheck --severity=warning "${scripts[@]}"
 
+  secrets:
+    name: Secrets (gitleaks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write # publication des rapports SARIF dans l'onglet sécurité
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: gitleaks (diff de la PR, historique complet sinon)
+        env:
+          EVENEMENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          TETE: ${{ github.event.pull_request.head.sha }}
+        run: bash tools/ci/secrets.sh
+      - name: Publier le rapport SARIF (gitleaks)
+        if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: rapports/gitleaks.sarif
+          category: gitleaks
+      - name: Conserver les compteurs I6
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: i6-secrets
+          path: rapports/i6-*.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+  sast:
+    name: Analyse statique (Semgrep)
+    needs: changements
+    if: needs.changements.outputs.analyse == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write # publication des rapports SARIF dans l'onglet sécurité
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Semgrep (règles du projet, sévérité ERROR)
+        run: bash tools/ci/semgrep.sh
+      - name: Publier le rapport SARIF (Semgrep)
+        if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: rapports/semgrep.sarif
+          category: semgrep
+      - name: Conserver les compteurs I6
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: i6-sast
+          path: rapports/i6-*.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+  config:
+    name: Configuration et dépendances (Trivy)
+    needs: changements
+    if: needs.changements.outputs.analyse == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write # publication des rapports SARIF dans l'onglet sécurité
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restaurer la base Trivy
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/trivy
+          key: trivy-config-${{ github.run_id }}
+          restore-keys: trivy-
+      - name: Exceptions (.trivyignore datées, 30 jours au plus)
+        run: bash tools/ci/verifier-exceptions.sh
+      - name: Trivy config (infra/, Dockerfile, manifests, charts)
+        if: always()
+        run: bash tools/ci/trivy.sh config . config
+      - name: Trivy fs (verrou npm du front)
+        if: always()
+        run: |
+          if [[ -f web/package-lock.json ]]; then
+            bash tools/ci/trivy.sh fs web web
+          else
+            echo "Aucun verrou npm : analyse ignorée."
+          fi
+      - name: Publier le rapport SARIF (Trivy config)
+        if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/trivy-config.sarif') != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: rapports/trivy-config.sarif
+          category: trivy-config
+      - name: Publier le rapport SARIF (Trivy fs)
+        if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/trivy-web.sarif') != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: rapports/trivy-web.sarif
+          category: trivy-web
+      - name: Conserver les compteurs I6
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: i6-config
+          path: rapports/i6-*.json
+          retention-days: 90
+          if-no-files-found: ignore
+
   go:
     name: Go (${{ matrix.module }})
     needs: changements
@@ -77,6 +199,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      security-events: write # publication des rapports SARIF dans l'onglet sécurité
     strategy:
       fail-fast: false
       matrix:
@@ -121,15 +244,55 @@ jobs:
           path: ${{ matrix.module }}/couverture.out
           retention-days: 90
           if-no-files-found: ignore
+      - name: govulncheck (vulnérabilités atteignables)
+        if: always() && steps.nom.outcome == 'success'
+        working-directory: ${{ matrix.module }}
+        env:
+          NOM: ${{ steps.nom.outputs.nom }}
+        run: bash "${GITHUB_WORKSPACE}/tools/ci/govulncheck.sh" "${NOM}"
       - name: Construire l'image sans la pousser
+        id: image
         env:
           NOM: ${{ steps.nom.outputs.nom }}
         run: |
           if [[ -f "${MODULE}/Dockerfile" ]]; then
             docker build --file "${MODULE}/Dockerfile" --tag "collector/${NOM}:ci" .
+            echo "construite=true" >> "$GITHUB_OUTPUT"
           else
             echo "Aucun Dockerfile dans ${MODULE} : construction ignorée."
           fi
+      - name: Restaurer la base Trivy
+        if: steps.image.outputs.construite == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/trivy
+          key: trivy-${{ steps.nom.outputs.nom }}-${{ github.run_id }}
+          restore-keys: trivy-
+      - name: Trivy image (critique ou élevée corrigeable, secrets embarqués)
+        if: steps.image.outputs.construite == 'true'
+        env:
+          NOM: ${{ steps.nom.outputs.nom }}
+        run: bash tools/ci/trivy.sh image "collector/${NOM}:ci" "${NOM}"
+      - name: Publier le rapport SARIF (govulncheck)
+        if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles(format('rapports/govulncheck-{0}.sarif', steps.nom.outputs.nom)) != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: rapports/govulncheck-${{ steps.nom.outputs.nom }}.sarif
+          category: govulncheck-${{ steps.nom.outputs.nom }}
+      - name: Publier le rapport SARIF (Trivy image)
+        if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles(format('rapports/trivy-{0}.sarif', steps.nom.outputs.nom)) != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: rapports/trivy-${{ steps.nom.outputs.nom }}.sarif
+          category: trivy-image-${{ steps.nom.outputs.nom }}
+      - name: Conserver les compteurs I6
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: i6-go-${{ steps.nom.outputs.nom }}
+          path: rapports/i6-*.json
+          retention-days: 90
+          if-no-files-found: ignore
 
   web:
     name: Front (web)
@@ -168,9 +331,44 @@ jobs:
           retention-days: 90
           if-no-files-found: ignore
 
+  securite:
+    name: Compteurs de sécurité (I6)
+    needs: [secrets, sast, config, go]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: i6-*
+          path: i6
+          merge-multiple: true
+      - name: Agréger les compteurs (aucun identifiant de vulnérabilité publié)
+        run: |
+          shopt -s nullglob
+          fichiers=(i6/*.json)
+          if (( ${#fichiers[@]} == 0 )); then
+            echo '[]' > i6.json
+          else
+            jq -s '.' "${fichiers[@]}" > i6.json
+          fi
+          {
+            echo "### Sécurité (I6) : compteurs"
+            echo ""
+            echo "| Outil | Bloquants | Détail |"
+            echo "|---|---|---|"
+            jq -r '.[] | "| \(.outil) | \(.bloquants) | \(del(.outil, .bloquants) | tojson) |"' i6.json
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: i6
+          path: i6.json
+          retention-days: 90
+
   ci-ok:
     name: ci-ok
-    needs: [changements, outillage, go, web]
+    needs: [changements, outillage, secrets, sast, config, go, web]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5

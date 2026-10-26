@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E1 Chaîne de livraison |
-| Statut | À faire |
+| Statut | En cours |
 | Sprint | 1 (J4) |
 | Engagement | Ferme |
 | Estimation | 3 points |
@@ -80,3 +80,21 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 | Rapport de revue de code | |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |
+
+### Réalisation et preuves restantes
+
+Réalisé hors ligne le 2026-10-26, sur la branche de US-002, en attente de la publication du dépôt (US-001) : jobs `secrets`, `sast`, `config`, govulncheck et Trivy `image` dans le job Go, job `securite` (compteurs I6) et exécution quotidienne dans [ci.yml](../.github/workflows/ci.yml) ; scripts [secrets.sh](../tools/ci/secrets.sh), [govulncheck.sh](../tools/ci/govulncheck.sh), [semgrep.sh](../tools/ci/semgrep.sh), [trivy.sh](../tools/ci/trivy.sh), [verifier-exceptions.sh](../tools/ci/verifier-exceptions.sh) ; règles [Semgrep](../tools/ci/semgrep/regles.yml) et leurs cas d'essai ; [.trivyignore](../.trivyignore), [.semgrepignore](../.semgrepignore).
+
+Prouvé sur le poste, sur une copie du dépôt et des cas d'essai jetables (rien de vulnérable n'est versionné) :
+
+| AC | Preuve locale | Reste à prouver sur GitHub |
+|---|---|---|
+| AC1 | gitleaks : historique propre vert ; commit d'un jeton fictif rouge en mode PR (diff) ; `main` reste verte quand une autre branche contient le secret | Exécution PR et `main`, SARIF dans l'onglet sécurité |
+| AC2 | Module d'essai appelant `language.ParseAcceptLanguage` de `golang.org/x/text` v0.3.7 : 1 vulnérabilité atteignable, rouge ; version corrigée : vert | Exécution sur un service réel |
+| AC3 | Verrou npm d'essai (lodash 4.17.20) : 2 élevées corrigeables, rouge ; Dockerfile sans `USER` : rouge ; dépôt actuel : vert | Exécution sur `web/` et `infra/` réels ; chart rendu à vérifier avec US-007 |
+| AC4 | `semgrep --test` vert sur les cas d'essai ; `import "C"` et `dangerouslySetInnerHTML` (même avec `nosemgrep`) : 2 constats, rouge | Exécution en PR |
+| AC5 | Image d'essai `alpine:3.18.0` : 9 critiques ou élevées corrigeables, rouge | Exécution sur l'image d'un service |
+| AC6 | Exceptions complètes à 20 jours : porte verte ; mêmes exceptions échues : contrôle rouge et Trivy rouge ; champ manquant ou échéance > 30 jours : rouge | Démonstration en PR (exception valide puis échue) |
+| AC7 | Compteurs JSON produits par chaque porte ; SARIF générés | SARIF visibles dans l'onglet sécurité ; résumé et artefact `i6` du job `securite` |
+| AC8 | Composants prouvés un par un ci-dessus | Branche BP3 (dépendance vulnérable et secret fictif) : PR rouge et non fusionnable, `main` verte |
+

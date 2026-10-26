@@ -42,7 +42,11 @@ Ce que la CI attend d'un nouveau module :
 - **Service Go** : `services/<service>/go.mod` (nom en minuscules), construit avec `GOWORK=off` ; `Dockerfile` dans le même dossier, construit depuis la racine du dépôt (`docker build -f services/<service>/Dockerfile .`). Job : `go mod verify`, `go vet`, golangci-lint ([.golangci.yml](.golangci.yml)), `go test -race -cover` (couverture publiée, non bloquante au sprint 1), construction de l'image sans poussée.
 - **Front** : `web/package.json` et `web/package-lock.json` ; dépendances de développement `typescript`, `eslint` avec `eslint-plugin-react` et `eslint-plugin-jsx-a11y`, `vitest` et `@vitest/coverage-v8`. `react/no-danger` et les règles `jsx-a11y` doivent être actives en erreur, sinon le job échoue.
 
-Mêmes outils sur le poste : `docker compose -f tools/ci/outils.yml run --rm actionlint` (ou `zizmor --offline .github`, `shellcheck <script>`). Réglages du dépôt GitHub (protection de `main`, détection de secrets) : [tools/github/configurer-depot.sh](tools/github/configurer-depot.sh).
+**Portes de sécurité** (bloquantes, seuils de [devsecops.md](docs/processus/devsecops.md) § 3) : gitleaks (diff de la PR, historique complet sur `main`), govulncheck (vulnérabilité Go atteignable), Semgrep (règles du projet dans [tools/ci/semgrep/](tools/ci/semgrep/), sévérité ERROR), Trivy `fs` (verrou npm), `config` (infra, Dockerfile, manifests, charts) et `image` (critique ou élevée corrigeable, secret embarqué). La CI tourne aussi chaque jour sur `main`. Les journaux n'affichent que des compteurs ; le détail est publié en SARIF dans l'onglet sécurité, les compteurs I6 dans l'artefact `i6`.
+
+**Exceptions** : uniquement dans [.trivyignore](.trivyignore), une entrée précédée de ses champs (composant, justification, mesure compensatoire, validation, date de création) et d'une échéance `exp:` à 30 jours au plus ; `tools/ci/verifier-exceptions.sh` refuse une entrée incomplète ou échue. Aucune exception Semgrep en ligne (`nosemgrep` est ignoré).
+
+Mêmes outils sur le poste : `docker compose -f tools/ci/outils.yml run --rm actionlint` (ou `zizmor --offline .github`, `shellcheck <script>`) ; portes de sécurité : `bash tools/ci/semgrep.sh`, `bash tools/ci/trivy.sh config . config`, `bash tools/ci/verifier-exceptions.sh` (Docker et `jq` requis). Réglages du dépôt GitHub (protection de `main`, détection de secrets) : [tools/github/configurer-depot.sh](tools/github/configurer-depot.sh).
 
 ## Carte des documents
 

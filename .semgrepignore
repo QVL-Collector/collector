@@ -1,0 +1,10 @@
+# Chemins exclus de l'analyse Semgrep (tools/ci/semgrep.sh). Ce fichier remplace la liste par défaut de Semgrep.
+:include .gitignore
+.git/
+sandbox/
+docs/
+backlog/
+presentation/
+rapports/
+tools/ci/semgrep/
+node_modules/
