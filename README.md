@@ -18,6 +18,32 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 Principe déjà acté : rien ne tourne en continu. L'environnement est allumé pour un usage précis, puis éteint.
 Scripts prévus dans [tools/](tools/) : `up.sh`, `down.sh`, `status.sh`, `demo.sh`.
 
+## Contribuer : hook pre-commit et CI
+
+**Hook pre-commit gitleaks** (obligatoire, une fois par clone) : il refuse tout commit dont les changements indexés contiennent un secret.
+
+```bash
+git config core.hooksPath tools/git-hooks
+```
+
+Il utilise `gitleaks` s'il est installé, sinon l'image épinglée de [tools/ci/outils.yml](tools/ci/outils.yml) (Docker requis). Un faux positif se traite dans [.gitleaks.toml](.gitleaks.toml), jamais par `--no-verify`.
+
+**CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : sur chaque PR vers `main` et chaque poussée sur `main`. Processus et portes : [cicd.md](docs/processus/cicd.md). `ci-ok` est la seule vérification requise ; une PR qui ne touche que la documentation la rend verte sans autre job.
+
+| Chemin modifié | Jobs exécutés |
+|---|---|
+| `services/<service>/**` | Go pour ce service |
+| `libs/**`, `contracts/**`, `.github/**`, `tools/ci/**`, `.golangci.yml` | Go pour tous les modules (et front pour `contracts/` et l'outillage) |
+| `web/**` | Front |
+| `.github/**`, `tools/**`, `*.sh` | Workflows et scripts : actionlint, zizmor, shellcheck |
+
+Ce que la CI attend d'un nouveau module :
+
+- **Service Go** : `services/<service>/go.mod` (nom en minuscules), construit avec `GOWORK=off` ; `Dockerfile` dans le même dossier, construit depuis la racine du dépôt (`docker build -f services/<service>/Dockerfile .`). Job : `go mod verify`, `go vet`, golangci-lint ([.golangci.yml](.golangci.yml)), `go test -race -cover` (couverture publiée, non bloquante au sprint 1), construction de l'image sans poussée.
+- **Front** : `web/package.json` et `web/package-lock.json` ; dépendances de développement `typescript`, `eslint` avec `eslint-plugin-react` et `eslint-plugin-jsx-a11y`, `vitest` et `@vitest/coverage-v8`. `react/no-danger` et les règles `jsx-a11y` doivent être actives en erreur, sinon le job échoue.
+
+Mêmes outils sur le poste : `docker compose -f tools/ci/outils.yml run --rm actionlint` (ou `zizmor --offline .github`, `shellcheck <script>`). Réglages du dépôt GitHub (protection de `main`, détection de secrets) : [tools/github/configurer-depot.sh](tools/github/configurer-depot.sh).
+
 ## Carte des documents
 
 Les documents marqués « à venir » sont prévus mais pas encore rédigés.
@@ -79,7 +105,8 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 | [tests/charge/](tests/charge/) | Scénarios de test de charge | À venir |
 | [infra/](infra/) | IaC et déploiement (selon D03 et D11) | À venir |
 | [tools/](tools/) | `up.sh`, `down.sh`, `status.sh`, `demo.sh` | À venir |
-| Pipeline CI/CD | Emplacement selon la forge retenue (D10) | À venir |
+| [.github/workflows/ci.yml](.github/workflows/ci.yml) | Pipeline de PR et de `main`, vérification requise `ci-ok` (D10) | Disponible |
+| [tools/ci/](tools/ci/), [tools/git-hooks/](tools/git-hooks/), [tools/github/](tools/github/) | Filtre de chemins et outils de CI, hook pre-commit, réglages du dépôt GitHub | Disponible |
 
 ### Soutenance
 

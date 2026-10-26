@@ -1,0 +1,188 @@
+# Pipeline de PR et de main (D10, docs/processus/cicd.md).
+# Un seul workflow : les jobs concernés sont choisis par le job « changements » ; « ci-ok » est la vérification requise unique.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GOWORK: "off"
+  GOFLAGS: -mod=readonly
+  GOLANGCI_LINT_VERSION: v2.15.0
+  NODE_VERSION: "24"
+
+jobs:
+  changements:
+    name: Changements
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      modules_go: ${{ steps.filtre.outputs.modules_go }}
+      go: ${{ steps.filtre.outputs.go }}
+      web: ${{ steps.filtre.outputs.web }}
+      outillage: ${{ steps.filtre.outputs.outillage }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Filtrer les chemins modifiés
+        id: filtre
+        env:
+          EVENEMENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          TETE: ${{ github.event.pull_request.head.sha }}
+        run: bash tools/ci/changements.sh
+
+  outillage:
+    name: Workflows et scripts
+    needs: changements
+    if: needs.changements.outputs.outillage == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint
+        run: docker compose -f tools/ci/outils.yml run --rm actionlint -color
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: docker compose -f tools/ci/outils.yml run --rm zizmor --persona=regular --format=github .github/workflows
+      - name: shellcheck
+        run: |
+          mapfile -t scripts < <(git ls-files '*.sh' 'tools/git-hooks/*' | grep -v '^sandbox/')
+          docker compose -f tools/ci/outils.yml run --rm shellcheck --severity=warning "${scripts[@]}"
+
+  go:
+    name: Go (${{ matrix.module }})
+    needs: changements
+    if: needs.changements.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.changements.outputs.modules_go) }}
+    env:
+      MODULE: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.*
+      - name: Nommer le module
+        id: nom
+        run: echo "nom=${MODULE//\//-}" >> "$GITHUB_OUTPUT"
+      - name: Vérifier les dépendances
+        working-directory: ${{ matrix.module }}
+        run: go mod verify
+      - name: go vet
+        working-directory: ${{ matrix.module }}
+        run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: ${{ matrix.module }}
+          args: --config=${{ github.workspace }}/.golangci.yml
+      - name: Tests unitaires (race, couverture)
+        working-directory: ${{ matrix.module }}
+        run: go test -race -covermode=atomic -coverprofile=couverture.out ./...
+      - name: Publier la couverture (non bloquante au sprint 1)
+        working-directory: ${{ matrix.module }}
+        run: |
+          total="$(go tool cover -func=couverture.out | awk '/^total:/ {print $NF}')"
+          echo "Couverture ${MODULE} : ${total:-non mesurée}"
+          printf '### Couverture\n\n| Module | Couverture |\n|---|---|\n| %s | %s |\n' "${MODULE}" "${total:-non mesurée}" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: couverture-${{ steps.nom.outputs.nom }}
+          path: ${{ matrix.module }}/couverture.out
+          retention-days: 90
+          if-no-files-found: ignore
+      - name: Construire l'image sans la pousser
+        env:
+          NOM: ${{ steps.nom.outputs.nom }}
+        run: |
+          if [[ -f "${MODULE}/Dockerfile" ]]; then
+            docker build --file "${MODULE}/Dockerfile" --tag "collector/${NOM}:ci" .
+          else
+            echo "Aucun Dockerfile dans ${MODULE} : construction ignorée."
+          fi
+
+  web:
+    name: Front (web)
+    needs: changements
+    if: needs.changements.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Installer les dépendances (verrou, sans script)
+        run: npm ci --ignore-scripts
+      - name: Types (tsc --noEmit)
+        run: npx --no-install tsc --noEmit
+      - name: Règles ESLint obligatoires (jsx-a11y, react/no-danger)
+        run: bash ../tools/ci/verifier-eslint.sh
+      - name: ESLint
+        run: npx --no-install eslint . --max-warnings=0
+      - name: Tests unitaires (Vitest, couverture)
+        run: npx --no-install vitest run --coverage.enabled --coverage.reporter=text-summary --coverage.reporter=json-summary
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: couverture-web
+          path: web/coverage/coverage-summary.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+  ci-ok:
+    name: ci-ok
+    needs: [changements, outillage, go, web]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Agréger les résultats
+        env:
+          RESULTATS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTATS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"' > resultats.txt
+          cat resultats.txt
+          if grep -Ev ' (success|skipped)$' resultats.txt; then
+            echo "::error::au moins un job requis est en échec ou annulé"
+            exit 1
+          fi
