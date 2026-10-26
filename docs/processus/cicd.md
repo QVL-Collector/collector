@@ -152,11 +152,11 @@ Le cluster n'existe que pendant une session du Learner Lab (environ 4 h) ; il es
 | Sécurité dynamique (ZAP baseline) | Fin de sprint | Non (registre des écarts) |
 | Charge | Hors pipeline, en soutenance (M16) | — |
 
-Au moins deux types automatisés et bloquants dans le pipeline (unitaires, intégration, acceptation) : M14 et C7. Périmètre exact, sorties attendues et parties prenantes : [tests.md](tests.md), à venir avec D13.
+Au moins deux types automatisés et bloquants dans le pipeline (unitaires, intégration, acceptation) : M14 et C7. Périmètre exact, sorties attendues et parties prenantes : [tests.md](tests.md).
 
 ## 8. Lien avec les indicateurs
 
-Chaque exécution produit des mesures exploitables par D12 : couverture par service, résultats de lint, vulnérabilités ouvertes par sévérité, durée du pipeline, taux de réussite des PR. Couverture publiée dès le sprint 1 sans porte ; seuil bloquant fixé au sprint 2 sur la mesure réelle, en « pas de baisse » par service. Rapports SARIF publiés dans la forge, artefacts conservés 90 jours, relevé copié dans `docs/mesures/` en fin de sprint. Définition et cibles des indicateurs : [qualite-indicateurs.md](qualite-indicateurs.md), à venir avec D12.
+Chaque exécution produit des mesures exploitables par D12 : couverture par service, résultats de lint, vulnérabilités ouvertes par sévérité, durée du pipeline, taux de réussite des PR. Couverture publiée dès le sprint 1 sans porte ; seuil bloquant fixé au sprint 2 sur la mesure réelle, en « pas de baisse » par service. Rapports SARIF publiés dans la forge, artefacts conservés 90 jours, relevé copié dans `docs/mesures/` en fin de sprint. Définition et cibles des indicateurs : [qualite-indicateurs.md](qualite-indicateurs.md).
 
 ## 9. Points ouverts
 
