@@ -45,6 +45,7 @@ Files quorum. Politique de chaque file de travail : `delivery-limit` **4**, soit
 ## Contrat pour les services
 
 - Secret `canal-amqp`, clé `AMQP_URL` (`amqp://<identité>:<mot de passe>@rabbitmq.canal.svc:5672/collector`), dans le namespace du service : `place-de-marche`, `controle`, `interactions`.
+- Secret `canal-supervision`, clé `host` (`http://keda:<mot de passe>@rabbitmq.canal.svc:15672/collector`, API de gestion), dans le namespace `controle` : lu par la `TriggerAuthentication` du scaler KEDA (US-026). L'identité `keda` (tag `monitoring`, droits vides) lit l'inventaire des files ; 15672 reste fermé aux pods de `controle`, ouvert au seul `keda-operator`.
 - Aucune déclaration ni liaison (refus 403) : `Publish` et `Consume` sur la topologie existante seulement. La déclaration passive reste permise (elle ne crée rien, constaté sur 4.3.7).
 - Propriété `user-id` égale à l'identité connectée sur chaque publication (MC2) ; le broker refuse un `user-id` usurpé (406).
 - Consommation par `basic.consume`, jamais `basic.get` : le compteur de livraisons des files quorum n'avance pas avec `basic.get`.
@@ -79,6 +80,6 @@ Restent valables : `broker/`, `outils/identifiants.sh`, la sonde, `compose.yml`.
 
 ## Vérifications du 2026-10-26 (poste)
 
-- docker compose : `verifier.sh local` 62/62 (AC2, AC4, AC5, MC1, MC4, MC8 avec 5 livraisons, AC6).
-- k3d (k3s 1.35.5, un nœud, PSS `restricted`) : `kubernetes.sh up` en 53 s ; `verifier.sh kubernetes` 75/75 (plus AC7 : 5672 seul ouvert depuis `place-de-marche`, tout fermé depuis un namespace intrus, Services `ClusterIP` seuls ; AC6 : aucun secret dans le dépôt, le manifeste et les valeurs Helm, le journal du broker).
+- docker compose : `verifier.sh local` 64/64 (AC2, AC4, AC5, MC1, MC4, MC8 avec 5 livraisons, AC6).
+- k3d (k3s 1.35.5, un nœud, PSS `restricted`) : `kubernetes.sh up` en 53 s ; `verifier.sh kubernetes` 79/79 (plus AC7 : 5672 seul ouvert depuis `place-de-marche`, tout fermé depuis un namespace intrus, Services `ClusterIP` seuls ; AC6 : aucun secret dans le dépôt, le manifeste et les valeurs Helm, le journal du broker).
 - `helm lint`, `kubeconform -strict` (9/9), `kubectl apply --dry-run=server`, shellcheck 0.11.0 sans remarque, Trivy `config` : 7 constats LOW, aucun HIGH ni CRITICAL.

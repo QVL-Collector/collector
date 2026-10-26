@@ -7,8 +7,6 @@ services:
   rabbitmq:
     image: "${RABBITMQ_IMAGE:?image non chargee, passer par outils/local.sh}"
     hostname: rabbitmq
-    # Cookie copie a l'emplacement attendu avec des droits stricts, puis l'entrypoint officiel
-    # reprend la main (passage a l'utilisateur rabbitmq).
     entrypoint:
       - /bin/sh
       - -c
