@@ -1,0 +1,12 @@
+# Exceptions aux portes Trivy (dépendances, images, configuration en code).
+# Règles : docs/processus/devsecops.md § 3 ; format contrôlé par tools/ci/verifier-exceptions.sh.
+# Une entrée = ses champs en commentaire, sans ligne vide, puis « <identifiant> exp:AAAA-MM-JJ » (30 jours au plus).
+# Validation : fonction Sécurité, puis Martin. Une exception échue refait échouer la CI.
+#
+# Exemple (non actif) :
+#   # composant: services/catalogue (image)
+#   # justification: pas de correctif publié ; composant non atteint par le service
+#   # mesure: politique réseau en refus par défaut, aucun appel sortant
+#   # validation: Sécurité 2026-11-04, Martin 2026-11-04
+#   # creee: 2026-11-04
+#   CVE-2026-0000 exp:2026-12-04

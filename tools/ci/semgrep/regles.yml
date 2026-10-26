@@ -1,0 +1,26 @@
+# Règles Semgrep du projet (D04, D10, ES-05, ES-08). Toutes en ERROR : bloquantes en CI.
+# Cas d'essai : regles.go et regles.tsx, à côté de ce fichier, vérifiés par semgrep --test avant l'analyse.
+rules:
+  - id: go-cgo-interdit
+    languages: [go]
+    severity: ERROR
+    message: cgo est interdit (D04) ; les services se construisent avec CGO_ENABLED=0, sans import "C".
+    pattern: import "C"
+
+  - id: go-regex-retour-arriere-interdite
+    languages: [go]
+    severity: ERROR
+    message: moteur de regex à retour arrière interdit (D04, déni de service) ; utiliser regexp de la bibliothèque standard.
+    pattern-regex: '"github\.com/dlclark/regexp2(/v\d+)?"'
+
+  - id: go-verification-contournee
+    languages: [go]
+    severity: ERROR
+    message: option de contournement de la vérification des jetons ou de TLS interdite (D04, MA4) ; la vérification passe par libs/platform.
+    pattern-regex: '\b(SkipClientIDCheck|SkipExpiryCheck|SkipIssuerCheck|InsecureSkipSignatureCheck|InsecureSkipVerify)\s*:\s*true\b'
+
+  - id: ts-dangerously-set-inner-html
+    languages: [typescript]
+    severity: ERROR
+    message: dangerouslySetInnerHTML est interdit (D04, ES-08) ; rendre le texte par React, jamais du HTML brut.
+    pattern-regex: '\bdangerouslySetInnerHTML\b'
