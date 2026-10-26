@@ -1,0 +1,86 @@
+# Service de test verifiant le jeton (Envoy, port interne 8081) dans pdm-test, et pod appelant
+# (equivalent de Transactions) dans transactions-test. ENVOY_IMAGE et CURL_IMAGE remplaces par k3d.sh ;
+# ConfigMap "verificateur-envoy" rendue depuis verificateur/envoy.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: verificateur
+  namespace: pdm-test
+  labels: { app: verificateur, app.kubernetes.io/part-of: xp03 }
+spec:
+  type: ClusterIP
+  selector: { app: verificateur }
+  ports:
+    - { name: interne, port: 8081, targetPort: 8081 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verificateur
+  namespace: pdm-test
+  labels: { app: verificateur, app.kubernetes.io/part-of: xp03 }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: verificateur }
+  template:
+    metadata:
+      labels: { app: verificateur, app.kubernetes.io/part-of: xp03 }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: envoy
+          image: ENVOY_IMAGE
+          args: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "warn"]
+          ports:
+            - { containerPort: 8081 }
+          readinessProbe:
+            tcpSocket: { port: 8081 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: config, mountPath: /etc/envoy, readOnly: true }
+      volumes:
+        - name: config
+          configMap: { name: verificateur-envoy }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appelant
+  namespace: transactions-test
+  labels: { app: appelant, app.kubernetes.io/part-of: xp03 }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: appelant }
+  template:
+    metadata:
+      labels: { app: appelant, app.kubernetes.io/part-of: xp03 }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: curl
+          image: CURL_IMAGE
+          command: ["sleep", "86400"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }

@@ -1,0 +1,25 @@
+# Namespaces de XP03 sur k3d (et EKS). pdm-test, transactions-test et ns-intrus sont partages avec
+# XP01 : "apply" est idempotent ; k3d.sh down ne supprime que identite-test et les objets de XP03.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: identite-test
+  labels:
+    app.kubernetes.io/part-of: xp03
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pdm-test
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: transactions-test
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns-intrus

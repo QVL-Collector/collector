@@ -1,0 +1,71 @@
+# MC3 / XC7 / XC9 (reseau) : politiques du broker.
+#   5672  : depuis les namespaces des services de test seulement ;
+#   15672 : depuis l'operateur KEDA seul (console : kubectl port-forward depuis le poste) ;
+#   15692 : ferme ici (collecte de D09 absente du bac a sable) ;
+#   4369, 25672 : fermes a tout pod ; aucune sortie hors DNS.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: refus-par-defaut
+  namespace: collector-canal
+  labels: { app.kubernetes.io/part-of: xp02 }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-amqp-services
+  namespace: collector-canal
+  labels: { app.kubernetes.io/part-of: xp02 }
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: [pdm-test, controle-test, interactions-test, lecture-test]
+      ports:
+        - { protocol: TCP, port: 5672 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-gestion-keda
+  namespace: collector-canal
+  labels: { app.kubernetes.io/part-of: xp02 }
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: keda }
+          podSelector:
+            matchLabels: { app: keda-operator }
+      ports:
+        - { protocol: TCP, port: 15672 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-sortie-dns
+  namespace: collector-canal
+  labels: { app.kubernetes.io/part-of: xp02 }
+spec:
+  podSelector:
+    matchLabels: { app: rabbitmq }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }

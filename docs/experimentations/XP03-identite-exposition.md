@@ -52,13 +52,13 @@ XE5 (limitation de débit) est reportée en AC du sprint 1 (option B de D14), bl
 
 | Élément | Version | État |
 |---|---|---|
-| Keycloak (image officielle, construite en mode optimisé) | à fixer avant exécution, par empreinte | À fixer |
+| Keycloak (image officielle, construite en mode optimisé) | 26.8.1 : `quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b`, image optimisée construite par `sandbox/XP03-identite-exposition/keycloak/Dockerfile` | Fixée |
 | Registre de l'image optimisée | GHCR privé (D10) ou dépôt ECR de bac à sable supprimé en fin de session | À fixer |
-| PostgreSQL local / RDS | 18.3 (XP00 S10) ; image locale `postgres:18.3` épinglée par empreinte | Fixée |
-| Caddy (proxy local) | à fixer avant exécution | À fixer |
+| PostgreSQL local / RDS | 18.3 (XP00 S10) ; image locale `postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db` | Fixée |
+| Caddy (proxy local) | 2.11.7 : `caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f` | Fixée |
 | Provider Terraform AWS | celui de XP01 ; vérifier qu'il expose les attributs d'en-têtes de réponse de l'écouteur (HSTS) | À vérifier |
-| Outil d'analyse TLS | image `testssl.sh` épinglée par empreinte | À fixer |
-| OpenSSL, curl | curl 8.17.0 ; OpenSSL de Git Bash à relever | À relever |
+| Outil d'analyse TLS | `drwetter/testssl.sh:3.2@sha256:e855bd0bd9808f2d3f809a190bbedda3422329bdfc9f0c117822bf5f0a2b3474` | Fixée |
+| OpenSSL, curl | curl 8.17.0 (Schannel) ; OpenSSL 3.5.4 (Git Bash) | Relevée |
 | EKS, kubectl, Helm, k3d | voir [XP01](XP01-orchestrateur.md) | Communes |
 
 ## Technos et interactions

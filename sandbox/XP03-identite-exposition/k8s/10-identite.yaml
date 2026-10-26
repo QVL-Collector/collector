@@ -1,0 +1,145 @@
+# PostgreSQL 18.3 (base neuve a chaque pod, emptyDir) et Keycloak optimise, namespace identite-test.
+# Secrets "keycloak-session" et ConfigMap "keycloak-realm" crees par k3d.sh (jamais versionnes / depuis realm/).
+# KEYCLOAK_IMAGE, POSTGRES_IMAGE et URL_AUTH sont remplaces par k3d.sh.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: identite-test
+  labels: { app: postgres, app.kubernetes.io/part-of: xp03 }
+spec:
+  selector: { app: postgres }
+  ports:
+    - { name: postgres, port: 5432, targetPort: 5432 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: identite-test
+  labels: { app: postgres, app.kubernetes.io/part-of: xp03 }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres, app.kubernetes.io/part-of: xp03 }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: POSTGRES_IMAGE
+          env:
+            - { name: POSTGRES_DB, value: keycloak }
+            - { name: POSTGRES_USER, value: keycloak }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: keycloak-session, key: MDP_POSTGRES } }
+            - { name: PGDATA, value: /var/lib/postgresql/donnees }
+          ports:
+            - { containerPort: 5432 }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "keycloak", "-d", "keycloak"] }
+            periodSeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: donnees, mountPath: /var/lib/postgresql }
+            - { name: run, mountPath: /var/run/postgresql }
+      volumes:
+        - name: donnees
+          emptyDir: { sizeLimit: 1Gi }
+        - name: run
+          emptyDir: { sizeLimit: 16Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: identite-test
+  labels: { app: keycloak, app.kubernetes.io/part-of: xp03 }
+spec:
+  type: ClusterIP
+  selector: { app: keycloak }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
+    - { name: gestion, port: 9000, targetPort: 9000 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: identite-test
+  labels: { app: keycloak, app.kubernetes.io/part-of: xp03 }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: keycloak }
+  template:
+    metadata:
+      labels: { app: keycloak, app.kubernetes.io/part-of: xp03 }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 0
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: keycloak
+          image: KEYCLOAK_IMAGE
+          imagePullPolicy: IfNotPresent
+          args: ["start", "--optimized", "--import-realm"]
+          env:
+            - { name: KC_DB_URL, value: "jdbc:postgresql://postgres:5432/keycloak" }
+            - { name: KC_DB_USERNAME, value: keycloak }
+            - name: KC_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: keycloak-session, key: MDP_POSTGRES } }
+            - { name: KC_HOSTNAME, value: "URL_AUTH" }
+            - { name: KC_HTTP_ENABLED, value: "true" }
+            - { name: KC_PROXY_HEADERS, value: xforwarded }
+            - { name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin-temporaire }
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: keycloak-session, key: MDP_KC_BOOTSTRAP } }
+            - { name: JAVA_OPTS_KC_HEAP, value: "-XX:MaxRAMPercentage=70" }
+          envFrom:
+            # Emplacements ${...} du realm : URL_FRONT, SECRET_*, MDP_ACHETEUR, MDP_VENDEUR, MDP_ADMIN_TEST, GRAINE_OTP.
+            - secretRef: { name: keycloak-realm-valeurs }
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: gestion, containerPort: 9000 }
+          startupProbe:
+            httpGet: { path: /health/started, port: 9000 }
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 9000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: 9000 }
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 500m, memory: 768Mi }
+            limits: { memory: 1280Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: realm, mountPath: /opt/keycloak/data/import/collector-realm.json, subPath: collector-realm.json, readOnly: true }
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm

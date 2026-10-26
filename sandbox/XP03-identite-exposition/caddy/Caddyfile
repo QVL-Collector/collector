@@ -1,0 +1,53 @@
+# Proxy local de XP03 : equivalent des regles d'ALB (MA7, XE4 + ME8). Autorite locale (tls internal),
+# pas de HSTS en local (protocole XP03, Environnement).
+{
+	admin off
+	auto_https disable_redirects
+	servers {
+		protocols h1 h2
+	}
+}
+
+# Port 80 : redirection 301 vers HTTPS pour les deux noms, 404 pour tout autre hote.
+http:// {
+	@connus host {$HOTE_FRONT} {$HOTE_AUTH}
+	redir @connus https://{host}{uri} 301
+	respond 404
+}
+
+{$HOTE_AUTH} {
+	tls internal
+
+	# URI brute (telle que recue, avant decodage et normalisation) dont le chemin contient une
+	# traversee, un encodage de "." ou de "/", ou une barre oblique inverse : 404 avant toute
+	# correspondance (ME8). La chaine de requete n'est pas examinee (redirect_uri encode).
+	@suspect expression `{http.request.uri}.matches("(?i)^[^?]*([.][.]|%2e|%2f|%5c|[\\\\])")`
+	respond @suspect 404
+
+	# Liste blanche de l'avis securite de D06 (point 4) ; tout le reste : 404.
+	@autorise path /realms/collector/protocol/openid-connect/* /realms/collector/login-actions/* /resources/* /realms/collector/.well-known/openid-configuration
+	handle @autorise {
+		reverse_proxy {$AMONT_KEYCLOAK} {
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Port 443
+		}
+	}
+	handle {
+		respond 404
+	}
+}
+
+{$HOTE_FRONT} {
+	tls internal
+	# Front de test : "reserver" n'est jamais route (port interne du service de test).
+	handle /rappel {
+		respond "Collector XP03 : rappel OIDC" 200
+	}
+	handle / {
+		respond "Collector XP03" 200
+	}
+	handle {
+		respond 404
+	}
+}

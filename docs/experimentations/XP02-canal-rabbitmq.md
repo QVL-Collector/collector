@@ -49,12 +49,12 @@ Vhost `collector` ; files quorum, `x-delivery-limit` 5, échange de mise à l'é
 
 | Élément | Version | État |
 |---|---|---|
-| Image RabbitMQ `4.x-management` | à fixer avant exécution, par empreinte | À fixer |
-| KEDA (chart) | à fixer avant exécution | À fixer |
-| Docker / docker compose | 28.5.1 / à relever | À relever |
+| Image RabbitMQ `4.x-management` | 4.3.7 : `rabbitmq:4.3.7-management@sha256:79fb281ef7e0a15e3c5e0e12e66e944cebbf14a129493ef464369abd2c48d01a` | Fixée |
+| KEDA (chart) | chart `kedacore/keda` 2.21.0 (KEDA 2.21.0) | Fixée |
+| Docker / docker compose | 28.5.1 / v2.40.2 | Relevée |
 | k3d, image k3s, EKS, kubectl, Helm | voir [XP01](XP01-orchestrateur.md) | Communes |
 | Producteur et consommateur de test | image du bac à sable, épinglée par empreinte | À fixer |
-| Outil de vague (XC8) | candidat : PerfTest de RabbitMQ, épinglé | À fixer |
+| Outil de vague (XC8) | PerfTest 2.25.0 : `pivotalrabbitmq/perf-test:2.25.0@sha256:b803911d60fdf6885fc6313f0d56a0c2c743bfdd27ac118f5e4b320c36c7b8c9` | Fixée |
 
 ## Technos et interactions
 

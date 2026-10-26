@@ -1,0 +1,259 @@
+{
+  "realm": "collector",
+  "displayName": "Collector (XP03)",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordBlacklist(mots-de-passe-interdits.txt)",
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "browserFlow": "navigateur-collector",
+  "roles": {
+    "realm": [
+      { "name": "acheteur", "description": "Role par defaut des comptes" },
+      { "name": "vendeur", "description": "Vendeur" },
+      { "name": "moderation", "description": "Moderation" },
+      { "name": "administration", "description": "Administration applicative" },
+      { "name": "admin", "description": "Composite moderation + administration (ES-20)", "composite": true,
+        "composites": { "realm": ["moderation", "administration"] } },
+      { "name": "default-roles-collector", "description": "Roles par defaut : acheteur (D06)", "composite": true,
+        "composites": { "realm": ["acheteur"] } }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-collector",
+    "composite": true,
+    "composites": { "realm": ["acheteur"] }
+  },
+  "clientScopes": [
+    {
+      "name": "basic",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        { "name": "sub", "protocol": "openid-connect", "protocolMapper": "oidc-sub-mapper",
+          "config": { "access.token.claim": "true", "introspection.token.claim": "true" } },
+        { "name": "auth_time", "protocol": "openid-connect", "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "config": { "user.session.note": "AUTH_TIME", "claim.name": "auth_time", "jsonType.label": "long",
+                      "id.token.claim": "true", "access.token.claim": "true", "introspection.token.claim": "true" } }
+      ]
+    },
+    {
+      "name": "roles",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        { "name": "roles du realm", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": { "claim.name": "realm_access.roles", "multivalued": "true", "jsonType.label": "String",
+                      "access.token.claim": "true", "introspection.token.claim": "true" } }
+      ]
+    },
+    {
+      "name": "audiences-collector",
+      "description": "Audiences du jeton d'utilisateur (D06 : un audience mapper par service)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        { "name": "aud place-de-marche", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "place-de-marche", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" } },
+        { "name": "aud transactions", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "transactions", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" } },
+        { "name": "aud interactions", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "interactions", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" } }
+      ]
+    },
+    {
+      "name": "reserver",
+      "description": "Droit d'appeler reserver de la Place de marche (client transactions seul, MA3)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        { "name": "aud place-de-marche", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "place-de-marche", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" } }
+      ]
+    },
+    {
+      "name": "aud-place-de-marche",
+      "description": "Test K3 : audience place-de-marche sans la portee reserver (client xp03-autre)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        { "name": "aud place-de-marche", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "place-de-marche", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" } }
+      ]
+    },
+    {
+      "name": "aud-interactions",
+      "description": "Test K3 : autre audience (client xp03-autre)",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        { "name": "aud interactions", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.custom.audience": "interactions", "access.token.claim": "true", "id.token.claim": "false", "introspection.token.claim": "true" } }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": ["basic"],
+  "defaultOptionalClientScopes": [],
+  "clients": [
+    {
+      "clientId": "collector-web",
+      "name": "Front Collector (SPA)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "fullScopeAllowed": false,
+      "redirectUris": ["${URL_FRONT}/rappel"],
+      "webOrigins": ["${URL_FRONT}"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${URL_FRONT}/",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "use.refresh.tokens": "true"
+      },
+      "defaultClientScopes": ["basic", "roles", "audiences-collector"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "transactions",
+      "name": "Service Transactions (client credentials)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${SECRET_TRANSACTIONS}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "use.refresh.tokens": "false",
+        "client_credentials.use_refresh_token": "false"
+      },
+      "defaultClientScopes": ["basic", "reserver"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "xp03-autre",
+      "name": "Client confidentiel de test K3 (sans reserver)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${SECRET_AUTRE}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "use.refresh.tokens": "false"
+      },
+      "defaultClientScopes": ["basic"],
+      "optionalClientScopes": ["aud-place-de-marche", "aud-interactions"]
+    }
+  ],
+  "scopeMappings": [
+    { "client": "collector-web", "roles": ["acheteur", "vendeur", "moderation", "administration", "admin"] }
+  ],
+  "users": [
+    {
+      "username": "acheteur-test", "enabled": true, "emailVerified": true,
+      "email": "acheteur-test@collector.invalid", "firstName": "Acheteur", "lastName": "Test",
+      "realmRoles": ["default-roles-collector"],
+      "credentials": [ { "type": "password", "value": "${MDP_ACHETEUR}", "temporary": false } ]
+    },
+    {
+      "username": "vendeur-test", "enabled": true, "emailVerified": true,
+      "email": "vendeur-test@collector.invalid", "firstName": "Vendeur", "lastName": "Test",
+      "realmRoles": ["default-roles-collector", "vendeur"],
+      "credentials": [ { "type": "password", "value": "${MDP_VENDEUR}", "temporary": false } ]
+    },
+    {
+      "username": "admin-test", "enabled": true, "emailVerified": true,
+      "email": "admin-test@collector.invalid", "firstName": "Admin", "lastName": "Test",
+      "realmRoles": ["default-roles-collector", "admin"],
+      "credentials": [
+        { "type": "password", "value": "${MDP_ADMIN_TEST}", "temporary": false },
+        { "type": "otp", "userLabel": "xp03",
+          "secretData": "{\"value\":\"${GRAINE_OTP}\"}",
+          "credentialData": "{\"subType\":\"totp\",\"digits\":6,\"counter\":0,\"period\":30,\"algorithm\":\"HmacSHA1\"}" }
+      ]
+    },
+    {
+      "username": "service-account-transactions", "enabled": true, "serviceAccountClientId": "transactions",
+      "realmRoles": []
+    },
+    {
+      "username": "service-account-xp03-autre", "enabled": true, "serviceAccountClientId": "xp03-autre",
+      "realmRoles": []
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "navigateur-collector",
+      "description": "Navigateur : cookie, sinon formulaire puis OTP conditionnel au role admin (MA12)",
+      "providerId": "basic-flow", "topLevel": true, "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-cookie", "requirement": "ALTERNATIVE", "priority": 10, "authenticatorFlow": false, "userSetupAllowed": false },
+        { "requirement": "ALTERNATIVE", "priority": 20, "authenticatorFlow": true, "flowAlias": "navigateur-collector formulaires", "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "navigateur-collector formulaires",
+      "description": "Identifiant et mot de passe, puis OTP si admin",
+      "providerId": "basic-flow", "topLevel": false, "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-username-password-form", "requirement": "REQUIRED", "priority": 10, "authenticatorFlow": false, "userSetupAllowed": false },
+        { "requirement": "CONDITIONAL", "priority": 20, "authenticatorFlow": true, "flowAlias": "navigateur-collector otp admin", "userSetupAllowed": false }
+      ]
+    },
+    {
+      "alias": "navigateur-collector otp admin",
+      "description": "OTP impose au seul role admin (ES-10)",
+      "providerId": "basic-flow", "topLevel": false, "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "conditional-user-role", "authenticatorConfig": "role-admin", "requirement": "REQUIRED", "priority": 10, "authenticatorFlow": false, "userSetupAllowed": false },
+        { "authenticator": "auth-otp-form", "requirement": "REQUIRED", "priority": 20, "authenticatorFlow": false, "userSetupAllowed": false }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    { "alias": "role-admin", "config": { "condUserRole": "admin", "negate": "false" } }
+  ]
+}

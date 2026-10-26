@@ -1,0 +1,54 @@
+{
+  "vhosts": [
+    { "name": "collector", "metadata": { "description": "Canal Collector (D05)", "tags": [] } }
+  ],
+  "permissions": [
+    { "user": "svc-pdm",          "vhost": "collector", "configure": "", "write": "^(controle[.]demandes|pdm[.]evenements)$", "read": "^pdm[.]resultats-controle$" },
+    { "user": "svc-controle",     "vhost": "collector", "configure": "", "write": "^controle[.]resultats$",                   "read": "^controle[.]demandes$" },
+    { "user": "svc-interactions", "vhost": "collector", "configure": "", "write": "",                                          "read": "^interactions[.]publication-decidee$" },
+    { "user": "svc-test",         "vhost": "collector", "configure": "", "write": "",                                          "read": "^test[.]publication-decidee$" },
+    { "user": "keda-monitoring",  "vhost": "collector", "configure": "", "write": "",                                          "read": "" },
+    { "user": "admin-canal",      "vhost": "collector", "configure": ".*", "write": ".*",                                      "read": ".*" }
+  ],
+  "topic_permissions": [
+    { "user": "svc-pdm", "vhost": "collector", "exchange": "pdm.evenements", "write": "^publication[.]decidee[.]v1$", "read": "^$" }
+  ],
+  "exchanges": [
+    { "name": "controle.demandes",  "vhost": "collector", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "controle.resultats", "vhost": "collector", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "pdm.evenements",     "vhost": "collector", "type": "topic",  "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "collector.ecartes",  "vhost": "collector", "type": "direct", "durable": true, "auto_delete": false, "internal": true,  "arguments": {} }
+  ],
+  "queues": [
+    { "name": "controle.demandes",                        "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    { "name": "pdm.resultats-controle",                   "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    { "name": "interactions.publication-decidee",         "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    { "name": "test.publication-decidee",                 "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    { "name": "controle.demandes.ecartes",                "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    { "name": "pdm.resultats-controle.ecartes",           "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    { "name": "interactions.publication-decidee.ecartes", "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
+    { "name": "test.publication-decidee.ecartes",         "vhost": "collector", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } }
+  ],
+  "bindings": [
+    { "source": "controle.demandes",  "vhost": "collector", "destination": "controle.demandes",                "destination_type": "queue", "routing_key": "v1",                     "arguments": {} },
+    { "source": "controle.resultats", "vhost": "collector", "destination": "pdm.resultats-controle",           "destination_type": "queue", "routing_key": "v1",                     "arguments": {} },
+    { "source": "pdm.evenements",     "vhost": "collector", "destination": "interactions.publication-decidee", "destination_type": "queue", "routing_key": "publication.decidee.v1", "arguments": {} },
+    { "source": "pdm.evenements",     "vhost": "collector", "destination": "test.publication-decidee",         "destination_type": "queue", "routing_key": "publication.decidee.v1", "arguments": {} },
+    { "source": "collector.ecartes",  "vhost": "collector", "destination": "controle.demandes.ecartes",                "destination_type": "queue", "routing_key": "controle.demandes",                "arguments": {} },
+    { "source": "collector.ecartes",  "vhost": "collector", "destination": "pdm.resultats-controle.ecartes",           "destination_type": "queue", "routing_key": "pdm.resultats-controle",           "arguments": {} },
+    { "source": "collector.ecartes",  "vhost": "collector", "destination": "interactions.publication-decidee.ecartes", "destination_type": "queue", "routing_key": "interactions.publication-decidee", "arguments": {} },
+    { "source": "collector.ecartes",  "vhost": "collector", "destination": "test.publication-decidee.ecartes",         "destination_type": "queue", "routing_key": "test.publication-decidee",         "arguments": {} }
+  ],
+  "policies": [
+    { "vhost": "collector", "name": "travail-controle-demandes", "pattern": "^controle[.]demandes$", "apply-to": "quorum_queues", "priority": 10,
+      "definition": { "delivery-limit": 5, "dead-letter-exchange": "collector.ecartes", "dead-letter-routing-key": "controle.demandes", "dead-letter-strategy": "at-least-once", "overflow": "reject-publish", "max-length": 10000, "message-ttl": 86400000 } },
+    { "vhost": "collector", "name": "travail-pdm-resultats-controle", "pattern": "^pdm[.]resultats-controle$", "apply-to": "quorum_queues", "priority": 10,
+      "definition": { "delivery-limit": 5, "dead-letter-exchange": "collector.ecartes", "dead-letter-routing-key": "pdm.resultats-controle", "dead-letter-strategy": "at-least-once", "overflow": "reject-publish", "max-length": 10000, "message-ttl": 86400000 } },
+    { "vhost": "collector", "name": "travail-interactions-publication-decidee", "pattern": "^interactions[.]publication-decidee$", "apply-to": "quorum_queues", "priority": 10,
+      "definition": { "delivery-limit": 5, "dead-letter-exchange": "collector.ecartes", "dead-letter-routing-key": "interactions.publication-decidee", "dead-letter-strategy": "at-least-once", "overflow": "reject-publish", "max-length": 10000, "message-ttl": 86400000 } },
+    { "vhost": "collector", "name": "travail-test-publication-decidee", "pattern": "^test[.]publication-decidee$", "apply-to": "quorum_queues", "priority": 10,
+      "definition": { "delivery-limit": 5, "dead-letter-exchange": "collector.ecartes", "dead-letter-routing-key": "test.publication-decidee", "dead-letter-strategy": "at-least-once", "overflow": "reject-publish", "max-length": 10000, "message-ttl": 86400000 } },
+    { "vhost": "collector", "name": "ecartes", "pattern": "[.]ecartes$", "apply-to": "quorum_queues", "priority": 20,
+      "definition": { "overflow": "reject-publish", "max-length": 10000, "message-ttl": 604800000 } }
+  ]
+}
