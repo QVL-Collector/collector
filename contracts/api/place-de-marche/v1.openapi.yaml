@@ -1,0 +1,443 @@
+openapi: 3.0.3
+info:
+  title: Place de marché, API v1
+  version: 1.0.0
+  description: >-
+    API HTTP de la Place de marché. Erreurs au format Problem Details (RFC 9457, application/problem+json),
+    sans trace technique. Les routes du vendeur exigent un jeton d'accès Keycloak valide (signature RS256,
+    émetteur, audience place-de-marche, client autorisé collector-web, type Bearer, expiration) portant le rôle
+    de realm vendeur. Un article d'un autre vendeur répond 404, sans révéler son existence. Corps JSON refusés :
+    clé dupliquée (casse ignorée), champ inconnu, type inattendu, valeur racine autre qu'un objet, plus de 16 Kio.
+servers:
+  - url: /marche/v1
+tags:
+  - name: Catégories
+  - name: Vendeur
+paths:
+  /categories:
+    get:
+      tags: [Catégories]
+      operationId: listerCategories
+      summary: Catégories proposées à la saisie, source unique des catégories
+      security: []
+      responses:
+        "200":
+          description: Catégories, triées par libellé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListeCategories"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+  /vendeur/articles:
+    get:
+      tags: [Vendeur]
+      operationId: listerMesArticles
+      summary: Articles du vendeur connecté, du plus récemment modifié au plus ancien
+      security:
+        - jetonKeycloak: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Taille"
+      responses:
+        "200":
+          description: Page d'articles du vendeur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageArticles"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+    post:
+      tags: [Vendeur]
+      operationId: creerBrouillon
+      summary: Créer un brouillon d'article, à l'état brouillon et en révision 1
+      security:
+        - jetonKeycloak: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreationBrouillon"
+      responses:
+        "201":
+          description: Brouillon créé
+          headers:
+            Location:
+              description: Chemin du brouillon créé
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "413":
+          $ref: "#/components/responses/CorpsTropVolumineux"
+        "415":
+          $ref: "#/components/responses/TypeNonPrisEnCharge"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+  /vendeur/articles/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Vendeur]
+      operationId: lireMonArticle
+      summary: Lire un article du vendeur connecté
+      security:
+        - jetonKeycloak: []
+      responses:
+        "200":
+          description: Article du vendeur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+    put:
+      tags: [Vendeur]
+      operationId: modifierBrouillon
+      summary: Remplacer le contenu d'un brouillon ; la révision lue est exigée et augmente de 1
+      security:
+        - jetonKeycloak: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModificationBrouillon"
+      responses:
+        "200":
+          description: Brouillon modifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "409":
+          $ref: "#/components/responses/Conflit"
+        "413":
+          $ref: "#/components/responses/CorpsTropVolumineux"
+        "415":
+          $ref: "#/components/responses/TypeNonPrisEnCharge"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+components:
+  securitySchemes:
+    jetonKeycloak:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000
+        default: 1
+    Taille:
+      name: taille
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+  schemas:
+    Montant:
+      type: object
+      additionalProperties: false
+      required: [montantCentimes, devise]
+      properties:
+        montantCentimes:
+          type: integer
+          format: int64
+          minimum: 0
+        devise:
+          type: string
+          enum: [EUR]
+    SaisiePrix:
+      type: object
+      nullable: true
+      additionalProperties: false
+      required: [montantCentimes, devise]
+      properties:
+        montantCentimes:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 100000000
+        devise:
+          type: string
+          enum: [EUR]
+    SaisieFraisDePort:
+      type: object
+      nullable: true
+      additionalProperties: false
+      required: [montantCentimes, devise]
+      properties:
+        montantCentimes:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 100000
+        devise:
+          type: string
+          enum: [EUR]
+    SaisieTitre:
+      type: string
+      maxLength: 200
+      description: Sans caractère de contrôle
+    SaisieDescription:
+      type: string
+      maxLength: 5000
+      description: Sans caractère de contrôle, sauts de ligne et tabulations admis
+    SaisieCategorie:
+      type: string
+      nullable: true
+      maxLength: 64
+      pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+      description: Identifiant d'une catégorie de GET /categories
+    CreationBrouillon:
+      description: >-
+        Contenu d'un brouillon. Un champ absent vaut texte vide ou null : la complétude est jugée à la soumission
+        au contrôle.
+      type: object
+      additionalProperties: false
+      properties:
+        titre:
+          $ref: "#/components/schemas/SaisieTitre"
+        description:
+          $ref: "#/components/schemas/SaisieDescription"
+        categorieId:
+          $ref: "#/components/schemas/SaisieCategorie"
+        prix:
+          $ref: "#/components/schemas/SaisiePrix"
+        fraisDePort:
+          $ref: "#/components/schemas/SaisieFraisDePort"
+    ModificationBrouillon:
+      description: >-
+        Remplacement complet du contenu d'un brouillon : un champ absent est vidé. La révision lue est exigée ;
+        une révision périmée répond 409.
+      type: object
+      additionalProperties: false
+      required: [revision]
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        titre:
+          $ref: "#/components/schemas/SaisieTitre"
+        description:
+          $ref: "#/components/schemas/SaisieDescription"
+        categorieId:
+          $ref: "#/components/schemas/SaisieCategorie"
+        prix:
+          $ref: "#/components/schemas/SaisiePrix"
+        fraisDePort:
+          $ref: "#/components/schemas/SaisieFraisDePort"
+    Categorie:
+      type: object
+      additionalProperties: false
+      required: [id, libelle]
+      properties:
+        id:
+          type: string
+          maxLength: 64
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        libelle:
+          type: string
+          minLength: 1
+          maxLength: 100
+    ListeCategories:
+      type: object
+      additionalProperties: false
+      required: [elements]
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Categorie"
+    Article:
+      type: object
+      additionalProperties: false
+      required: [id, etat, revision, titre, description, categorie, prix, fraisDePort, creeLe, modifieLe]
+      properties:
+        id:
+          type: string
+          format: uuid
+        etat:
+          type: string
+          enum: [brouillon, en_controle, publie, refuse, a_verifier]
+        revision:
+          type: integer
+          minimum: 1
+        titre:
+          type: string
+        description:
+          type: string
+        categorie:
+          allOf:
+            - $ref: "#/components/schemas/Categorie"
+          nullable: true
+        prix:
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+          nullable: true
+        fraisDePort:
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+          nullable: true
+        creeLe:
+          type: string
+          format: date-time
+        modifieLe:
+          type: string
+          format: date-time
+    PageArticles:
+      type: object
+      additionalProperties: false
+      required: [elements, page, taille, total]
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+    ErreurDeChamp:
+      type: object
+      additionalProperties: false
+      required: [champ, code]
+      properties:
+        champ:
+          type: string
+          example: prix.montantCentimes
+        code:
+          type: string
+          enum:
+            - obligatoire
+            - invalide
+            - hors_limites
+            - trop_long
+            - caractere_interdit
+            - negatif
+            - au_dela_du_plafond
+            - devise_non_prise_en_charge
+            - categorie_inconnue
+    Probleme:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: >-
+            about:blank pour les erreurs génériques ; sinon urn:collector:probleme:saisie-invalide,
+            urn:collector:probleme:corps-invalide, urn:collector:probleme:revision-perimee ou
+            urn:collector:probleme:article-non-modifiable
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        erreurs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErreurDeChamp"
+  responses:
+    SaisieInvalide:
+      description: Saisie invalide (erreurs par champ) ou corps invalide (JSON mal formé, clé dupliquée, champ inconnu, type inattendu)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonAuthentifie:
+      description: Jeton absent, expiré, mal signé, d'un autre émetteur, d'une autre audience ou d'un autre client
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonAutorise:
+      description: Jeton valide sans le rôle vendeur
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    Introuvable:
+      description: Article inexistant ou appartenant à un autre vendeur
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    Conflit:
+      description: Révision périmée, ou article non modifiable dans son état
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    CorpsTropVolumineux:
+      description: Corps au-delà de 16 Kio
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    TypeNonPrisEnCharge:
+      description: Corps qui n'est pas application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    ErreurInterne:
+      description: Erreur interne, sans détail technique
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
