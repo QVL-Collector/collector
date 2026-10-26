@@ -176,7 +176,7 @@ func TestUS009AC8CategoriesAccessiblesAuVisiteur(t *testing.T) {
 	e.envoyer(t, http.MethodGet, cheminCategories, bearer(e.jetons.acheteur(uuid.NewString()))).exiger(t, http.StatusOK)
 }
 
-const limiteCorps = 16 * 1024
+const limiteCorps = 32 * 1024
 
 func corpsDeTaille(taille int) []byte {
 	debut := []byte(`{"titre":"Rembourré"}`)
@@ -223,16 +223,16 @@ func TestUS009AC9CleDupliqueeRefuseeEnModification(t *testing.T) {
 func TestUS009AC9TailleMaximaleDuCorps(t *testing.T) {
 	e := demarrerEnMemoire(t)
 	jeton := e.vendeur()
-	t.Run("exactement 16 Kio accepté", func(t *testing.T) {
+	t.Run("exactement 32 Kio accepté", func(t *testing.T) {
 		e.envoyer(t, http.MethodPost, cheminArticles, jeton, corpsBrut(corpsDeTaille(limiteCorps))).exiger(t, http.StatusCreated)
 	})
-	t.Run("16 Kio plus un octet refusé en 413", func(t *testing.T) {
+	t.Run("32 Kio plus un octet refusé en 413", func(t *testing.T) {
 		e.envoyer(t, http.MethodPost, cheminArticles, jeton, corpsBrut(corpsDeTaille(limiteCorps+1))).probleme(t, http.StatusRequestEntityTooLarge)
 	})
 	t.Run("1 Mio refusé en 413", func(t *testing.T) {
 		e.envoyer(t, http.MethodPost, cheminArticles, jeton, corpsBrut(corpsDeTaille(1<<20))).probleme(t, http.StatusRequestEntityTooLarge)
 	})
-	t.Run("modification au-delà de 16 Kio refusée en 413", func(t *testing.T) {
+	t.Run("modification au-delà de 32 Kio refusée en 413", func(t *testing.T) {
 		article := e.creer(t, jeton, `{"titre":"Original"}`)
 		e.envoyer(t, http.MethodPut, cheminArticles+"/"+article.ID, jeton, corpsBrut(corpsModificationDeTaille(limiteCorps+1))).probleme(t, http.StatusRequestEntityTooLarge)
 		if relu := e.relire(t, jeton, article.ID); relu.Revision != 1 {
@@ -240,7 +240,7 @@ func TestUS009AC9TailleMaximaleDuCorps(t *testing.T) {
 		}
 	})
 	if page := e.mesArticles(t, jeton, ""); page.Total != 2 {
-		t.Fatalf("seuls le corps de 16 Kio et l'article modifié devaient exister : %+v", page)
+		t.Fatalf("seuls le corps de 32 Kio et l'article modifié devaient exister : %+v", page)
 	}
 }
 

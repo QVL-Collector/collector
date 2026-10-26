@@ -7,7 +7,7 @@ info:
     sans trace technique. Les routes du vendeur exigent un jeton d'accès Keycloak valide (signature RS256,
     émetteur, audience place-de-marche, client autorisé collector-web, type Bearer, expiration) portant le rôle
     de realm vendeur. Un article d'un autre vendeur répond 404, sans révéler son existence. Corps JSON refusés :
-    clé dupliquée (casse ignorée), champ inconnu, type inattendu, valeur racine autre qu'un objet, plus de 16 Kio.
+    clé dupliquée (casse ignorée), champ inconnu, type inattendu, valeur racine autre qu'un objet, plus de 32 Kio.
 servers:
   - url: /marche/v1
 tags:
@@ -424,7 +424,7 @@ components:
           schema:
             $ref: "#/components/schemas/Probleme"
     CorpsTropVolumineux:
-      description: Corps au-delà de 16 Kio
+      description: Corps au-delà de 32 Kio
       content:
         application/problem+json:
           schema:

@@ -19,7 +19,7 @@ const (
 	basePath          = "/marche/v1"
 	sellerArticles    = basePath + "/vendeur/articles"
 	sellerRole        = "vendeur"
-	maxBodyBytes      = 16 << 10
+	maxBodyBytes      = 32 << 10
 	pageParameter     = "page"
 	pageSizeParameter = "taille"
 )

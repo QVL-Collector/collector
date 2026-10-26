@@ -1,4 +1,7 @@
 -- +goose Up
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE ON TABLES TO marche_execution;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO marche_execution;
+
 CREATE TABLE categorie (
     id      text PRIMARY KEY
             CONSTRAINT categorie_id_format CHECK (char_length(id) <= 64 AND id ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
@@ -22,6 +25,3 @@ CREATE TABLE article (
 );
 
 CREATE INDEX article_vendeur_modification_idx ON article (vendeur_id, modifie_le DESC, id DESC);
-
-GRANT SELECT ON categorie TO marche_execution;
-GRANT SELECT, INSERT, UPDATE ON article TO marche_execution;

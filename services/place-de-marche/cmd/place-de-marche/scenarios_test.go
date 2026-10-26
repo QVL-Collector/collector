@@ -101,13 +101,15 @@ func ac1BrouillonVideAccepte(t *testing.T, e *environnement) {
 func ac1BornesAcceptees(t *testing.T, e *environnement) {
 	jeton := e.vendeur()
 	cas := map[string]string{
-		"titre de 200 caractères":           fmt.Sprintf(`{"titre":%q}`, strings.Repeat("a", 200)),
-		"titre de 200 caractères accentués": fmt.Sprintf(`{"titre":%q}`, strings.Repeat("é", 200)),
-		"description de 5000 caractères":    fmt.Sprintf(`{"description":%q}`, strings.Repeat("d", 5000)),
-		"prix nul":                          `{"prix":{"montantCentimes":0,"devise":"EUR"}}`,
-		"prix au plafond":                   `{"prix":{"montantCentimes":100000000,"devise":"EUR"}}`,
-		"frais de port nuls":                `{"fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`,
-		"frais de port au plafond":          `{"fraisDePort":{"montantCentimes":100000,"devise":"EUR"}}`,
+		"titre de 200 caractères":                     fmt.Sprintf(`{"titre":%q}`, strings.Repeat("a", 200)),
+		"titre de 200 caractères accentués":           fmt.Sprintf(`{"titre":%q}`, strings.Repeat("é", 200)),
+		"description de 5000 caractères":              fmt.Sprintf(`{"description":%q}`, strings.Repeat("d", 5000)),
+		"description de 5000 caractères de 3 octets":  fmt.Sprintf(`{"description":%q}`, strings.Repeat("€", 5000)),
+		"titre et description de 4 octets aux maxima": fmt.Sprintf(`{"titre":%q,"description":%q}`, strings.Repeat("🎲", 200), strings.Repeat("🎲", 5000)),
+		"prix nul":                 `{"prix":{"montantCentimes":0,"devise":"EUR"}}`,
+		"prix au plafond":          `{"prix":{"montantCentimes":100000000,"devise":"EUR"}}`,
+		"frais de port nuls":       `{"fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`,
+		"frais de port au plafond": `{"fraisDePort":{"montantCentimes":100000,"devise":"EUR"}}`,
 	}
 	for nom, corps := range cas {
 		t.Run(nom, func(t *testing.T) {

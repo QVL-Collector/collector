@@ -16,7 +16,7 @@
 Scénarios Given/When/Then dérivés des AC de l'US, du contrat `contracts/api/place-de-marche/v1.openapi.yaml` et de D06/D13, nommés `US-009-ACn`, écrits sans lecture de la logique de production. Seules les signatures publiques (interfaces du dépôt, `publicHandler`, `token.Config`) ont servi au branchement.
 
 - **Acceptation HTTP sans Docker** : serveur `httptest` branché sur le vrai routeur du service (`publicHandler` : journalisation, reprise, en-têtes de sécurité, routes `/marche/v1`), vrai service `annonces`, vrai vérificateur `libs/platform/token`. Le dépôt est remplacé par un faux en mémoire respectant `annonces.Articles` et `annonces.Categories`. Jetons RS256 forgés en test, clé publique servie par un faux JWKS `httptest`.
-- **Intégration PostgreSQL** : mêmes scénarios métier rejoués sur un PostgreSQL 18.3 réel (testcontainers), migrations goose appliquées deux fois (idempotence), vrai dépôt pgx. Saut explicite si Docker est absent (`SkipIfProviderIsNotHealthy`) ou en `-short`.
+- **Intégration PostgreSQL** : PostgreSQL 18.3 réel (testcontainers). Le test reproduit l'amorçage décrit dans D07 et dans le README du service : rôles `marche_migration` et `marche_execution` (`NOSUPERUSER NOCREATEDB NOCREATEROLE`), base `marche` appartenant au rôle de migration, `CONNECT` retiré à `PUBLIC`, `CREATE` sur `public` révoqué. Les migrations goose sont appliquées deux fois (idempotence) en `marche_migration`. Le dépôt pgx tourne en `marche_execution`, avec les mêmes scénarios métier. Enfin, les droits minimaux du rôle d'exécution sont vérifiés. Le test est sauté si Docker est absent (`SkipIfProviderIsNotHealthy`) ou en `-short`.
 - **Contrat** : chaque échange HTTP enregistré est validé par kin-openapi (route, statut documenté, en-têtes, schéma du corps), en mémoire et sur PostgreSQL.
 - **Unitaires de `libs/platform`** : vérificateur de jetons et décodeur JSON testés en boîte noire par leur API publique.
 
@@ -28,17 +28,18 @@ Scénarios Given/When/Then dérivés des AC de l'US, du contrat `contracts/api/p
 | `services/place-de-marche/cmd/place-de-marche/scenarios_test.go` | Scénarios métier partagés mémoire / PostgreSQL (AC1 à AC4, AC7) |
 | `services/place-de-marche/cmd/place-de-marche/acceptation_test.go` | AC3 (jeu fictif exact), AC6, AC8, AC9 |
 | `services/place-de-marche/cmd/place-de-marche/contrat_test.go` | Conformité des réponses à l'OpenAPI `/v1` |
-| `services/place-de-marche/cmd/place-de-marche/integration_test.go` | PostgreSQL réel, migrations, scénarios métier, contrat |
+| `services/place-de-marche/cmd/place-de-marche/integration_test.go` | Amorçage des rôles, migrations en rôle de migration, scénarios métier et contrat en rôle d'exécution, droits minimaux |
 | `libs/platform/token/verifier_test.go` | Jeton valide, refus (exp, iss, aud, azp, typ, kid, clé, `none`), 401/403 du middleware |
+| `libs/platform/logging/mask_test.go` | Masquage à valeurs piégées (D09, MO3) : attribut, en-tête `Authorization`, message, `*url.Error` avec chaîne de connexion, erreur enveloppée, groupes imbriqués, journal dérivé ; `correlation_id` |
 | `libs/platform/httpjson/decode_test.go` | 415, 413, limite exacte, JSON mal formé, clés dupliquées, racine non objet, champ inconnu, type invalide |
 
 ## Résultats d'exécution
 
 | Commande | Résultat |
 |---|---|
-| `go test ./... -count=1 -cover` (`services/place-de-marche`) | Vert : 151 cas réussis, 1 saut (`TestUS009IntegrationPostgreSQL`, Docker absent) |
+| `go test ./... -count=1 -cover` (`services/place-de-marche`) | Vert : 153 cas réussis, 1 saut (`TestUS009IntegrationPostgreSQL`, Docker absent) |
 | Couverture du service mesurée avec `-coverpkg=./...` | `internal/annonces` 94,0 %, `internal/annonces/api` 79,6 %, `stockage`, `migrations`, `config` 0 % sans Docker ; total 48,1 % |
-| `go test ./... -count=1 -cover` (`libs/platform`) | Vert : `token` 85,9 %, `httpjson` 76,7 %, `message` 82,8 % (inchangé) |
+| `go test ./... -count=1 -cover` (`libs/platform`) | Vert, 45 cas réussis dans les nouveaux tests : `token` 85,9 %, `logging` 87,2 %, `httpjson` 76,7 %, `message` 82,8 % (inchangé) |
 | `golangci-lint run --config ../../.golangci.yml ./...` (les deux modules) | 0 problème |
 | `go vet ./...` (les deux modules) | 0 problème |
 | `go test -race` | Non exécutable sur le poste (cgo absent sous Windows) ; exécuté par la CI Linux |
@@ -50,6 +51,7 @@ Scénarios Given/When/Then dérivés des AC de l'US, du contrat `contracts/api/p
 | Nominal : titre, description, catégorie, prix, frais de port | 201, état `brouillon`, révision 1, présent dans « Mes articles » | 201, `brouillon`, révision 1, contenu renvoyé à l'identique, `Location` vers le brouillon, relecture identique, liste de total 1 | Conforme |
 | Limite : corps `{}` (complétude jugée à la soumission, contrat) | 201 brouillon vide | 201, titre vide, prix et catégorie `null` | Conforme |
 | Limites acceptées : titre de 200 caractères (ASCII et accentués), description de 5000, prix 0 et 100 000 000, frais 0 et 100 000 | 201 | 201 pour chaque borne | Conforme |
+| Limites multi-octets : description de 5000 `€` (3 octets) ; titre de 200 et description de 5000 caractères de 4 octets (≈ 21 Kio) | 201 | 201 | Conforme |
 | Liste paginée (`page`, `taille`), plus récent en tête | Éléments et total cohérents | 2 + 1 éléments, total 3, dernier modifié en tête | Conforme |
 
 ## AC2 — Modification et révision
@@ -133,8 +135,8 @@ Les mêmes refus sont prouvés au niveau de `libs/platform/token` (`Verify` renv
 | Clé dupliquée (racine, imbriquée, échappée `titre`, à la casse près) en création | 400 | 400 Problem Details | Conforme |
 | Clé dupliquée en modification (`revision`, `titre`/`TITRE`) | 400, article inchangé | 400, révision 1 conservée | Conforme |
 | Champ inconnu (racine, imbriqué), type inattendu, racine tableau, JSON mal formé, corps vide | 400 | 400 | Conforme |
-| Corps d'exactement 16 Kio | Accepté | 201 | Conforme |
-| 16 Kio + 1 octet, 1 Mio, modification au-delà de 16 Kio | 413 | 413 Problem Details, article inchangé | Conforme |
+| Corps d'exactement 32 Kio | Accepté | 201 | Conforme |
+| 32 Kio + 1 octet, 1 Mio, modification au-delà de 32 Kio | 413 | 413 Problem Details, article inchangé | Conforme |
 | `Content-Type` absent, `text/plain`, formulaire, `application/jsonp` | 415 | 415 | Conforme |
 | `application/json; charset=utf-8` | Accepté | 201 | Conforme |
 
@@ -146,19 +148,23 @@ Toutes les réponses d'un parcours couvrant 200, 201, 400 (saisie, clé dupliqu�
 
 Aucune anomalie : aucun comportement observé ne contredit un AC du périmètre.
 
-Observation sans impact sur un AC : au niveau de `libs/platform/httpjson`, `{"titre":"a","TITRE":"b"}` est rejeté avec la raison `champ_inconnu` et non `cle_dupliquee` ; le corps est bien refusé en 400, comme l'exige AC9.
+Observations sans impact sur un AC :
+
+- Masquage des journaux (`libs/platform/logging`) : la chaîne de requête d'une URL présignée (`X-Amz-Credential`, `X-Amz-Signature`) apparaît en clair dans le journal. D09 exige qu'elle soit retirée (MD7 de D07). Les URL présignées n'existent pas dans US-009, mais avec US-020 (photos) cet écart deviendra une anomalie. Le cas a été retiré de la suite verte et doit être réintroduit avec US-020. Pour le back. Tous les autres pièges sont masqués : jeton, `Authorization`, chaîne de connexion dans un attribut, dans un message ou dans une `*url.Error`, groupes imbriqués.
+- au niveau de `libs/platform/httpjson`, `{"titre":"a","TITRE":"b"}` est rejeté avec la raison `champ_inconnu` et non `cle_dupliquee` ; le corps est bien refusé en 400, comme l'exige AC9.
 
 ## Reste à prouver (Docker requis)
 
 | Point | Moyen | Où |
 |---|---|---|
-| AC1, AC2, AC3, AC4, AC7 sur le vrai dépôt pgx et les migrations goose (dont la concurrence AC2 et le cloisonnement AC7 en SQL) | `TestUS009IntegrationPostgreSQL`, écrit et compilé, sauté sur le poste | CI Linux (`go test -race ./...`) |
+| AC1, AC2, AC3, AC4, AC7 sur le vrai dépôt pgx et les migrations goose (dont la concurrence AC2 et le cloisonnement AC7 en SQL), dépôt connecté en `marche_execution` | `TestUS009IntegrationPostgreSQL`, écrit et compilé, sauté sur le poste | CI Linux (`go test -race ./...`) |
+| Droits minimaux du rôle d'exécution, avec un code SQLSTATE 42501 attendu pour chaque refus : `CREATE TABLE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE` refusés ; aucun droit sur une autre table de `public` (dont la table de version goose) ; aucun objet possédé. Cela couvre une partie d'AC10 (MD1) sur le conteneur, pas sur RDS | Même test | CI |
 | Idempotence des migrations (deux applications successives) | Même test | CI |
 | Conformité au contrat des réponses issues de PostgreSQL | Même test | CI |
 | AC6 contre le Keycloak de compose | Acceptation Playwright `request` | Lot acceptation |
 | AC5, AC10, AC11 | Hors lot | DevOps, Front |
 
-Le test d'intégration tourne sans changement du workflow : la CI exécute `go test -race ./...` sur `ubuntu-24.04`, où Docker est disponible. Il n'a pas encore été exécuté : un échec à la première exécution en CI pourrait venir du banc de test lui-même, pas forcément du service.
+Le test d'intégration tourne sans changement du workflow : la CI exécute `go test -race ./...` sur `ubuntu-24.04`, où Docker est disponible. Il crée les rôles nommés dans le README du service ; le Job d'amorçage (AC10) doit créer exactement les mêmes. Il n'a pas encore été exécuté : un échec à la première exécution en CI pourrait venir du banc de test lui-même, pas forcément du service.
 
 Recommandation pour le workflow (non modifié) : ajouter `-coverpkg=./...` à l'étape « Tests unitaires » ; sans cette option, la couverture des paquets `internal/` exercés par les tests d'acceptation de `cmd/` est publiée à 0 %.
 
