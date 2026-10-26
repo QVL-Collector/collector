@@ -42,7 +42,7 @@ func (v *Validator) Validate(body []byte) error {
 	}
 	document, err := jsonschema.UnmarshalJSON(bytes.NewReader(body))
 	if err != nil {
-		return reject(ReasonMalformed, "%v", err)
+		return reject(ReasonMalformed, "syntaxe JSON invalide")
 	}
 	schema, err := v.contractOf(document)
 	if err != nil {
@@ -60,10 +60,10 @@ func (v *Validator) Decode(body []byte, data any) (Envelope, error) {
 	}
 	var envelope Envelope
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return Envelope{}, reject(ReasonMalformed, "décodage de l'enveloppe : %v", err)
+		return Envelope{}, reject(ReasonMalformed, "enveloppe non décodable")
 	}
 	if err := json.Unmarshal(envelope.Data, data); err != nil {
-		return Envelope{}, reject(ReasonMalformed, "décodage des données de %s : %v", envelope.Type, err)
+		return Envelope{}, reject(ReasonMalformed, "données non décodables dans le type attendu")
 	}
 	return envelope, nil
 }
@@ -94,7 +94,7 @@ func (v *Validator) contractOf(document any) (*jsonschema.Schema, error) {
 	}
 	schema, known := v.contracts[contractKey{messageType: messageType, version: version}]
 	if !known {
-		return nil, reject(ReasonUnknownContract, "aucun contrat pour le type %q en version %d", excerpt(messageType), version)
+		return nil, reject(ReasonUnknownContract, "aucun contrat pour ce type et cette version")
 	}
 	return schema, nil
 }
@@ -106,7 +106,7 @@ func contractVersion(raw any) (int64, error) {
 	}
 	version, err := number.Int64()
 	if err != nil {
-		return 0, reject(ReasonUnknownContract, "version de contrat %q non entière", excerpt(number.String()))
+		return 0, reject(ReasonUnknownContract, "version de contrat non entière")
 	}
 	return version, nil
 }
@@ -114,7 +114,7 @@ func contractVersion(raw any) (int64, error) {
 func schemaViolation(err error) error {
 	var violation *jsonschema.ValidationError
 	if !errors.As(err, &violation) {
-		return reject(ReasonSchemaViolation, "%v", err)
+		return reject(ReasonSchemaViolation, "message refusé par son schéma")
 	}
 	leaf := firstLeaf(violation)
 	return reject(ReasonSchemaViolation, "valeur /%s refusée par le mot-clé %s",

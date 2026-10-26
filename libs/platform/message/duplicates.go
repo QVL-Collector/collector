@@ -22,7 +22,7 @@ func rejectDuplicateKeys(body []byte) error {
 func walkValue(decoder *json.Decoder) error {
 	token, err := decoder.Token()
 	if err != nil {
-		return reject(ReasonMalformed, "%v", err)
+		return reject(ReasonMalformed, "syntaxe JSON invalide")
 	}
 	delimiter, isDelimiter := token.(json.Delim)
 	if !isDelimiter {
@@ -34,7 +34,7 @@ func walkValue(decoder *json.Decoder) error {
 	case '[':
 		return walkArray(decoder)
 	}
-	return reject(ReasonMalformed, "délimiteur inattendu %q", delimiter)
+	return reject(ReasonMalformed, "délimiteur inattendu")
 }
 
 func walkObject(decoder *json.Decoder) error {
@@ -42,14 +42,14 @@ func walkObject(decoder *json.Decoder) error {
 	for decoder.More() {
 		token, err := decoder.Token()
 		if err != nil {
-			return reject(ReasonMalformed, "%v", err)
+			return reject(ReasonMalformed, "syntaxe JSON invalide")
 		}
 		key, isKey := token.(string)
 		if !isKey {
 			return reject(ReasonMalformed, "clé d'objet attendue")
 		}
 		if _, duplicated := seen[key]; duplicated {
-			return reject(ReasonDuplicateKey, "clé %q présente plusieurs fois", excerpt(key))
+			return reject(ReasonDuplicateKey, "clé présente plusieurs fois dans un même objet")
 		}
 		seen[key] = struct{}{}
 		if err := walkValue(decoder); err != nil {
@@ -70,7 +70,7 @@ func walkArray(decoder *json.Decoder) error {
 
 func closeContainer(decoder *json.Decoder) error {
 	if _, err := decoder.Token(); err != nil {
-		return reject(ReasonMalformed, "%v", err)
+		return reject(ReasonMalformed, "syntaxe JSON invalide")
 	}
 	return nil
 }
