@@ -719,6 +719,10 @@ P3 : aucun risque nouveau dans le POC ; le bac à sable passe la même détectio
 
 Conséquences immédiates à reporter : schéma du POC de l'architecture (v0.1 dessiné selon P1) ; parades P2 de l'avis sécurité ci-dessus intégrées aux AC (jeton de service à audience et droit limités, revérification du jeton de l'acheteur, réservation atomique avec test de concurrence, une réservation active par acheteur, échéance plafonnée) ; mesures 1 à 3 du point 4 dans les AC ; effort supplémentaire (≈ 12 à 15 jours au total pour le complément) à absorber par le découpage en sprints ; scénario de charge maintenu sur la consultation du catalogue (les réservations consomment des objets uniques).
 
+## Complément — repli si le sprint 3 ne tient pas (tranché par Martin le 2026-10-26)
+
+> **« Oui, repli accepté »** : la cible reste les 4 services déployés (P2). Si le sprint 3 ne peut pas être tenu, le POC se replie sur P1 : Interactions et Transactions sont documentés (contrats, conception, tests prévus) mais non déployés. La démo reste complète sur le parcours soumission → contrôle → publication → consultation. Le repli est décidé à la revue du sprint 2 et consigné dans le bilan de sprint.
+
 ## Conséquences
 
 - **Architecture** : [architecture-technique.md](../architecture/architecture-technique.md) passe en v0.2 : schéma du POC selon l'option P2 (§ 3), séquence de la réservation du POC (§ 4.3), distincte de l'achat V1 documenté (§ 4.4) ; FC11, règles d'architecture et réservation alignées sur la révision de sécurité (ES-38, M-RES-01).

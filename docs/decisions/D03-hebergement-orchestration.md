@@ -591,6 +591,8 @@ Aucune durée n'est encore mesurée sur le compte de Martin. Les chiffres sont �
 
 Date : 2026-10-09
 
+> **Complément du 2026-10-26, accès des pods aux identifiants du nœud : « 2 sauts + filtre réseau »**. Le Learner Lab ne permet ni OIDC (IRSA) ni rôle dédié (Pod Identity : la confiance de `LabRole` n'inclut pas `pods.eks.amazonaws.com`). Seuls les identifiants du nœud (`LabRole`) donnent donc accès à S3 pour les photos. La limite de sauts IMDSv2 des nœuds est fixée à 2. Une politique réseau refuse `169.254.169.254/32` à tous les pods, sauf au seul pod qui écrit les photos (MS3 principal). La limite à 1 avec `hostNetwork` est écartée. L'écart avec X16 strict est assumé et documenté ; XP01 mesure le filtrage (G4).
+
 ## Conséquences
 
 Martin a retenu l'option A en statut Candidate : ces conséquences s'appliquent, sous réserve de l'expérimentation (D14). Contraintes du Learner Lab : [environnement-learner-lab.md](../00-cadrage/environnement-learner-lab.md).

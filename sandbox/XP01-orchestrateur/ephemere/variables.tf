@@ -128,7 +128,7 @@ variable "noeuds_max" {
 variable "imds_limite_sauts" {
   description = "Limite de sauts IMDSv2 des nœuds. 1 : IMDS fermé aux pods hors hostNetwork (X16, repli MS3). 2 : IMDS ouvert aux pods, filtré par politique réseau (MS3 principal, G4 par IMDS)."
   type        = number
-  default     = 1
+  default     = 2
 
   validation {
     condition     = contains([1, 2], var.imds_limite_sauts)

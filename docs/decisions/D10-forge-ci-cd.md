@@ -364,6 +364,8 @@ Risques, par ordre de probabilité :
 
 Date : 2026-10-26
 
+> **Complément du 2026-10-26, adresse des commits : « noreply GitHub »**. Les commits publics portent l'adresse `<id>+<login>@users.noreply.github.com` du compte GitHub de Martin. L'historique local est réécrit vers cette adresse avant le premier envoi, ce qui est sans risque puisqu'aucun dépôt distant n'existe encore. Mise en œuvre : US-001.
+
 ## Conséquences
 
 La décision de Martin est enregistrée ci-dessus ; ses conséquences :
