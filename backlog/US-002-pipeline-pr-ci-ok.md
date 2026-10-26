@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E1 Chaîne de livraison |
-| Statut | À faire |
+| Statut | En cours |
 | Sprint | 1 (J4) |
 | Engagement | Ferme |
 | Estimation | 3 points |
@@ -82,3 +82,21 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 | Rapport de revue de code | |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |
+
+### Réalisation et preuves restantes
+
+Réalisé hors ligne le 2026-10-26, en attente de la publication du dépôt (US-001) : workflow [ci.yml](../.github/workflows/ci.yml), filtre [changements.sh](../tools/ci/changements.sh), outils épinglés [outils.yml](../tools/ci/outils.yml), [.golangci.yml](../.golangci.yml), [dependabot.yml](../.github/dependabot.yml), hook [pre-commit](../tools/git-hooks/pre-commit) et [.gitleaks.toml](../.gitleaks.toml), réglages [configurer-depot.sh](../tools/github/configurer-depot.sh).
+
+Prouvé sur le poste : actionlint et zizmor (persona `pedantic`, hors ligne) sans constat ; shellcheck sans constat ; filtre de chemins sur un dépôt d'essai (docs seule → aucun job ; un service → ce service seul ; `libs/` → tous ; nom de module invalide → échec) ; étapes du job Go (`go mod verify`, `go vet`, golangci-lint, `go test -race -cover`) sur un module d'essai ; AC6 : commit d'un jeton fictif refusé par le hook, avec gitleaks installé et par le repli Docker.
+
+| AC | Reste à prouver sur GitHub, après la poussée |
+|---|---|
+| AC1 | PR de démonstration ajoutant un service Go d'essai : seul son job s'exécute, couverture dans le résumé et en artefact |
+| AC2 | Première PR du front (US-009 ou US-010) : `tsc`, contrôle des règles ESLint, ESLint et Vitest exécutés |
+| AC3 | PR ne touchant que `docs/` : jobs « ignorés », `ci-ok` vert, PR fusionnable |
+| AC4 | PR avec un test unitaire rouge : `ci-ok` rouge, bouton de fusion bloqué |
+| AC5 | Deux poussées rapprochées sur une PR : la première exécution est annulée |
+| AC7 | Après `configurer-depot.sh` : poussée directe et poussée forcée sur `main` refusées ; relevé `--relever` archivé |
+| AC8 | Relecture du workflow (épinglage, `permissions`) et relevé des droits par défaut en lecture |
+| AC9 | Durée de l'exécution de la PR d'AC1 relevée (< 15 min) |
+
