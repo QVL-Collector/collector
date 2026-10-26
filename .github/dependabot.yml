@@ -1,0 +1,26 @@
+# Mises à jour proposées par PR (D10, MP3) : actions épinglées par empreinte et images des outils de CI.
+# Les écosystèmes gomod, npm et docker des services s'ajoutent avec le premier module concerné.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker-compose
+    directory: /tools/ci
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
