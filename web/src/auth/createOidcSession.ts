@@ -26,15 +26,25 @@ export function createOidcSession(
     manager.removeUser().catch(ignoreFailure);
   });
   manager.clearStaleState().catch(ignoreFailure);
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      pendingRedirect = null;
+    }
+  });
 
   function signIn(returnPath: string): Promise<void> {
-    pendingRedirect ??= manager
+    if (pendingRedirect !== null) {
+      return pendingRedirect;
+    }
+    const redirect = manager
       .signinRedirect({ state: toSafeReturnPath(returnPath, origin) })
-      .catch((error: unknown) => {
-        pendingRedirect = null;
-        throw error;
+      .finally(() => {
+        if (pendingRedirect === redirect) {
+          pendingRedirect = null;
+        }
       });
-    return pendingRedirect;
+    pendingRedirect = redirect;
+    return redirect;
   }
 
   async function signOut(): Promise<void> {

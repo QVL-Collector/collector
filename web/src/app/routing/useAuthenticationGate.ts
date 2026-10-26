@@ -4,6 +4,7 @@ import type { AuthState } from '../../auth/AuthSession';
 import type { CollectorRole } from '../../auth/collectorRoles';
 import { useAuthSession } from '../../auth/useAuthSession';
 import { useAuthState } from '../../auth/useAuthState';
+import { usePageRestored } from '../../ui/hooks/usePageRestored';
 
 export type AuthenticationGateStatus = 'granted' | 'forbidden' | 'redirecting' | 'unavailable';
 
@@ -53,6 +54,7 @@ export function useAuthenticationGate(requiredRole?: CollectorRole): Authenticat
     setUnavailable(false);
     setAttempt((previous) => previous + 1);
   }, []);
+  usePageRestored(retry);
 
   return { status: statusOf(state, requiredRole, unavailable), retry };
 }

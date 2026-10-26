@@ -9,7 +9,7 @@
 | Périmètre de ce lot | Front (`web/`) : AC1, AC2, AC4, AC5 (partie client OIDC et stockage), AC10 |
 | Hors périmètre de ce lot | AC3 (import du realm, comptes fictifs), AC5 partie serveur (durée de 5 minutes fixée par le realm), AC6 (rotation du jeton de rafraîchissement), AC7 (exposition de Keycloak), AC8 (contrôle du realm en CI), AC9 (CSP et en-têtes nginx) : realm et infrastructure, à prouver avec un Keycloak réel, `curl` et Playwright |
 | Outils | Vitest 3.2.4, Testing Library, jsdom 26.1.0, `axe-core` 4.14.0 |
-| Verdict | **Tous les AC du périmètre front sont couverts et conformes** |
+| Verdict | **Tous les AC du périmètre front sont couverts et conformes** (anomalie A1 corrigée et revérifiée) |
 
 ## Méthode
 
@@ -29,6 +29,7 @@ Tests : `web/src/acceptance/US-008/`
 | `identityProviderHarness.tsx` | Faux serveur d'autorisation HTTP, capture de navigation, démarrage de l'application, lecture du stockage navigateur |
 | `AC1-connexion.test.tsx` | Redirection vers le realm, nom et rôle, retour à la page d'origine, échecs |
 | `AC1-espace-vendeur.test.tsx` | Route `/vendeur` protégée : visiteur, vendeur, acheteur |
+| `AC1-retour-arriere-et-chemin-de-retour.test.tsx` | Retour arrière depuis Keycloak (`pageshow` persisté, revue M1) ; chemins de retour hors site (revue m1) |
 | `AC2-deconnexion.test.tsx` | Révocation, fin de session, retour à `/` en visiteur |
 | `AC4-configuration-et-traductions.test.tsx` | `config.json` à l'exécution, configurations OIDC invalides, FR par défaut et EN |
 | `AC5-pkce-jetons-en-memoire.test.tsx` | Code + PKCE `S256`, aucun jeton dans le stockage, état PKCE supprimé, jeton expiré jamais envoyé |
@@ -38,7 +39,7 @@ Tests : `web/src/acceptance/US-008/`
 
 | Commande (depuis `web/`) | Résultat |
 |---|---|
-| `npm test` | 10 fichiers, **92 tests verts** (56 US-008, 36 US-010 inchangés), 0 échec ; deux exécutions consécutives identiques |
+| `npm test` | 11 fichiers, **97 tests verts** (61 US-008, 36 US-010), 0 échec, après correction de A1 |
 | `npm run lint` | 0 erreur, 0 avertissement |
 | `npm run typecheck` | 0 erreur |
 | `npx prettier --check src/acceptance` | Conforme |
@@ -62,6 +63,9 @@ Tests : `web/src/acceptance/US-008/`
 | Espace vendeur : retour depuis `/vendeur` | Arrivée dans l'espace vendeur | `/vendeur`, titre « Espace vendeur » | Conforme |
 | Espace vendeur : vendeur A connecté | Accès | « Bienvenue, Alice Vendeur… » | Conforme |
 | Espace vendeur : acheteur | Refus | Page « Accès réservé », aucun appel d'API hors catalogue | Conforme |
+| Limite (M1) : retour arrière depuis Keycloak (`pageshow` persisté) puis nouveau clic « Se connecter » | Nouvelle redirection | Seconde navigation vers `auth.` | Conforme |
+| Limite (M1) : retour arrière depuis Keycloak sur `/vendeur` | Nouvelle redirection par la garde | Seconde navigation vers `auth.` (après correction de A1) | Conforme |
+| Erreur (m1) : connexion depuis `/a/..//evil.com`, `//evil.com`, `/\evil.com` | Retour sur le site | Retour sur `/`, même origine | Conforme |
 
 ### AC2 — Déconnexion
 
@@ -118,10 +122,19 @@ La règle `color-contrast` est désactivée sous jsdom (pas de rendu) ; le contr
 
 ## Anomalies
 
-Aucune anomalie : aucun comportement observé ne contredit un AC du périmètre.
+| Id | AC | Sévérité | Fichiers en cause | Statut |
+|---|---|---|---|---|
+| A1 | AC1 | Majeure | `web/src/app/routing/useAuthenticationGate.ts`, `web/src/auth/createOidcSession.ts` | Corrigée, revérifiée le 2026-10-26 (5/5 verts dans le fichier, 97/97 au total) |
+
+**A1 — La garde `/vendeur` ne relançait pas la connexion après un retour arrière depuis Keycloak (corrigée).**
+- Attendu (AC1) : « Given un visiteur […], When il clique « Se connecter », Then il est redirigé vers `auth.collector.qvl-project.com` » ; l'espace vendeur doit rester atteignable par la connexion (revue M1).
+- Étapes : ouvrir `/vendeur` en visiteur → redirection vers `auth.` ; émettre `pageshow` avec `persisted: true` (restauration depuis le cache aller-retour).
+- Réel avant correction : aucune seconde navigation vers `auth.` (1 au lieu de 2), sur deux exécutions. Test : `AC1-retour-arriere-et-chemin-de-retour.test.tsx`, scénario « redirigé depuis /vendeur puis revenu par « Précédent » ».
+- Le même scénario depuis le bouton « Se connecter » est conforme : la remise à zéro de la redirection en cours fonctionne pour un clic ultérieur, mais pas pour la relance faite par la garde au même événement `pageshow`.
 
 ## Limites et suites
 
 - Keycloak simulé : JWT non signés, pas de vraie page de connexion. Le parcours AC1/AC2 réel reste à jouer en Playwright sur compose.
 - AC3, AC6, AC7, AC8, AC9 et la durée de 5 minutes d'AC5 : à prouver par DevOps et Test sur le realm et l'infrastructure.
 - Le harnais lit `localStorage`, `sessionStorage` et `document.cookie` par des accesseurs dédiés pour vérifier l'absence de jetons ; la règle de lint qui les interdit reste active ailleurs.
+- Correction : `createOidcSession.ts` remet à zéro la redirection en cours sur `pageshow` persisté, avant la relance de la garde. Revérification : seconde navigation vers `auth.` observée.
