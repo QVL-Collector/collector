@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Résultat de contrôle de publication, contrat v1",
+  "description": "Émis par le Contrôle de publication vers la Place de marché (échange controle.resultats, clé de routage v1). Le motif est une catégorie fermée : il ne cite jamais la règle exacte ni le seuil appliqué.",
+  "allOf": [{ "$ref": "../enveloppe-v1.schema.json" }],
+  "properties": {
+    "type": { "const": "controle.resultat" },
+    "version": { "const": 1 },
+    "data": { "$ref": "#/$defs/resultat" }
+  },
+  "$defs": {
+    "resultat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["article_id", "revision", "rules_version", "issue"],
+      "properties": {
+        "article_id": {
+          "description": "Identifiant de l'article contrôlé, repris de la demande.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "revision": {
+          "description": "Révision contrôlée, reprise de la demande.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "rules_version": {
+          "description": "Version du jeu de règles appliqué ; elle évolue sans changer la version du contrat.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "issue": { "$ref": "#/$defs/issue" },
+        "reason": { "$ref": "#/$defs/motif" }
+      },
+      "if": {
+        "required": ["issue"],
+        "properties": { "issue": { "const": "publie" } }
+      },
+      "then": {
+        "properties": { "reason": false }
+      },
+      "else": {
+        "required": ["reason"]
+      }
+    },
+    "issue": {
+      "description": "Issue du contrôle : publié, refusé, ou à vérifier par l'admin.",
+      "enum": ["publie", "refuse", "a_verifier"]
+    },
+    "motif": {
+      "description": "Catégorie de motif, obligatoire si l'issue n'est pas « publie », absente sinon.",
+      "enum": [
+        "annonce_incomplete",
+        "coordonnees_detectees",
+        "compte_non_autorise",
+        "prix_a_confirmer",
+        "vendeur_a_verifier",
+        "categorie_inconnue"
+      ]
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "4e6a8c0d-2b1f-4d3e-9a5c-7b9d1f3e5a7c",
+  "type": "controle.demande",
+  "version": 1,
+  "emitted_at": "2026-11-03T13:30:12.5Z",
+  "correlation_id": "6f1b3d5e-7a9c-4e2d-b4f6-8a0c2e4f6b8d",
+  "data": {
+    "article_id": "c3e5a7b9-d1f2-4a4c-8e6a-0b2d4f6a8c0e",
+    "revision": 1,
+    "submitted_at": "2026-11-03T13:30:11Z",
+    "seller": {
+      "account_id": "9b1d3f5a-7c9e-4b2d-a4f6-1c3e5a7b9d2f",
+      "member_since": "2026-10-30",
+      "suspended": true
+    },
+    "listing": {
+      "title": "Montre de gousset en argent",
+      "description": "Montre de gousset en argent massif, mécanisme fonctionnel, révisée en 2024.",
+      "category_code": "horlogerie-ancienne",
+      "price_cents": 89000,
+      "photo_count": 4
+    }
+  }
+}

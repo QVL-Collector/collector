@@ -1,0 +1,13 @@
+{
+  "id": "9e2b7c41-8d3a-4f6e-b1c5-3a7d9e0f2b48",
+  "type": "controle.resultat",
+  "version": 1,
+  "emitted_at": "2026-11-02T09:15:01.874Z",
+  "correlation_id": "7a9d2e14-c6b3-4f81-a0d5-e2c47b19f863",
+  "data": {
+    "article_id": "3f1c2a8e-5b7d-4e2a-9c1f-6d8b0a4e7c21",
+    "revision": 1,
+    "rules_version": 1,
+    "issue": "publie"
+  }
+}

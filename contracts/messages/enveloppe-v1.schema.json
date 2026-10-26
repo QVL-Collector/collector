@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Enveloppe commune des messages du canal, v1",
+  "description": "Membres communs à tout message échangé sur le canal. Le contexte de trace W3C voyage dans les en-têtes du message, pas dans le corps.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "version", "emitted_at", "correlation_id", "data"],
+  "properties": {
+    "id": {
+      "description": "Identifiant unique du message, conservé tel quel en cas de rejeu.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "description": "Type du message ; avec la version, désigne le schéma qui s'applique.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "version": {
+      "description": "Version du contrat du type de message.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "emitted_at": {
+      "description": "Date d'émission, en UTC.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "description": "Identifiant de corrélation propagé de la demande au résultat.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "data": {
+      "description": "Contenu propre au type de message, défini par son schéma.",
+      "type": "object"
+    }
+  }
+}
