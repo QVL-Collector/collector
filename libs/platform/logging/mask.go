@@ -21,6 +21,7 @@ var sensitiveKeys = map[string]struct{}{
 var (
 	signedTokenPattern       = regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*`)
 	connectionPasswordFormat = regexp.MustCompile(`(://[^:/@\s]+:)[^@\s]+@`)
+	presignedParameterFormat = regexp.MustCompile(`(?i)(X-Amz-(?:Credential|Signature|Security-Token)=)[^&\s"'\\]+`)
 )
 
 func maskSensitive(_ []string, attr slog.Attr) slog.Attr {
@@ -38,5 +39,6 @@ func maskSensitive(_ []string, attr slog.Attr) slog.Attr {
 
 func maskSecrets(text string) string {
 	withoutTokens := signedTokenPattern.ReplaceAllString(text, maskedValue)
-	return connectionPasswordFormat.ReplaceAllString(withoutTokens, "${1}"+maskedValue+"@")
+	withoutSignatures := presignedParameterFormat.ReplaceAllString(withoutTokens, "${1}"+maskedValue)
+	return connectionPasswordFormat.ReplaceAllString(withoutSignatures, "${1}"+maskedValue+"@")
 }

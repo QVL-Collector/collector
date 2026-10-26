@@ -30,7 +30,7 @@ Scénarios Given/When/Then dérivés des AC de l'US, du contrat `contracts/api/p
 | `services/place-de-marche/cmd/place-de-marche/contrat_test.go` | Conformité des réponses à l'OpenAPI `/v1` |
 | `services/place-de-marche/cmd/place-de-marche/integration_test.go` | Amorçage des rôles, migrations en rôle de migration, scénarios métier et contrat en rôle d'exécution, droits minimaux |
 | `libs/platform/token/verifier_test.go` | Jeton valide, refus (exp, iss, aud, azp, typ, kid, clé, `none`), 401/403 du middleware |
-| `libs/platform/logging/mask_test.go` | Masquage à valeurs piégées (D09, MO3) : attribut, en-tête `Authorization`, message, `*url.Error` avec chaîne de connexion, erreur enveloppée, groupes imbriqués, journal dérivé ; `correlation_id` |
+| `libs/platform/logging/mask_test.go` | Masquage à valeurs piégées (D09, MO3) : attribut, en-tête `Authorization`, message, `*url.Error` avec chaîne de connexion ou URL présignée, erreur enveloppée, groupes imbriqués, journal dérivé, URL présignées toute casse ; `correlation_id` |
 | `libs/platform/httpjson/decode_test.go` | 415, 413, limite exacte, JSON mal formé, clés dupliquées, racine non objet, champ inconnu, type invalide |
 
 ## Résultats d'exécution
@@ -39,7 +39,7 @@ Scénarios Given/When/Then dérivés des AC de l'US, du contrat `contracts/api/p
 |---|---|
 | `go test ./... -count=1 -cover` (`services/place-de-marche`) | Vert : 153 cas réussis, 1 saut (`TestUS009IntegrationPostgreSQL`, Docker absent) |
 | Couverture du service mesurée avec `-coverpkg=./...` | `internal/annonces` 94,0 %, `internal/annonces/api` 79,6 %, `stockage`, `migrations`, `config` 0 % sans Docker ; total 48,1 % |
-| `go test ./... -count=1 -cover` (`libs/platform`) | Vert, 45 cas réussis dans les nouveaux tests : `token` 85,9 %, `logging` 87,2 %, `httpjson` 76,7 %, `message` 82,8 % (inchangé) |
+| `go test ./... -count=1 -cover` (`libs/platform`) | Vert, 50 cas réussis dans les nouveaux tests : `token` 85,9 %, `logging` 87,5 %, `httpjson` 76,7 %, `message` 82,8 % (inchangé) |
 | `golangci-lint run --config ../../.golangci.yml ./...` (les deux modules) | 0 problème |
 | `go vet ./...` (les deux modules) | 0 problème |
 | `go test -race` | Non exécutable sur le poste (cgo absent sous Windows) ; exécuté par la CI Linux |
@@ -150,7 +150,7 @@ Aucune anomalie : aucun comportement observé ne contredit un AC du périmètre.
 
 Observations sans impact sur un AC :
 
-- Masquage des journaux (`libs/platform/logging`) : la chaîne de requête d'une URL présignée (`X-Amz-Credential`, `X-Amz-Signature`) apparaît en clair dans le journal. D09 exige qu'elle soit retirée (MD7 de D07). Les URL présignées n'existent pas dans US-009, mais avec US-020 (photos) cet écart deviendra une anomalie. Le cas a été retiré de la suite verte et doit être réintroduit avec US-020. Pour le back. Tous les autres pièges sont masqués : jeton, `Authorization`, chaîne de connexion dans un attribut, dans un message ou dans une `*url.Error`, groupes imbriqués.
+- Masquage des URL présignées (D09, MD7 de D07) : à la première exécution, la chaîne de requête d'une URL présignée sortait en clair dans le journal. Le back a corrigé le masquage ; les cas sont réintroduits et verts : `X-Amz-Credential`, `X-Amz-Signature`, `X-Amz-Security-Token`, en casse d'origine et en minuscules, dans un attribut, un message et une `*url.Error`. L'hôte et les noms de paramètres restent visibles.
 - au niveau de `libs/platform/httpjson`, `{"titre":"a","TITRE":"b"}` est rejeté avec la raison `champ_inconnu` et non `cle_dupliquee` ; le corps est bien refusé en 400, comme l'exige AC9.
 
 ## Reste à prouver (Docker requis)

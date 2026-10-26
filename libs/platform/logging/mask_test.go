@@ -21,9 +21,14 @@ const (
 	piegeDeConnexion = "ValeurPiegeeDeConnexion42"
 	chaineConnexion  = "postgres://marche_execution:" + piegeDeConnexion + "@base.collector.test:5432/marche?sslmode=verify-full"
 	valeursInterdite = "valeur piégée"
+	signaturePiegee  = "signature-presignee-piegee"
+	identitePiegee   = "identite-presignee-piegee"
+	sessionPiegee    = "session-presignee-piegee"
+	urlPresignee     = "https://photos.collector.test/a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=" + identitePiegee + "&X-Amz-Signature=" + signaturePiegee
+	urlMinuscules    = "https://photos.collector.test/b.jpg?x-amz-credential=" + identitePiegee + "&x-amz-security-token=" + sessionPiegee + "&x-amz-signature=" + signaturePiegee
 )
 
-var pieges = []string{jetonPiege, opaquePiege, piegeDeConnexion}
+var pieges = []string{jetonPiege, opaquePiege, piegeDeConnexion, signaturePiegee, identitePiegee, sessionPiegee}
 
 func journal(t *testing.T) (*slog.Logger, *bytes.Buffer) {
 	t.Helper()
@@ -55,6 +60,12 @@ func TestMasquageDesValeursPiegees(t *testing.T) {
 		"erreur enveloppée": func(l *slog.Logger) {
 			l.Error("échec", "erreur", fmt.Errorf("vérification : %w", errors.New("jeton "+jetonPiege)))
 		},
+		"URL présignée en attribut":     func(l *slog.Logger) { l.Info("photo", "url", urlPresignee) },
+		"URL présignée en minuscules":   func(l *slog.Logger) { l.Info("photo", "url", urlMinuscules) },
+		"URL présignée dans le message": func(l *slog.Logger) { l.Info("téléversement vers " + urlMinuscules) },
+		"URL présignée dans une url.Error": func(l *slog.Logger) {
+			l.Error("échec", "erreur", &url.Error{Op: "Put", URL: urlPresignee, Err: errors.New("délai dépassé")})
+		},
 		"groupe imbriqué": func(l *slog.Logger) {
 			l.Info("requête", slog.Group("http", slog.Group("entetes", slog.String("Authorization", "Bearer "+opaquePiege), slog.String("valeur", jetonPiege))))
 		},
@@ -79,6 +90,17 @@ func TestMasquageConserveLeMessageUtile(t *testing.T) {
 			t.Errorf("%q absent du journal : %s", attendu, sortie)
 		}
 	}
+}
+
+func TestMasquageGardeLesNomsDeParametresPresignes(t *testing.T) {
+	l, sortie := journal(t)
+	l.Info("photo", "url", urlMinuscules)
+	for _, attendu := range []string{"photos.collector.test", "x-amz-credential", "x-amz-security-token", "x-amz-signature"} {
+		if !strings.Contains(sortie.String(), attendu) {
+			t.Errorf("%q absent du journal : %s", attendu, sortie)
+		}
+	}
+	exigerSansPiege(t, sortie)
 }
 
 func TestIdentifiantDeCorrelationJournalise(t *testing.T) {
