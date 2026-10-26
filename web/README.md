@@ -35,13 +35,16 @@ Un composant ne contient que du JSX ; état, effets et appels vivent dans un hoo
 
 `/config.json` est lu au démarrage, jamais figé au build (ENF-29). En production, il est monté depuis un ConfigMap ; `public/config.json` sert au développement.
 
-| Clé                      | Valeurs                                 | Rôle                                                                |
-| ------------------------ | --------------------------------------- | ------------------------------------------------------------------- |
-| `marketplaceApiUrl`      | chemin de même origine, ex. `/marche`   | Préfixe de la Place de marché ; une URL absolue est refusée         |
-| `catalogue.source`       | `api`, `demo`                           | Client HTTP réel ou adaptateur de démonstration chargé à la demande |
-| `catalogue.demoScenario` | `nominal`, `empty`, `error`             | États du catalogue rejouables sans back                             |
+| Clé                      | Valeurs                                                                 | Rôle                                                                               |
+| ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `marketplaceApiUrl`      | chemin de même origine, ex. `/marche`                                   | Préfixe de la Place de marché ; une URL absolue est refusée                        |
+| `catalogue.source`       | `api`, `demo`                                                           | Client HTTP réel ou adaptateur de démonstration chargé à la demande                |
+| `catalogue.demoScenario` | `nominal`, `empty`, `error`                                             | États du catalogue rejouables sans back                                            |
+| `oidc.authority`         | URL de l'émetteur, ex. `https://auth.<domaine>/realms/collector`        | HTTPS obligatoire (HTTP admis sur `localhost` seulement), sans requête ni fragment |
+| `oidc.clientId`          | `collector-web`                                                         | Client public du realm                                                             |
+| `oidc.scope`             | portées séparées par une espace, `openid` obligatoire ; défaut `openid` | `profile` requis pour afficher le nom (AC1 de US-008)                              |
 
-La configuration OIDC (émetteur, client) sera ajoutée avec la connexion (US-008).
+Une configuration invalide affiche l'écran d'échec de démarrage. L'origine de `oidc.authority` doit être celle de `COLLECTOR_IDP_ORIGIN` (CSP).
 
 ## Contrat supposé du catalogue public
 
@@ -56,14 +59,27 @@ La réponse est validée champ par champ avant affichage ; un écart de contrat 
 ## Sécurité
 
 - Aucun HTML libre : `react/no-danger`, `no-unsanitized`, `no-eval` en erreur ; un titre contenant du balisage s'affiche comme du texte (US-010, AC4). Le jeu de démonstration en contient deux.
-- `localStorage`, `sessionStorage` et `document.cookie` interdits au lint : les jetons resteront en mémoire (D06).
+- `localStorage`, `sessionStorage` et `document.cookie` interdits au lint : les jetons restent en mémoire (D06). Seule exception : l'état transitoire de la requête d'autorisation (voir « Connexion »).
 - CSP posée par nginx sur toutes les réponses, 404 comprises : `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (Emotion, D04), `connect-src 'self' ${COLLECTOR_IDP_ORIGIN}`, `frame-ancestors 'none'`. Polices auto-hébergées, `assetsInlineLimit: 0`.
 - HSTS est posé par l'écouteur de l'ALB, pas ici (D08, ME1).
 - Image : `COLLECTOR_IDP_ORIGIN` injecté au démarrage par les modèles nginx. En système de fichiers en lecture seule, monter un `emptyDir` sur `/tmp` et sur `/etc/nginx/conf.d`.
 
-## Point d'extension de la connexion (US-008)
+## Connexion (US-008)
 
-`src/auth/AuthSession.ts` définit la session ; `anonymousSession` est passée par défaut à `createAppServices`. US-008 fournira une session OIDC (PKCE `S256`, `InMemoryWebStorage`) : le client HTTP ajoute alors `Authorization: Bearer` sans autre changement.
+Bibliothèque : `oidc-client-ts` (maintenue, PKCE `S256` natif, stockage des utilisateurs injectable, rafraîchissement par jeton sans iframe), sans surcouche React : `src/auth/` expose une `AuthSession` lue par `useSyncExternalStore`.
+
+| Élément                           | Comportement                                                                                                                                                                                                                           |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connexion                         | Bouton « Se connecter » de l'en-tête → `auth.` (code d'autorisation + PKCE `S256`, `response_mode=fragment` : le code n'atteint jamais les journaux nginx) → `/rappel` → retour à la page d'origine (chemin de même origine validé)    |
+| Jetons                            | `InMemoryWebStorage` uniquement ; `Authorization: Bearer` ajouté par `createHttpClient` via `session.getAccessToken` ; jeton expiré jamais envoyé                                                                                      |
+| État de la requête d'autorisation | `state` et vérificateur PKCE dans `sessionStorage` (préfixe `collector.oidc.`), seule exception au lint, limitée à `src/auth/createOidcStateStore.ts` ; aucun jeton, entrée supprimée au retour, entrées périmées purgées au démarrage |
+| Renouvellement                    | Silencieux par jeton de rafraîchissement (rotation Keycloak) une minute avant l'expiration ; en cas d'échec, l'état visiteur revient                                                                                                   |
+| Rechargement                      | Mémoire vide : visiteur sur les pages publiques ; une page protégée relance la connexion, sans formulaire tant que la session `auth.` vit                                                                                              |
+| Déconnexion                       | Révocation des jetons, fin de session Keycloak (`end_session`), retour à `/`                                                                                                                                                           |
+| En-tête                           | Nom (`name`, sinon `preferred_username`) et rôle principal (`realm_access.roles` du jeton d'accès : admin, puis vendeur, puis acheteur) ; icônes seules sous `sm`                                                                      |
+| Route protégée                    | `RequireAuthentication` (`src/app/routing/`), ex. `/vendeur` avec le rôle `vendeur` ; refus affiché sans appel d'API, le contrôle réel reste côté services (US-009)                                                                    |
+
+Le rôle affiché n'est qu'un confort d'interface : aucune décision d'autorisation n'est prise par le front.
 
 ## Internationalisation et accessibilité
 

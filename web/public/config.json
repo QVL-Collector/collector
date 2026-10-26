@@ -3,5 +3,10 @@
   "catalogue": {
     "source": "demo",
     "demoScenario": "nominal"
+  },
+  "oidc": {
+    "authority": "https://auth.collector.localhost/realms/collector",
+    "clientId": "collector-web",
+    "scope": "openid profile"
   }
 }

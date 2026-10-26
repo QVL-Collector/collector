@@ -6,10 +6,13 @@ import type { CatalogueClient } from '../features/catalogue/domain/catalogue';
 
 export type AppServices = {
   readonly catalogueClient: CatalogueClient;
+  readonly authSession?: AuthSession;
 };
 
+export type AppServicesConfig = Pick<RuntimeConfig, 'marketplaceApiUrl' | 'catalogue'>;
+
 export async function createAppServices(
-  config: RuntimeConfig,
+  config: AppServicesConfig,
   session: AuthSession = anonymousSession,
 ): Promise<AppServices> {
   const marketplaceHttp = createHttpClient({
@@ -18,5 +21,6 @@ export async function createAppServices(
   });
   return {
     catalogueClient: await createCatalogueClient(config.catalogue, marketplaceHttp),
+    authSession: session,
   };
 }

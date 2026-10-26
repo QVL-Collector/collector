@@ -69,6 +69,19 @@
       ]
     },
     {
+      "name": "profile",
+      "description": "Nom affiche par le front (US-008), jeton d'identite seulement",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        { "name": "nom complet", "protocol": "openid-connect", "protocolMapper": "oidc-full-name-mapper",
+          "config": { "id.token.claim": "true", "access.token.claim": "false", "userinfo.token.claim": "true", "introspection.token.claim": "false" } },
+        { "name": "identifiant", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": { "user.attribute": "username", "claim.name": "preferred_username", "jsonType.label": "String",
+                      "id.token.claim": "true", "access.token.claim": "false", "userinfo.token.claim": "true", "introspection.token.claim": "false" } }
+      ]
+    },
+    {
       "name": "audiences-collector",
       "description": "Audiences du jeton d'utilisateur (D06 : un audience mapper par service)",
       "protocol": "openid-connect",
@@ -137,7 +150,7 @@
         "oidc.ciba.grant.enabled": "false",
         "use.refresh.tokens": "true"
       },
-      "defaultClientScopes": ["basic", "roles", "audiences-collector"],
+      "defaultClientScopes": ["basic", "roles", "profile", "audiences-collector"],
       "optionalClientScopes": []
     },
     {
