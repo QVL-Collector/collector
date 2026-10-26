@@ -10,11 +10,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"collector/libs/platform/outbox"
 	"collector/services/place-de-marche/internal/annonces"
 )
 
 const articleColumns = `a.id, a.vendeur_id, a.etat, a.revision, a.titre, a.description,
-	a.categorie_id, c.libelle, a.prix_centimes, a.frais_port_centimes, a.cree_le, a.modifie_le`
+	a.categorie_id, c.libelle, a.prix_centimes, a.frais_port_centimes, a.motif, a.cree_le, a.modifie_le`
 
 const insertDraftQuery = `
 WITH cree AS (
@@ -30,11 +31,31 @@ WITH modifie AS (
 	UPDATE article
 	SET titre = $5, description = $6, categorie_id = $7, prix_centimes = $8, frais_port_centimes = $9,
 		revision = revision + 1, modifie_le = now()
-	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = $4
+	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
 	RETURNING *
 )
 SELECT ` + articleColumns + `
 FROM modifie AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const submitQuery = `
+WITH soumis AS (
+	UPDATE article
+	SET etat = $5, motif = NULL, revision = revision + 1, modifie_le = now()
+	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
+	RETURNING *
+)
+SELECT ` + articleColumns + `,
+	(SELECT (min(premier.cree_le) AT TIME ZONE 'UTC')::date FROM article AS premier WHERE premier.vendeur_id = a.vendeur_id)
+FROM soumis AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const applyReviewQuery = `
+UPDATE article
+SET etat = $3, motif = $4, modifie_le = now()
+WHERE id = $1 AND revision = $2 AND etat = $5`
+
+const recordReviewQuery = `
+INSERT INTO resultat_controle (message_id, article_id, revision, issue, motif, version_regles)
+VALUES ($1::text::uuid, $2, $3, $4, $5, $6)`
 
 const findOwnedQuery = `
 SELECT ` + articleColumns + `
@@ -55,12 +76,17 @@ const (
 	categoryExistsQuery = `SELECT EXISTS (SELECT 1 FROM categorie WHERE id = $1)`
 )
 
-type Store struct {
-	pool *pgxpool.Pool
+type ReviewRequestEncoder interface {
+	Encode(ctx context.Context, request annonces.ReviewRequest) (outbox.Event, error)
 }
 
-func NewStore(pool *pgxpool.Pool) *Store {
-	return &Store{pool: pool}
+type Store struct {
+	pool     *pgxpool.Pool
+	requests ReviewRequestEncoder
+}
+
+func NewStore(pool *pgxpool.Pool, requests ReviewRequestEncoder) *Store {
+	return &Store{pool: pool, requests: requests}
 }
 
 func (s *Store) CreateDraft(ctx context.Context, seller annonces.SellerID, content annonces.Content) (annonces.Article, error) {
@@ -79,12 +105,12 @@ func (s *Store) CreateDraft(ctx context.Context, seller annonces.SellerID, conte
 func (s *Store) UpdateDraft(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
 	columns := contentColumns(content)
 	row := s.pool.QueryRow(ctx, updateDraftQuery,
-		uuid.UUID(id), uuid.UUID(seller), int(expected), string(annonces.StatusDraft),
+		uuid.UUID(id), uuid.UUID(seller), int(expected), sellerHeldStatuses(),
 		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
 	)
 	article, err := scanArticle(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return annonces.Article{}, s.explainRefusedUpdate(ctx, seller, id)
+		return annonces.Article{}, s.explainRefusal(ctx, seller, id, annonces.Status.Editable, annonces.ErrArticleNotEditable)
 	}
 	if err != nil {
 		return annonces.Article{}, fmt.Errorf("modification du brouillon : %w", err)
@@ -92,7 +118,71 @@ func (s *Store) UpdateDraft(ctx context.Context, seller annonces.SellerID, id an
 	return article, nil
 }
 
-func (s *Store) explainRefusedUpdate(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID) error {
+func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Article, error) {
+	var submitted annonces.Article
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		request, err := submitInTransaction(ctx, tx, seller, id, expected)
+		if err != nil {
+			return err
+		}
+		event, err := s.requests.Encode(ctx, request)
+		if err != nil {
+			return err
+		}
+		submitted = request.Article
+		return outbox.Enqueue(ctx, tx, event)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.Article{}, s.explainRefusal(ctx, seller, id, annonces.Status.Submittable, annonces.ErrArticleNotSubmittable)
+	}
+	if err != nil {
+		return annonces.Article{}, fmt.Errorf("soumission de l'article : %w", err)
+	}
+	return submitted, nil
+}
+
+func submitInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.ReviewRequest, error) {
+	row := tx.QueryRow(ctx, submitQuery,
+		uuid.UUID(id), uuid.UUID(seller), int(expected), sellerHeldStatuses(), string(annonces.StatusUnderReview),
+	)
+	var (
+		r           articleRow
+		memberSince time.Time
+	)
+	if err := row.Scan(append(r.targets(), &memberSince)...); err != nil {
+		return annonces.ReviewRequest{}, err
+	}
+	article := r.article()
+	return annonces.ReviewRequest{
+		Article:     article,
+		Seller:      annonces.SellerStatus{MemberSince: memberSince},
+		SubmittedAt: article.UpdatedAt,
+	}, nil
+}
+
+func (s *Store) ApplyReview(ctx context.Context, outcome annonces.ReviewOutcome) (bool, error) {
+	applied := false
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		reason := reasonColumn(outcome.Reason)
+		tag, err := tx.Exec(ctx, applyReviewQuery,
+			uuid.UUID(outcome.Article), int(outcome.Revision), string(outcome.Status), reason, string(annonces.StatusUnderReview),
+		)
+		if err != nil || tag.RowsAffected() == 0 {
+			return err
+		}
+		applied = true
+		_, err = tx.Exec(ctx, recordReviewQuery,
+			outcome.MessageID, uuid.UUID(outcome.Article), int(outcome.Revision), string(outcome.Status), reason, outcome.RulesVersion,
+		)
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("application du résultat de contrôle : %w", err)
+	}
+	return applied, nil
+}
+
+func (s *Store) explainRefusal(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, allowed func(annonces.Status) bool, notAllowed error) error {
 	var (
 		status   string
 		revision int
@@ -104,8 +194,8 @@ func (s *Store) explainRefusedUpdate(ctx context.Context, seller annonces.Seller
 	if err != nil {
 		return fmt.Errorf("lecture de l'état de l'article : %w", err)
 	}
-	if !annonces.Status(status).Editable() {
-		return annonces.ErrArticleNotEditable
+	if !allowed(annonces.Status(status)) {
+		return notAllowed
 	}
 	return annonces.ErrStaleRevision
 }
@@ -174,15 +264,19 @@ type articleRow struct {
 	categoryLabel    *string
 	priceCents       *int64
 	shippingFeeCents *int64
+	reason           *string
 	createdAt        time.Time
 	updatedAt        time.Time
 }
 
+func (r *articleRow) targets() []any {
+	return []any{&r.id, &r.seller, &r.status, &r.revision, &r.title, &r.description,
+		&r.categoryID, &r.categoryLabel, &r.priceCents, &r.shippingFeeCents, &r.reason, &r.createdAt, &r.updatedAt}
+}
+
 func scanArticle(row pgx.Row) (annonces.Article, error) {
 	var r articleRow
-	err := row.Scan(&r.id, &r.seller, &r.status, &r.revision, &r.title, &r.description,
-		&r.categoryID, &r.categoryLabel, &r.priceCents, &r.shippingFeeCents, &r.createdAt, &r.updatedAt)
-	if err != nil {
+	if err := row.Scan(r.targets()...); err != nil {
 		return annonces.Article{}, err
 	}
 	return r.article(), nil
@@ -199,6 +293,7 @@ func (r articleRow) article() annonces.Article {
 		Category:    category(r.categoryID, r.categoryLabel),
 		Price:       euros(r.priceCents),
 		ShippingFee: euros(r.shippingFeeCents),
+		Reason:      reviewReason(r.reason),
 		CreatedAt:   r.createdAt,
 		UpdatedAt:   r.updatedAt,
 	}
@@ -216,6 +311,31 @@ func euros(cents *int64) *annonces.Money {
 		return nil
 	}
 	return &annonces.Money{Cents: *cents, Currency: annonces.Euro}
+}
+
+func reviewReason(raw *string) *annonces.ReviewReason {
+	if raw == nil {
+		return nil
+	}
+	reason := annonces.ReviewReason(*raw)
+	return &reason
+}
+
+func reasonColumn(reason *annonces.ReviewReason) *string {
+	if reason == nil {
+		return nil
+	}
+	value := string(*reason)
+	return &value
+}
+
+func sellerHeldStatuses() []string {
+	statuses := annonces.SellerHeldStatuses()
+	columns := make([]string, len(statuses))
+	for i, status := range statuses {
+		columns[i] = string(status)
+	}
+	return columns
 }
 
 type draftColumns struct {

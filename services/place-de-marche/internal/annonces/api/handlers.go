@@ -30,9 +30,13 @@ var staleRevision = problem.Typed("urn:collector:probleme:revision-perimee", "R�
 var notEditable = problem.Typed("urn:collector:probleme:article-non-modifiable", "Article non modifiable",
 	http.StatusConflict, "L'article ne peut pas être modifié dans son état actuel.")
 
+var notSubmittable = problem.Typed("urn:collector:probleme:article-non-soumettable", "Article non soumettable",
+	http.StatusConflict, "L'article ne peut pas être soumis au contrôle dans son état actuel.")
+
 type ArticleService interface {
 	CreateDraft(ctx context.Context, seller annonces.SellerID, content annonces.Content) (annonces.Article, error)
 	UpdateDraft(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error)
+	Submit(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Article, error)
 	OwnArticle(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID) (annonces.Article, error)
 	OwnArticles(ctx context.Context, seller annonces.SellerID, page annonces.PageRequest) (annonces.ArticlePage, error)
 	Categories(ctx context.Context) ([]annonces.Category, error)
@@ -57,6 +61,7 @@ func Register(mux *http.ServeMux, service ArticleService, authenticator Authenti
 	mux.Handle("GET "+sellerArticles, sellerOnly(h.listOwnArticles))
 	mux.Handle("GET "+sellerArticles+"/{id}", sellerOnly(h.ownArticle))
 	mux.Handle("PUT "+sellerArticles+"/{id}", sellerOnly(h.updateDraft))
+	mux.Handle("POST "+sellerArticles+"/{id}/soumission", sellerOnly(h.submit))
 	mux.HandleFunc("/", httpserver.NotFound)
 }
 
@@ -93,13 +98,8 @@ func (h handlers) createDraft(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handlers) updateDraft(w http.ResponseWriter, r *http.Request) {
-	seller, authenticated := sellerOf(w, r)
-	if !authenticated {
-		return
-	}
-	id, err := annonces.ParseArticleID(r.PathValue("id"))
-	if err != nil {
-		problem.Write(w, problem.NotFound())
+	seller, id, found := ownedArticleOf(w, r)
+	if !found {
 		return
 	}
 	var payload draftUpdatePayload
@@ -120,14 +120,31 @@ func (h handlers) updateDraft(w http.ResponseWriter, r *http.Request) {
 	httpjson.Write(w, http.StatusOK, toArticleResponse(article))
 }
 
-func (h handlers) ownArticle(w http.ResponseWriter, r *http.Request) {
-	seller, authenticated := sellerOf(w, r)
-	if !authenticated {
+func (h handlers) submit(w http.ResponseWriter, r *http.Request) {
+	seller, id, found := ownedArticleOf(w, r)
+	if !found {
 		return
 	}
-	id, err := annonces.ParseArticleID(r.PathValue("id"))
+	var payload submissionPayload
+	if !h.decode(w, r, &payload) {
+		return
+	}
+	expected, fieldErrors := revisionOf(payload.Revision)
+	if len(fieldErrors) > 0 {
+		problem.Write(w, problem.Validation(fieldErrors))
+		return
+	}
+	article, err := h.service.Submit(r.Context(), seller, id, expected)
 	if err != nil {
-		problem.Write(w, problem.NotFound())
+		h.writeError(w, r, err)
+		return
+	}
+	httpjson.Write(w, http.StatusAccepted, toArticleResponse(article))
+}
+
+func (h handlers) ownArticle(w http.ResponseWriter, r *http.Request) {
+	seller, id, found := ownedArticleOf(w, r)
+	if !found {
 		return
 	}
 	article, err := h.service.OwnArticle(r.Context(), seller, id)
@@ -168,6 +185,19 @@ func sellerOf(w http.ResponseWriter, r *http.Request) (annonces.SellerID, bool) 
 		return annonces.SellerID{}, false
 	}
 	return seller, true
+}
+
+func ownedArticleOf(w http.ResponseWriter, r *http.Request) (annonces.SellerID, annonces.ArticleID, bool) {
+	seller, authenticated := sellerOf(w, r)
+	if !authenticated {
+		return annonces.SellerID{}, annonces.ArticleID{}, false
+	}
+	id, err := annonces.ParseArticleID(r.PathValue("id"))
+	if err != nil {
+		problem.Write(w, problem.NotFound())
+		return annonces.SellerID{}, annonces.ArticleID{}, false
+	}
+	return seller, id, true
 }
 
 func (h handlers) decode(w http.ResponseWriter, r *http.Request, target any) bool {
@@ -219,6 +249,8 @@ func (h handlers) writeError(w http.ResponseWriter, r *http.Request, err error) 
 		problem.Write(w, staleRevision)
 	case errors.Is(err, annonces.ErrArticleNotEditable):
 		problem.Write(w, notEditable)
+	case errors.Is(err, annonces.ErrArticleNotSubmittable):
+		problem.Write(w, notSubmittable)
 	default:
 		h.logger.ErrorContext(r.Context(), "erreur interne", slog.String("event", "annonces.erreur_interne"), slog.Any("erreur", err))
 		problem.Write(w, problem.Internal())
