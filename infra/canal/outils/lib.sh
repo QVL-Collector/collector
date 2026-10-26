@@ -4,6 +4,7 @@
 
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
+umask 077
 
 CANAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPOT_DIR="$(cd "$CANAL_DIR/../.." && pwd)"
@@ -27,18 +28,15 @@ journal() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*" >&2; }
 echec() { journal "ECHEC : $*"; exit 1; }
 
 chemin_hote() {
-  # Chemin lisible par docker.exe et kubectl.exe (C:/...) depuis Git Bash.
   if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
 }
 
 variable_mdp() {
-  # admin-canal -> MDP_ADMIN_CANAL
   local u="${1^^}"
   printf 'MDP_%s' "${u//-/_}"
 }
 
 namespace_de() {
-  # Namespace Kubernetes du service qui porte l'identite (un Secret par service, MC5).
   case "$1" in
     marche) printf 'place-de-marche' ;;
     controle) printf 'controle' ;;

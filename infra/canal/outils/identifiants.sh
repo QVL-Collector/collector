@@ -16,7 +16,6 @@ fi
 mdp_aleatoire() { openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32; }
 
 empreinte_rabbitmq() {
-  # base64( sel(4 octets) || sha256( sel || mot de passe ) ) : format rabbit_password_hashing_sha256.
   local sel_hex
   sel_hex="$(openssl rand -hex 4)"
   {
@@ -33,8 +32,8 @@ etiquettes() {
   esac
 }
 
-mkdir -p "$GENERE_DIR"
 umask 077
+mkdir -p "$GENERE_DIR"
 mdp_tmp="$(mktemp "$GENERE_DIR/mdp.XXXXXX")"
 json_tmp="$(mktemp "$GENERE_DIR/utilisateurs.XXXXXX")"
 trap 'rm -f "$mdp_tmp" "$json_tmp"' EXIT
