@@ -28,9 +28,13 @@ const accessibleTextAttributes = [
 ].join('|');
 const textAttribute = `JSXAttribute[name.name=/^(${accessibleTextAttributes})$/]`;
 const literalText = ':matches(Literal, TemplateLiteral[expressions.length=0])';
+const stringText = ':matches(Literal[raw=/^[\'"]/], TemplateLiteral[expressions.length=0])';
+const textComposition =
+  ":matches(ConditionalExpression, LogicalExpression, BinaryExpression[operator='+'])";
 const literalTextSelectors = [
   `${textAttribute} > ${literalText}`,
   `${textAttribute} > JSXExpressionContainer > ${literalText}`,
+  `${textAttribute} > JSXExpressionContainer ${textComposition} > ${stringText}`,
 ].map((selector) => ({ selector, message: literalTextMessage }));
 
 export default tseslint.config(
