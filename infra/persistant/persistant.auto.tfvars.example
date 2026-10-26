@@ -1,0 +1,10 @@
+# Copier en persistant.auto.tfvars (ignoré par git) avant le premier plan de la couche persistante.
+# Valeurs lues en CLI, jamais versionnées (numéro de compte et adresse personnelle).
+
+# aws acm list-certificates --query "CertificateSummaryList[?DomainName=='collector.qvl-project.com'].CertificateArn" --output text
+arn_certificat = "arn:aws:acm:us-east-1:<compte>:certificate/<identifiant>"
+
+# aws acm describe-certificate --certificate-arn <arn> --query 'Certificate.DomainValidationOptions[0].ResourceRecord.Name' --output text (sans le point final)
+nom_validation = "_<empreinte>.collector.qvl-project.com"
+
+courriel_alertes_budget = "<adresse école de Martin>"
