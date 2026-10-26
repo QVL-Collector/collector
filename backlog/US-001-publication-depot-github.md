@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E1 Chaîne de livraison |
-| Statut | À faire |
+| Statut | Faite, à valider |
 | Sprint | 1 (J4) |
 | Engagement | Ferme |
 | Estimation | 2 points |
@@ -72,7 +72,7 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
 | Étape | Lien / date |
 |---|---|
-| Rapport de test | |
+| Rapport de test | [US-001-rapport-tests.md](../docs/rapports/tests/US-001-rapport-tests.md) |
 | Rapport de revue de code | |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |
