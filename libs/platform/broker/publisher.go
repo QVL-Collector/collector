@@ -82,9 +82,21 @@ func (p *Publisher) PublishBatch(ctx context.Context, batch []Message) error {
 		return err
 	}
 	if unroutable := p.drainReturned(); len(unroutable) > 0 {
-		return fmt.Errorf("%w : %s", ErrUnroutable, strings.Join(unroutable, ", "))
+		return &UnroutableError{IDs: unroutable}
 	}
 	return nil
+}
+
+type UnroutableError struct {
+	IDs []string
+}
+
+func (e *UnroutableError) Error() string {
+	return fmt.Sprintf("%s : %s", ErrUnroutable, strings.Join(e.IDs, ", "))
+}
+
+func (e *UnroutableError) Unwrap() error {
+	return ErrUnroutable
 }
 
 func (p *Publisher) awaitConfirmations(ctx context.Context, batch []Message, confirmations []*amqp.DeferredConfirmation) error {

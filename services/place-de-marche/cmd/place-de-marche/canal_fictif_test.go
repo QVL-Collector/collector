@@ -44,6 +44,10 @@ func (j *journalPartage) Write(octets []byte) (int, error) {
 	return j.tampon.Write(octets)
 }
 
+func (j *journalPartage) consigner(ligne string) {
+	_, _ = j.Write([]byte(ligne + "\n"))
+}
+
 func (j *journalPartage) contient(fragment string) bool {
 	j.mu.Lock()
 	defer j.mu.Unlock()

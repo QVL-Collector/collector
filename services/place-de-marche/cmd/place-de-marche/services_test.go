@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -107,38 +109,58 @@ func construireControle(t *testing.T) string {
 	return binaire
 }
 
-func lancerControle(t *testing.T, binaire string, canal *canalDeTest) *journalPartage {
+type processusControle struct {
+	journal *journalPartage
+	gestion string
+	termine chan error
+	arret   *exec.Cmd
+	une     sync.Once
+}
+
+func demarrerProcessusControle(t *testing.T, binaire string, canal *canalDeTest) *processusControle {
 	t.Helper()
-	gestion := adresseLibre(t)
-	journal := &journalPartage{}
-	processus := exec.Command(binaire)
-	processus.Env = os.Environ()
+	p := &processusControle{journal: &journalPartage{}, gestion: adresseLibre(t), termine: make(chan error, 1)}
+	p.arret = exec.Command(binaire)
+	p.arret.Env = os.Environ()
 	for nom, valeur := range canal.environnementDeService(identiteControle) {
-		processus.Env = append(processus.Env, nom+"="+valeur)
+		p.arret.Env = append(p.arret.Env, nom+"="+valeur)
 	}
-	processus.Env = append(processus.Env, "CANAL_EMETTEUR_ATTENDU="+identiteMarche, "ADRESSE_GESTION="+gestion)
-	processus.Stdout, processus.Stderr = journal, journal
-	if err := processus.Start(); err != nil {
+	p.arret.Env = append(p.arret.Env, "CANAL_EMETTEUR_ATTENDU="+identiteMarche, "ADRESSE_GESTION="+p.gestion)
+	p.arret.Stdout, p.arret.Stderr = p.journal, p.journal
+	if err := p.arret.Start(); err != nil {
 		t.Fatalf("lancement du Contrôle : %v", err)
 	}
-	termine := make(chan error, 1)
-	go func() { termine <- processus.Wait() }()
-	t.Cleanup(func() {
-		_ = processus.Process.Kill()
+	go func() { p.termine <- p.arret.Wait() }()
+	t.Cleanup(p.arreter)
+	return p
+}
+
+func (p *processusControle) arreter() {
+	p.une.Do(func() {
+		_ = p.arret.Process.Kill()
 		select {
-		case erreur := <-termine:
-			t.Logf("arrêt du Contrôle : %v", erreur)
+		case erreur := <-p.termine:
+			p.journal.consigner("arrêt : " + fmt.Sprint(erreur))
 		case <-time.After(10 * time.Second):
 		}
 	})
+}
+
+func (p *processusControle) disponible(client *http.Client) bool {
+	return repond(client, "http://"+p.gestion+"/disponibilite")
+}
+
+func lancerControle(t *testing.T, binaire string, canal *canalDeTest) *journalPartage {
+	t.Helper()
+	p := demarrerProcessusControle(t, binaire, canal)
 	client := &http.Client{Timeout: 2 * time.Second}
 	attendre(t, 30*time.Second, "démarrage du Contrôle", func() bool {
 		select {
-		case err := <-termine:
+		case err := <-p.termine:
 			t.Fatalf("le Contrôle s'est arrêté : %v", err)
 		default:
 		}
-		return repond(client, "http://"+gestion+"/disponibilite")
+		return p.disponible(client)
 	})
-	return journal
+	return p.journal
 }

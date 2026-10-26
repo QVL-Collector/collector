@@ -35,9 +35,14 @@ type Consumer struct {
 	Logger            *slog.Logger
 }
 
+type closures struct {
+	consumer  <-chan *amqp.Error
+	publisher <-chan *amqp.Error
+}
+
 func (c Consumer) Worker(handle Handler) Worker {
 	return func(ctx context.Context, conn *amqp.Connection) error {
-		return c.consume(ctx, conn, handle)
+		return c.consume(ctx, conn, handle, nil)
 	}
 }
 
@@ -48,17 +53,17 @@ func (c Consumer) WorkerWithPublisher(userID string, handlerFor func(*Publisher)
 			return err
 		}
 		defer publisher.Close()
-		return c.consume(ctx, conn, handlerFor(publisher))
+		return c.consume(ctx, conn, handlerFor(publisher), publisher.Closed())
 	}
 }
 
-func (c Consumer) consume(ctx context.Context, conn *amqp.Connection, handle Handler) error {
+func (c Consumer) consume(ctx context.Context, conn *amqp.Connection, handle Handler, publisherClosed <-chan *amqp.Error) error {
 	channel, err := conn.Channel()
 	if err != nil {
 		return fmt.Errorf("ouverture du canal de consommation : %w", err)
 	}
 	defer func() { _ = channel.Close() }()
-	closed := channel.NotifyClose(make(chan *amqp.Error, 1))
+	closed := closures{consumer: channel.NotifyClose(make(chan *amqp.Error, 1)), publisher: publisherClosed}
 	if err := channel.Qos(c.Prefetch, 0, false); err != nil {
 		return fmt.Errorf("réglage du préchargement : %w", err)
 	}
@@ -69,13 +74,15 @@ func (c Consumer) consume(ctx context.Context, conn *amqp.Connection, handle Han
 	return c.loop(ctx, handle, deliveries, closed)
 }
 
-func (c Consumer) loop(ctx context.Context, handle Handler, deliveries <-chan amqp.Delivery, closed <-chan *amqp.Error) error {
+func (c Consumer) loop(ctx context.Context, handle Handler, deliveries <-chan amqp.Delivery, closed closures) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case reason := <-closed:
+		case reason := <-closed.consumer:
 			return CloseReason(reason)
+		case reason := <-closed.publisher:
+			return publisherCloseReason(reason)
 		case delivery, open := <-deliveries:
 			if !open {
 				return fmt.Errorf("%w : consommation de %s interrompue", ErrConnectionLost, c.Queue)
@@ -87,7 +94,7 @@ func (c Consumer) loop(ctx context.Context, handle Handler, deliveries <-chan am
 	}
 }
 
-func (c Consumer) process(ctx context.Context, handle Handler, delivery amqp.Delivery, closed <-chan *amqp.Error) error {
+func (c Consumer) process(ctx context.Context, handle Handler, delivery amqp.Delivery, closed closures) error {
 	if delivery.UserId != c.ExpectedPublisher {
 		c.Logger.WarnContext(ctx, "émetteur inattendu, message écarté",
 			slog.String("event", "canal.emetteur_refuse"),
@@ -118,17 +125,23 @@ func (c Consumer) process(ctx context.Context, handle Handler, delivery amqp.Del
 	}
 }
 
-func wait(ctx context.Context, closed <-chan *amqp.Error, d time.Duration) error {
+func wait(ctx context.Context, closed closures, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case reason := <-closed:
+	case reason := <-closed.consumer:
 		return CloseReason(reason)
+	case reason := <-closed.publisher:
+		return publisherCloseReason(reason)
 	case <-timer.C:
 		return nil
 	}
+}
+
+func publisherCloseReason(reason *amqp.Error) error {
+	return fmt.Errorf("canal de publication fermé : %w", CloseReason(reason))
 }
 
 func settle(delivery amqp.Delivery, disposition Disposition) error {

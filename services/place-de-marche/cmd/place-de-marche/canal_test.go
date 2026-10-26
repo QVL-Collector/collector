@@ -111,8 +111,40 @@ func copie(contenu []byte, destination string) testcontainers.ContainerFile {
 	return testcontainers.ContainerFile{Reader: bytes.NewReader(contenu), ContainerFilePath: destination, FileMode: 0o644}
 }
 
-func demarrerRabbitMQ(t *testing.T) *canalDeTest {
+type alteration func(topologie map[string]any)
+
+func sansDroitDEcriture(identite string) alteration {
+	return func(topologie map[string]any) {
+		for _, p := range topologie["permissions"].([]any) {
+			if droit := p.(map[string]any); droit["user"] == identite {
+				droit["write"] = ""
+			}
+		}
+	}
+}
+
+func topologieDuBroker(t *testing.T, alterations []alteration) []byte {
 	t.Helper()
+	var topologie map[string]any
+	if err := json.Unmarshal(fichierDuBroker(t, "definitions/10-topologie.json"), &topologie); err != nil {
+		t.Fatalf("topologie du broker : %v", err)
+	}
+	for _, alterer := range alterations {
+		alterer(topologie)
+	}
+	contenu, err := json.Marshal(topologie)
+	if err != nil {
+		t.Fatalf("topologie du broker : %v", err)
+	}
+	return contenu
+}
+
+func demarrerRabbitMQ(t *testing.T, alterations ...alteration) *canalDeTest {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("intégration RabbitMQ ignorée en mode -short")
+	}
+	testcontainers.SkipIfProviderIsNotHealthy(t)
 	ctx := contexteBorne(t, 3*time.Minute)
 	secrets, utilisateurs := genererIdentites(t)
 	conteneur, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -123,7 +155,7 @@ func demarrerRabbitMQ(t *testing.T) *canalDeTest {
 				copie(nil, dossierDuBroker+"/conf.d/10-defaults.conf"),
 				copie(fichierDuBroker(t, "conf.d/10-collector.conf"), dossierDuBroker+"/conf.d/10-collector.conf"),
 				copie(fichierDuBroker(t, "enabled_plugins"), dossierDuBroker+"/enabled_plugins"),
-				copie(fichierDuBroker(t, "definitions/10-topologie.json"), dossierDuBroker+"/definitions/10-topologie.json"),
+				copie(topologieDuBroker(t, alterations), dossierDuBroker+"/definitions/10-topologie.json"),
 				copie(utilisateurs, dossierDuBroker+"/definitions/00-utilisateurs.json"),
 			},
 			WaitingFor: wait.ForAll(

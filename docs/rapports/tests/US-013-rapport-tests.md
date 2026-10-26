@@ -23,6 +23,7 @@
 | `services/place-de-marche/cmd/place-de-marche/canal_test.go` | RabbitMQ par testcontainers-go, identités générées à l'exécution, file espion des résultats, publication confirmée |
 | `services/place-de-marche/cmd/place-de-marche/services_test.go` | Lancement de la Place de marché (`serve`, en processus) et du Contrôle (binaire construit par `go install`) |
 | `services/place-de-marche/cmd/place-de-marche/bout_en_bout_test.go` | `TestUS013BoutEnBoutPlaceDeMarcheEtControle` (15 scénarios ordonnés) |
+| `services/place-de-marche/cmd/place-de-marche/controle_sans_droit_test.go` | `TestUS013ControleSansDroitDePublicationSArreteOuSeSignaleIndisponible` (retour de revue, voir § 4 bis) |
 | `services/place-de-marche/cmd/place-de-marche/testdata/canal/` | Copie de la topologie IaC (`conf.d/10-collector.conf` sans ses commentaires, `enabled_plugins`, `definitions/10-topologie.json`) |
 | `services/controle/internal/regles/regles_test.go` | Règle de complétude v1 et catégorie inconnue |
 | `services/place-de-marche/go.mod` | `amqp091-go` passe en dépendance directe (`go mod tidy`) |
@@ -34,7 +35,7 @@
 | Module | `go test ./... -count=1 -cover` | `golangci-lint run` (v2.15.0, `.golangci.yml`) |
 |---|---|---|
 | `libs/platform` | Vert ; `message` 82,8 %, `token` 85,9 %, `logging` 87,5 %, `httpjson` 76,7 % (`broker`, `outbox` sans test propre, couverts par le bout en bout) | 0 constat |
-| `services/place-de-marche` | Vert (US-009 + US-013, dont 2 tests Docker), 74 s | 0 constat |
+| `services/place-de-marche` | Vert (US-009 + US-013, dont 3 tests Docker), 86 s, relancé après la correction Back de `libs/platform/broker` | 0 constat |
 | `services/controle` | Vert ; `regles` 100 % | 0 constat |
 
 Tests US-013 : 48 tests et sous-tests en mémoire, 15 scénarios de bout en bout, 27 tests et sous-tests de la règle. Tests US-009 : tous verts après réparation.
@@ -133,6 +134,16 @@ Sans Docker ou avec `-short`, les tests d'intégration sont sautés explicitemen
 |---|---|---|
 | B soumet l'article de A → 404 ; article inexistant → 404 ; article de A intact, aucune demande | `TestUS013AC9SoumissionDeLArticleDUnAutreVendeurIntrouvable`, bout en bout « AC9 » | Conforme |
 | Réponses indiscernables (type, titre, détail) entre article d'autrui et inexistant | `TestUS013AC9ReponseIdentiquePourArticleDAutruiEtInexistant` | Conforme |
+
+### 4 bis — Retour de revue : Contrôle privé du droit de publier ses résultats
+
+Exigence du README du Contrôle : « Une file ou un échange absent, ou un droit refusé, arrête le service en erreur. » La revue a relevé une boucle sans fin dans ce cas (`libs/platform/broker/consumer.go`), corrigée par le Back.
+
+| Scénario | Test | Résultat |
+|---|---|---|
+| Given la topologie IaC où `controle` n'a plus le droit d'écrire sur `controle.resultats`, et une demande conforme en file, When le Contrôle démarre et la consomme, Then il s'arrête en erreur ou se signale non disponible (`/disponibilite`) en moins de 45 s, et la demande reste en file sans acquittement ni mise à l'écart | `TestUS013ControleSansDroitDePublicationSArreteOuSeSignaleIndisponible` | Conforme après correction : arrêt en erreur (`exit status 1`), demande conservée dans `controle.demandes` |
+
+La topologie est modifiée au moment du test (droit d'écriture de `controle` vidé dans une copie de `10-topologie.json`), le fichier de `testdata` restant identique à l'IaC.
 
 ### AC10 — Accessibilité
 

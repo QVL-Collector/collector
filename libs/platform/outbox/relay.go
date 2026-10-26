@@ -2,8 +2,10 @@ package outbox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -53,9 +55,10 @@ func (r *Relay) Worker() broker.Worker {
 func (r *Relay) loop(ctx context.Context, conn *amqp.Connection, publisher *broker.Publisher) error {
 	connectionClosed := conn.NotifyClose(make(chan *amqp.Error, 1))
 	blocked := conn.NotifyBlocked(make(chan amqp.Blocking, blockedBuffer))
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
+	timer := time.NewTimer(pollInterval)
+	defer timer.Stop()
 	paused := false
+	failures := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -74,49 +77,77 @@ func (r *Relay) loop(ctx context.Context, conn *amqp.Connection, publisher *brok
 				slog.Bool("actif", state.Active),
 				slog.String("raison", state.Reason),
 			)
-		case <-ticker.C:
-			if paused {
-				continue
-			}
-			if err := r.drain(ctx, publisher); err != nil {
+		case <-timer.C:
+			delay, err := r.cycle(ctx, publisher, paused, &failures)
+			if err != nil {
 				return err
 			}
+			timer.Reset(delay)
 		}
 	}
 }
 
-func (r *Relay) drain(ctx context.Context, publisher *broker.Publisher) error {
+func (r *Relay) cycle(ctx context.Context, publisher *broker.Publisher, paused bool, failures *int) (time.Duration, error) {
+	if paused {
+		return pollInterval, nil
+	}
+	failed, err := r.drain(ctx, publisher)
+	if err != nil {
+		return 0, err
+	}
+	if !failed {
+		*failures = 0
+		return pollInterval, nil
+	}
+	delay := broker.DefaultBackoff.Delay(*failures)
+	*failures++
+	r.logger.WarnContext(ctx, "outbox en échec, nouvel essai différé",
+		slog.String("event", "outbox.essai_differe"),
+		slog.Int("echecs_consecutifs", *failures),
+		slog.Duration("prochain_essai", delay),
+	)
+	return delay, nil
+}
+
+func (r *Relay) drain(ctx context.Context, publisher *broker.Publisher) (bool, error) {
 	for {
 		relayed, err := r.relayBatch(ctx, publisher)
 		if broker.IsFault(err) {
-			return err
+			return true, err
 		}
 		if err != nil {
-			r.logger.WarnContext(ctx, "lot de l'outbox non publié, nouvel essai au prochain cycle",
+			r.logger.WarnContext(ctx, "lot de l'outbox non publié",
 				slog.String("event", "outbox.lot_non_publie"),
 				slog.Any("erreur", err),
 			)
-			return nil
+			return true, nil
 		}
 		if relayed < batchSize {
-			return nil
+			return false, nil
 		}
 	}
 }
 
 func (r *Relay) relayBatch(ctx context.Context, publisher *broker.Publisher) (int, error) {
 	relayed := 0
+	var unroutable *broker.UnroutableError
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		events, err := pendingEvents(ctx, tx)
 		if err != nil || len(events) == 0 {
 			return err
 		}
-		if err := publisher.PublishBatch(ctx, messages(events)); err != nil {
+		err = publisher.PublishBatch(ctx, messages(events))
+		if errors.As(err, &unroutable) {
+			events = without(events, unroutable.IDs)
+		} else if err != nil {
 			return err
 		}
 		relayed = len(events)
 		return markPublished(ctx, tx, events)
 	})
+	if err == nil && unroutable != nil {
+		err = unroutable
+	}
 	if err != nil {
 		return 0, fmt.Errorf("relais d'un lot de l'outbox : %w", err)
 	}
@@ -148,6 +179,12 @@ func markPublished(ctx context.Context, tx pgx.Tx, events []Event) error {
 		return fmt.Errorf("marquage des événements publiés : %w", err)
 	}
 	return nil
+}
+
+func without(events []Event, excluded []string) []Event {
+	return slices.DeleteFunc(events, func(event Event) bool {
+		return slices.Contains(excluded, event.ID)
+	})
 }
 
 func messages(events []Event) []broker.Message {
