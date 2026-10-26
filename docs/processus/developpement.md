@@ -33,7 +33,7 @@ De l'exigence au déploiement, une US traverse huit étapes. Les étapes 3 à 7 
 
 Boucle de correction : tout échec aux étapes 4 ou 5 renvoie l'US à l'étape 3, puis le cycle reprend dans l'ordre (test, puis revue). Aucune étape n'est sautée.
 
-Étape 8 : le détail du pipeline (étapes, portes, outils) est fixé par D10 et décrit dans [cicd.md](cicd.md) (à venir). La consigne tolère l'absence de déploiement automatisé en (pré)production ; le déploiement reste alors une commande scriptée (`tools/`), reproductible et réversible.
+Étape 8 : le détail du pipeline (étapes, portes, outils) est fixé par D10 et décrit dans [cicd.md](cicd.md). La consigne tolère l'absence de déploiement automatisé en (pré)production ; le déploiement reste alors une commande scriptée (`tools/`), reproductible et réversible.
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,7 @@ Gabarit du fichier de sprint : [_GABARIT-SPRINT.md](../../backlog/sprints/_GABAR
 
 ## 4. Exigences de qualité et pratiques du processus
 
-Lecture : pour chaque caractéristique ISO 25010, l'exigence non fonctionnelle visée ([exigences.md](../00-cadrage/exigences.md) § 3), la pratique du processus qui la sert, et la preuve produite. Les indicateurs et leurs seuils sont définis dans [qualite-indicateurs.md](qualite-indicateurs.md) (à venir, D12).
+Lecture : pour chaque caractéristique ISO 25010, l'exigence non fonctionnelle visée ([exigences.md](../00-cadrage/exigences.md) § 3), la pratique du processus qui la sert, et la preuve produite. Les indicateurs et leurs seuils sont définis dans [qualite-indicateurs.md](qualite-indicateurs.md).
 
 | Caractéristique ISO 25010 | ENF | Pratique du processus | Preuve / mesure |
 |---|---|---|---|
@@ -85,8 +85,8 @@ Lecture : pour chaque caractéristique ISO 25010, l'exigence non fonctionnelle v
 | Capacité d'interaction (utilisabilité) | ENF-26, ENF-27 | AC « Accessibilité » ; contrôle automatisé d'accessibilité en CI | Rapport d'accessibilité sans non-conformité bloquante |
 | Analysabilité (observabilité) | ENF-25 | Composante d'observabilité livrée dès le walking skeleton (D09) | Incident provoqué puis diagnostiqué en démonstration |
 
-Types de tests, outils, sorties attendues et parties prenantes du test : [tests.md](tests.md) (à venir, D13).
-Schéma détaillé du pipeline et portes qualité : [cicd.md](cicd.md) (à venir, D10).
+Types de tests, outils, sorties attendues et parties prenantes du test : [tests.md](tests.md).
+Schéma détaillé du pipeline et portes qualité : [cicd.md](cicd.md).
 
 ## 5. Parties prenantes et responsabilités
 
@@ -117,7 +117,7 @@ Parties prenantes métier (cas d'entreprise, [contexte-et-grille.md](../00-cadra
 | Où est-elle notée ? | Section « Dette technique » du fichier de sprint où elle apparaît, avec un identifiant `DT-nn`, sa source (revue, audit, indicateur) et son impact |
 | Qui la note ? | La fonction qui la constate ; le Lead Developer valide l'inscription |
 | Quand la rembourse-t-on ? | À la planification suivante : toute dette à impact sécurité ou fiabilité est engagée en priorité ; le reste est arbitré contre les US, avec une part réservée de la capacité (cible : 20 %) |
-| Comment la mesure-t-on ? | Par les indicateurs de [qualite-indicateurs.md](qualite-indicateurs.md) (à venir, D12), relevés à chaque sprint ; une dégradation de tendance crée une entrée `DT-nn` |
+| Comment la mesure-t-on ? | Par les indicateurs de [qualite-indicateurs.md](qualite-indicateurs.md), relevés à chaque sprint ; une dégradation de tendance crée une entrée `DT-nn` |
 | Bilan | Analyse consolidée à J6 dans `docs/mesures/analyse-dette.md` (à venir) : dette remboursée, dette restante, axes d'amélioration |
 
 Une dette remboursée garde sa ligne avec la date et l'US de remboursement : l'historique prouve que la mesure a produit une action.

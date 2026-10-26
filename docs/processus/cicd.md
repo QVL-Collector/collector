@@ -10,8 +10,8 @@
 | [developpement.md](developpement.md) | Cycle de vie d'une US (étapes 1 à 8) ; ce document détaille les étapes 7 et 8 |
 | [devsecops.md](devsecops.md) | Mesures de sécurité par étape, gestion des vulnérabilités et des exceptions ; non répétées ici |
 | [PILOTAGE.md](../PILOTAGE.md) | Conventions git (§ 6), Definition of Done (§ 5), circuit d'une US (§ 3.3) |
-| [tests.md](tests.md) (à venir, D13) | Types de tests, outils, sorties attendues, parties prenantes |
-| [qualite-indicateurs.md](qualite-indicateurs.md) (à venir, D12) | Indicateurs alimentés par le pipeline |
+| [tests.md](tests.md) | Types de tests, outils, sorties attendues, parties prenantes |
+| [qualite-indicateurs.md](qualite-indicateurs.md) | Indicateurs alimentés par le pipeline |
 
 ## 1. Principes
 
