@@ -4,7 +4,6 @@ import { useArticleWorkspace } from '../hooks/useArticleWorkspace';
 import { ArticleForm } from './ArticleForm';
 import { ArticleStatusPanel } from './ArticleStatusPanel';
 import { ArticleSubmitAction } from './ArticleSubmitAction';
-import { ArticleSummary } from './ArticleSummary';
 
 type ArticleWorkspaceProps = {
   readonly article: SellerArticle;
@@ -12,7 +11,7 @@ type ArticleWorkspaceProps = {
 };
 
 export function ArticleWorkspace({ article, fetchLatest }: ArticleWorkspaceProps) {
-  const { status, editor, submission, categories, lockMessage, isEditable, isSubmissionBlocked } =
+  const { status, editor, submission, categories, lockMessage, isSubmissionBlocked } =
     useArticleWorkspace(article, fetchLatest);
   return (
     <Stack
@@ -38,11 +37,7 @@ export function ArticleWorkspace({ article, fetchLatest }: ArticleWorkspaceProps
         />
       </Stack>
       <Stack flexGrow={1} minWidth={0}>
-        {isEditable ? (
-          <ArticleForm editor={editor} categories={categories} />
-        ) : (
-          <ArticleSummary article={article} />
-        )}
+        <ArticleForm editor={editor} categories={categories} />
       </Stack>
     </Stack>
   );

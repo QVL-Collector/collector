@@ -4,7 +4,6 @@ import type { FieldProblem } from '../../../api/problemDetails';
 import type { DemoScenario } from '../../../config/runtimeConfig';
 import { parseCategories } from '../../../shared/marketplacePayload';
 import {
-  acceptsChanges,
   acceptsSubmission,
   triggersRecontrol,
   type ArticleDraft,
@@ -172,7 +171,6 @@ export function createDemoSellerClient(scenario: DemoScenario): SellerClient {
       await waitForDemoLatency();
       const article = find(id);
       simulateChangeFromAnotherTab(article);
-      expectAllowed(acceptsChanges, article, sellerProblemTypes.notModifiable);
       expectRevision(article, revision);
       expectValidDraft(draft);
       const updated = save({

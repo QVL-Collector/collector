@@ -54,7 +54,6 @@ export const fr = {
     welcome: 'Bienvenue, {{name}}. Vos annonces apparaîtront ici.',
     navigation: 'Espace vendeur',
     untitled: 'Article sans titre',
-    notProvided: 'Non renseigné',
     newArticle: 'Nouvel article',
     backToList: 'Retour à mes articles',
     states: {
@@ -102,7 +101,6 @@ export const fr = {
         'Préparez votre annonce. Elle reste un brouillon invisible au catalogue tant que vous ne la soumettez pas.',
       documentTitle: '{{title}} · Collector',
       loading: 'Chargement de l’article en cours',
-      readOnly: 'L’annonce n’est pas modifiable dans son état actuel.',
       notFound: {
         title: 'Article introuvable',
         description: 'Cet article n’existe pas ou n’appartient pas à votre compte.',

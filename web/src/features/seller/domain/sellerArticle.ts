@@ -84,10 +84,6 @@ export function triggersRecontrol(state: ArticleState): boolean {
   return state === 'publie' || state === 'en_controle' || state === 'a_verifier';
 }
 
-export function acceptsChanges(state: ArticleState): boolean {
-  return acceptsSubmission(state) || triggersRecontrol(state);
-}
-
 export function isUnderControl(state: ArticleState): boolean {
   return state === 'en_controle';
 }

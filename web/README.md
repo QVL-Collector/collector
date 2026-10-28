@@ -73,6 +73,12 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, isolé dans `src/feat
 - Soumission bloquée tant que des modifications ne sont pas enregistrées. Pendant `en_controle`, l'article est relu toutes les 2 s ; chaque changement d'état est annoncé dans une zone `role="status"` (AC10 de US-013).
 - Démonstration (`source: demo`) : faux client vendeur en mémoire, contrôle simulé en 2,5 s (incomplet → refusé, catégorie « Objets divers » → à vérifier, sinon publié), et un brouillon « Album de timbres » qui répond 409 à la première écriture pour rejouer le conflit.
 
+### Modification après publication (US-021)
+
+- Tous les états sont modifiables. Un article `publie`, `en_controle` ou `a_verifier` enregistré repasse en `en_controle` (motif effacé, révision + 1) ; un brouillon ou un refusé reste dans son état. La soumission reste réservée à `brouillon` et `refuse`.
+- Avant d'enregistrer, un avertissement (`Alert` en `role="note"`, relié au bouton par `aria-describedby`) annonce le retrait du catalogue (publié) ou la relance du contrôle sur la nouvelle version (en contrôle, à vérifier) ; le bouton devient « Enregistrer et renvoyer au contrôle » et le succès annonce le retour au contrôle.
+- Un résultat de contrôle portant sur une révision antérieure est sans effet (démonstration comprise).
+
 ## Sécurité
 
 - Aucun HTML libre : `react/no-danger`, `no-unsanitized`, `no-eval` en erreur ; un titre contenant du balisage s'affiche comme du texte (US-010, AC4). Le jeu de démonstration en contient deux.

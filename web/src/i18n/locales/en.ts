@@ -55,7 +55,6 @@ export const en: Translation = {
     welcome: 'Welcome, {{name}}. Your listings will appear here.',
     navigation: 'Seller area',
     untitled: 'Untitled item',
-    notProvided: 'Not provided',
     newArticle: 'New item',
     backToList: 'Back to my items',
     states: {
@@ -102,7 +101,6 @@ export const en: Translation = {
         'Prepare your listing. It stays a draft, hidden from the catalogue, until you submit it.',
       documentTitle: '{{title}} · Collector',
       loading: 'Loading the item',
-      readOnly: 'The listing cannot be edited in its current state.',
       notFound: {
         title: 'Item not found',
         description: 'This item does not exist or does not belong to your account.',
