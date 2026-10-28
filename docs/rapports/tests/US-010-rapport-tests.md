@@ -63,6 +63,7 @@ Tests : `web/src/acceptance/US-010/`
 | Réponse de deux articles publiés | Seuls ceux-ci apparaissent | Exactement 2 éléments listés, ceux de la réponse | Conforme |
 | Réponse 404 `application/problem+json` | Aucun article affiché | État d'erreur, aucune liste | Conforme |
 | Réponse hors contrat | Aucun article affiché | État d'erreur, aucune liste | Conforme |
+| API publique (Back, PostgreSQL réel et mémoire) : articles brouillon, en contrôle, refusés, à vérifier | Absents de la liste et du filtre, lecture directe en 404, aucune donnée du vendeur | Absents (total inchangé), 404 identique à un article inexistant, aucun identifiant ni champ vendeur ; détail dans le [rapport US-023, section Back](US-023-rapport-tests.md#back--api-publique-du-catalogue) | Conforme |
 
 Le filtrage des statuts brouillon, contrôle, refusé, à vérifier et la réponse 404 de la lecture directe relèvent de l'API (tests d'intégration Back et d'acceptation API) : non couverts par ce lot.
 

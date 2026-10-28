@@ -167,6 +167,55 @@ func (s *stockageEnMemoire) ApplyReview(_ context.Context, issue annonces.Review
 	return true, nil
 }
 
+func (s *stockageEnMemoire) publies(filtre annonces.CatalogueFilter) []annonces.Article {
+	var publies []annonces.Article
+	for _, a := range s.articles {
+		if a.Status != annonces.StatusPublished || a.Category == nil {
+			continue
+		}
+		if filtre.Category == nil || a.Category.ID == *filtre.Category {
+			publies = append(publies, a)
+		}
+	}
+	slices.SortFunc(publies, func(a, b annonces.Article) int { return b.UpdatedAt.Compare(a.UpdatedAt) })
+	return publies
+}
+
+func entreeDuCatalogue(a annonces.Article) annonces.CatalogueEntry {
+	entree := annonces.CatalogueEntry{ID: a.ID, Title: a.Title, Category: *a.Category}
+	if a.Price != nil {
+		entree.Price = *a.Price
+	}
+	return entree
+}
+
+func (s *stockageEnMemoire) ListPublished(_ context.Context, filtre annonces.CatalogueFilter, page annonces.PageRequest) (annonces.CataloguePage, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	publies := s.publies(filtre)
+	debut := min(page.Offset(), len(publies))
+	fin := min(debut+page.Size, len(publies))
+	entrees := make([]annonces.CatalogueEntry, 0, fin-debut)
+	for _, a := range publies[debut:fin] {
+		entrees = append(entrees, entreeDuCatalogue(a))
+	}
+	return annonces.CataloguePage{Entries: entrees, Total: len(publies)}, nil
+}
+
+func (s *stockageEnMemoire) FindPublished(_ context.Context, id annonces.ArticleID) (annonces.PublishedArticle, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	article, ok := s.articles[id]
+	if !ok || article.Status != annonces.StatusPublished || article.Category == nil {
+		return annonces.PublishedArticle{}, annonces.ErrArticleNotFound
+	}
+	return annonces.PublishedArticle{
+		CatalogueEntry: entreeDuCatalogue(article),
+		Description:    article.Description,
+		ShippingFee:    article.ShippingFee,
+	}, nil
+}
+
 func (s *stockageEnMemoire) retirerDemandes() []annonces.ReviewRequest {
 	s.mu.Lock()
 	defer s.mu.Unlock()

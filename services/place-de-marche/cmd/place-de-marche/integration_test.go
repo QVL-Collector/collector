@@ -131,6 +131,12 @@ func demarrerPostgreSQL(t *testing.T) string {
 
 func demarrerSurPostgreSQL(t *testing.T) (*environnement, basePostgreSQL, *pgxpool.Pool) {
 	t.Helper()
+	base, pool, service := servicePostgreSQL(t)
+	return demarrer(t, service), base, pool
+}
+
+func servicePostgreSQL(t *testing.T) (basePostgreSQL, *pgxpool.Pool, *annonces.Service) {
+	t.Helper()
 	ctx := contexteBorne(t, 2*time.Minute)
 	base := amorcer(ctx, t, demarrerPostgreSQL(t))
 	for range 2 {
@@ -144,7 +150,7 @@ func demarrerSurPostgreSQL(t *testing.T) (*environnement, basePostgreSQL, *pgxpo
 	}
 	t.Cleanup(pool.Close)
 	depot := stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)))
-	return demarrer(t, annonces.NewService(depot, depot)), base, pool
+	return base, pool, annonces.NewService(depot, depot)
 }
 
 func exigerRefusDeDroit(t *testing.T, pool *pgxpool.Pool, instruction string) {

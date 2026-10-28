@@ -94,7 +94,11 @@ type bancEnMemoire struct {
 func demarrerBancEnMemoire(t *testing.T) *bancEnMemoire {
 	t.Helper()
 	stockage := nouveauStockageEnMemoire(jeuDeCategoriesFictif)
-	service := annonces.NewService(stockage, stockage)
+	return monterBanc(t, annonces.NewService(stockage, stockage), stockage)
+}
+
+func monterBanc(t *testing.T, service *annonces.Service, stockage *stockageEnMemoire) *bancEnMemoire {
+	t.Helper()
 	validateur := validateurDeContrats(t)
 	journal := &journalPartage{}
 	return &bancEnMemoire{
