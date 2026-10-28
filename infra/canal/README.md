@@ -58,13 +58,15 @@ infra/canal/outils/local.sh up                 # local : identifiants, broker pr
 infra/canal/outils/verifier.sh local           # droits, mise à l'écart, API de gestion, absence de secret
 infra/canal/outils/local.sh down               # supprime conteneur et réseau, efface .genere/
 
-infra/canal/outils/kubernetes.sh up            # namespaces, Secrets, chart (KUBE_CONTEXT, sinon contexte courant)
+infra/canal/outils/kubernetes.sh up            # namespaces, Secrets, chart (KUBE_CONTEXT obligatoire)
 infra/canal/outils/verifier.sh kubernetes      # + réseau depuis un service et depuis un namespace intrus, Services internes
 infra/canal/outils/kubernetes.sh console       # console sur 127.0.0.1:15672 (admin-canal)
 infra/canal/outils/kubernetes.sh down          # chart, Secrets, .genere/ (namespaces conservés)
 ```
 
 Prérequis : Docker, `openssl`, `xxd`, `curl` ; en plus pour Kubernetes : `kubectl`, Helm 4 (et `k3d` pour importer l'image de sonde dans un cluster k3d). `SONDE_IMAGE` remplace l'image de sonde (par défaut construite depuis `verification/`).
+
+**Garde-fou de contexte** : `kubernetes.sh` et `verifier.sh kubernetes` exigent `KUBE_CONTEXT` et le refusent hors des motifs `k3d-*` (poste) et `*collector*` (cluster du projet), avant toute commande. Chaque appel passe `--context` (`--kube-context` pour Helm) : le contexte courant n'est jamais lu, le poste en porte d'autres. Un `KUBECONFIG` au format `/c/...` est converti par `cygpath -m` ; sans cela, sous `MSYS_NO_PATHCONV=1`, `kubectl` l'ignorait et lisait `~/.kube/config`. Exemple : `KUBECONFIG=<kubeconfig k3d> KUBE_CONTEXT=k3d-<nom> infra/canal/outils/kubernetes.sh up`.
 
 Le chart ne crée ni namespace ni RBAC (D10) : `kubernetes.sh namespaces` les pose avec la session du poste ; `up.sh` (US-004) l'appellera. Les Secrets existent avant l'installation du chart ; de nouveaux identifiants imposent un redémarrage du broker, fait par `up`.
 
@@ -73,6 +75,7 @@ Le chart ne crée ni namespace ni RBAC (D10) : `kubernetes.sh namespaces` les po
 - **AC3, stockage éphémère** : `emptyDir`, qui survit au redémarrage du conteneur mais pas à la suppression du pod (constaté sur k3d). Couverture : filet de la Place de marché (renvoi des articles « en contrôle »), rejeu de l'outbox (MC9).
 - Pas de TLS interne : confinement réseau seul (D05, écart documenté pour la V1).
 - Collecte des métriques (15692) fermée tant que D09 n'est pas installé (`metriques.namespaces`).
+- **Sondes** : démarrage, disponibilité et vivacité en `tcpSocket` sur 5672, faites par le kubelet. Les sondes `exec` `rabbitmq-diagnostics` démarraient une VM Erlang à chaque passage (~17 s CPU, XP02) et tenaient le broker à 0,5-1,1 vCPU au repos pour une demande de 0,25. Le port AMQP n'ouvre qu'en fin de démarrage (définitions importées) et se ferme si l'application s'arrête : vivacité en échec, redémarrage après 4 × 15 s. Pas de sonde HTTP sur la gestion : il faudrait une identité dans la spécification du pod. Non couvert : une VM figée dont le port reste ouvert (le noyau accepte encore la connexion), et les alarmes mémoire ou disque, qui ne retirent plus le pod du Service (le retirer empêcherait aussi les consommateurs de vider les files) ; elles relèvent de la supervision (D09).
 
 ## En cas de verdict ECS (XP01, 2026-11-02)
 
@@ -83,3 +86,10 @@ Restent valables : `broker/`, `outils/identifiants.sh`, la sonde, `compose.yml`.
 - docker compose : `verifier.sh local` 64/64 (AC2, AC4, AC5, MC1, MC4, MC8 avec 5 livraisons, AC6).
 - k3d (k3s 1.35.5, un nœud, PSS `restricted`) : `kubernetes.sh up` en 53 s ; `verifier.sh kubernetes` 79/79 (plus AC7 : 5672 seul ouvert depuis `place-de-marche`, tout fermé depuis un namespace intrus, Services `ClusterIP` seuls ; AC6 : aucun secret dans le dépôt, le manifeste et les valeurs Helm, le journal du broker).
 - `helm lint`, `kubeconform -strict` (9/9), `kubectl apply --dry-run=server`, shellcheck 0.11.0 sans remarque, Trivy `config` : 7 constats LOW, aucun HIGH ni CRITICAL.
+
+## Sondes légères et garde-fou de contexte du 2026-10-28 (k3d)
+
+- Broker au repos, 5 min après 90 s de stabilisation : sondes `exec` 506 à 1 113 mCPU (`kubectl top`, ~840 en moyenne) ; sondes `tcpSocket` 4 à 9 mCPU (cgroup : 4 mCPU en moyenne). Pod prêt 14 s après la mise à jour.
+- `rabbitmqctl stop_app` (nœud Erlang vivant, que `rabbitmq-diagnostics ping` ne voyait pas) : retrait du Service en ~25 s, redémarrage par la vivacité à ~60 s, de nouveau prêt à ~78 s.
+- `verifier.sh kubernetes` 79/79, `helm lint`, `kubeconform -strict` (9/9).
+- Garde-fou de contexte : sans `KUBE_CONTEXT` et avec le contexte EKS du poste, `kubernetes.sh up` et `verifier.sh kubernetes` refusent sans aucun appel à `kubectl`, `helm`, `k3d`, `docker` ni `curl` (remplacés par des espions) ; avec `k3d-*` et un `KUBECONFIG` en `/c/...`, `verifier.sh kubernetes` 79/79. shellcheck sans remarque.

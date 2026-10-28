@@ -62,20 +62,24 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
+          # Sondes TCP sur 5672, faites par le kubelet sans processus dans le conteneur : une sonde exec
+          # rabbitmq-diagnostics demarre une VM Erlang (~17 s CPU, XP02). Le port AMQP n'ouvre qu'une fois
+          # le demarrage termine (definitions importees), et se ferme si l'application s'arrete.
           startupProbe:
-            exec: { command: ["rabbitmq-diagnostics", "-q", "ping"] }
+            tcpSocket: { port: amqp }
             periodSeconds: 5
-            timeoutSeconds: 15
+            timeoutSeconds: 2
             failureThreshold: 36
           readinessProbe:
-            exec: { command: ["/bin/sh", "-c", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"] }
+            tcpSocket: { port: amqp }
             periodSeconds: 10
-            timeoutSeconds: 15
-          livenessProbe:
-            exec: { command: ["rabbitmq-diagnostics", "-q", "ping"] }
-            periodSeconds: 30
-            timeoutSeconds: 15
+            timeoutSeconds: 2
             failureThreshold: 3
+          livenessProbe:
+            tcpSocket: { port: amqp }
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
           volumeMounts:
             - { name: donnees, mountPath: /var/lib/rabbitmq }
             - { name: tmp, mountPath: /tmp }
