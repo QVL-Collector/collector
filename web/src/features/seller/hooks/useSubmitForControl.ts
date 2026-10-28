@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { useSellerClient } from '../api/useSellerClient';
 import { acceptsChanges, type SellerArticle } from '../domain/sellerArticle';
 import { toArticleFailure } from './articleFailure';
+import type { LockNoticeHandlers } from './useLockNotice';
 import { useStoreSellerArticle } from './useStoreSellerArticle';
 
-export type SubmissionFailure = 'conflict' | 'locked' | 'unavailable';
+export type SubmissionFailure = 'conflict' | 'unavailable';
 
 export type SubmitForControlModel = {
   readonly canSubmit: boolean;
@@ -19,14 +20,10 @@ type SubmissionRequest = {
   readonly revision: number;
 };
 
-function toSubmissionFailure(error: unknown): SubmissionFailure {
-  const { kind } = toArticleFailure(error);
-  return kind === 'conflict' || kind === 'locked' ? kind : 'unavailable';
-}
-
 export function useSubmitForControl(
   article: SellerArticle,
   fetchLatest: () => Promise<SellerArticle | null>,
+  lockNotice: LockNoticeHandlers,
 ): SubmitForControlModel {
   const client = useSellerClient();
   const storeArticle = useStoreSellerArticle();
@@ -35,23 +32,24 @@ export function useSubmitForControl(
     mutationFn: ({ id, revision }: SubmissionRequest) => client.submitForControl(id, revision),
     onSuccess: storeArticle,
   });
+  const showFailure = (error: unknown) => {
+    const { kind } = toArticleFailure(error);
+    if (kind === 'locked') {
+      lockNotice.show('not-submittable');
+    } else {
+      setFailure(kind === 'conflict' ? 'conflict' : 'unavailable');
+    }
+    if (kind === 'conflict' || kind === 'locked') {
+      void fetchLatest();
+    }
+  };
   const submit = () => {
     if (mutation.isPending) {
       return;
     }
     setFailure(null);
-    mutation.mutate(
-      { id: article.id, revision: article.revision },
-      {
-        onError: (error) => {
-          const submissionFailure = toSubmissionFailure(error);
-          setFailure(submissionFailure);
-          if (submissionFailure !== 'unavailable') {
-            void fetchLatest();
-          }
-        },
-      },
-    );
+    lockNotice.clear();
+    mutation.mutate({ id: article.id, revision: article.revision }, { onError: showFailure });
   };
   return {
     canSubmit: acceptsChanges(article.state),

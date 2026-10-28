@@ -52,10 +52,21 @@ function parseDate(value: unknown, path: string): Date {
   return date;
 }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function parseUuid(value: unknown, path: string): string {
+  const id = expectString(value, path);
+  if (!uuidPattern.test(id)) {
+    throw new InvalidPayloadError(path);
+  }
+  return id;
+}
+
 export function parseSellerArticle(value: unknown, path = 'article'): SellerArticle {
   const article = expectRecord(value, path);
+  parseDate(article.creeLe, `${path}.creeLe`);
   return {
-    id: expectNonEmptyString(article.id, `${path}.id`),
+    id: parseUuid(article.id, `${path}.id`),
     state: expectOneOf(article.etat, articleStates, `${path}.etat`),
     revision: expectInteger(article.revision, `${path}.revision`, 1),
     title: expectString(article.titre, `${path}.titre`),

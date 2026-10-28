@@ -59,12 +59,6 @@ export function ArticleFormFeedback({ feedback, onReload }: ArticleFormFeedbackP
           </Stack>
         </Alert>
       );
-    case 'locked':
-      return (
-        <Alert severity="error" sx={revealSx(0)}>
-          {t('seller.form.locked')}
-        </Alert>
-      );
     case 'unavailable':
       return (
         <Alert severity="error" sx={revealSx(0)}>

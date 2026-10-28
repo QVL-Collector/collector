@@ -10,8 +10,6 @@ export function SubmissionFailureMessage({ failure }: SubmissionFailureMessagePr
   switch (failure) {
     case 'conflict':
       return t('seller.submission.conflict');
-    case 'locked':
-      return t('seller.submission.locked');
     case 'unavailable':
       return t('seller.submission.failure');
   }

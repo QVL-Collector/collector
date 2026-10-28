@@ -68,3 +68,47 @@ AC1 à AC9 couverts côté back par le code et les tests (en mémoire, bout en b
 - **Back** : issue 1 (majeure, à corriger avant merge), puis 2 à 5, suggestions 7 et 8.
 - **Testeur** : test de non-régression de l'issue 1 (arrêt en erreur du Contrôle sur échange des résultats absent ou écriture refusée).
 - **Devops** : issue 6.
+
+## 6. Front (`web/`, US-013 AC10 et US-009 AC11)
+
+Diff : `git diff origin/main...HEAD -- web/` (commits `1f6cf31`, `b6aadb4`), hors `web/src/acceptance/US-013/` (tests en cours d'écriture).
+
+### Vérifications
+
+- `npm run lint`, `npm run typecheck`, `npm run i18n:check` (146 clés fr/en alignées) et `prettier --check src` : verts.
+- Non-régression : suites d'acceptation US-008, US-010 et US-025 relancées, 19 fichiers et 187 tests verts.
+- `src/api/problemDetails.ts` a cette fois de vrais consommateurs : `httpClient.ts:57-73` (lecture des réponses `application/problem+json`), `ApiError.ts:1-13` (porte `problem`), `features/seller/hooks/articleFailure.ts:65-76` (`type` et `erreurs[]` lus). Ce n'est plus du code mort.
+- `httpClient.sendJson` (`httpClient.ts:88-97`) : méthodes limitées à `POST` et `PUT` par le type, `Content-Type: application/json`, jeton `Bearer` lu au moment de l'appel (en mémoire, D06), `credentials: 'omit'`, URL de même origine (D08). Les erreurs donnent un `ApiError` avec le problème lu, et une panne réseau un `ApiError(null)`.
+- Réponses validées champ par champ (`sellerArticlePayload.ts`), 409 distingués par `type` (`articleFailure.ts:66-68` : `revision-perimee` donne un conflit sans rien écraser, `article-non-modifiable` et `article-non-soumettable` donnent une relecture).
+- Relecture toutes les 2 s (`controlPolling.ts`, `useSellerArticle.ts:882`, `useMyArticles.ts:785`) : c'est `refetchInterval` de TanStack Query qui s'en charge, sans minuteur fait main. Elle s'arrête hors `en_controle` et quand on quitte la page (la requête n'est plus observée), et elle est suspendue quand l'onglet est caché. Les requêtes en double sont fusionnées, il n'y a donc ni fuite ni rafale.
+- Formulaire : `noValidate`, erreur par champ dans `helperText` (relié par `aria-describedby`), `aria-invalid` posé par `error`, focus sur le premier champ en erreur (`useArticleEditor.ts:316-323`), résumé dans un `Alert` (`role="alert"`). Les changements d'état passent par `LiveStatus` (`role="status"`, `aria-live="polite"`) via `useStateChangeAnnouncement` (AC10). La double soumission est bloquée (`isPending`), et la soumission aussi tant qu'il reste des modifications non enregistrées.
+- Séparation logique/présentation respectée (composants en JSX pur, logique dans `hooks/`). Le mode démo est isolé : `createSellerClient.ts:14` charge `demoSellerClient` par `import()` dynamique. Aucun texte en dur, aucun commentaire, aucune mention interdite.
+
+### Bloquantes
+
+Aucune.
+
+### Majeures
+
+Aucune.
+
+### Mineures
+
+F1. **`features/seller/components/ArticleWorkspace.tsx:27-45` avec `hooks/useSubmitForControl.ts:1050-1052` et `hooks/useArticleEditor.ts:334-336`** : sur un 409 `article-non-soumettable` ou `article-non-modifiable`, `fetchLatest()` relit l'article. Il passe alors dans un état non modifiable, donc `ArticleSubmitAction` et `ArticleForm` sont démontés. Les messages `seller.submission.locked` et `seller.form.locked` (« elle vient d'être rechargée ») ne s'affichent qu'un instant puis disparaissent. Seule l'annonce de changement d'état reste. Correction : porter l'échec au niveau de `useArticleWorkspace` et l'afficher dans `ArticleStatusPanel`, indépendamment de `canSubmit` et `isEditable`. → front
+
+F2. **`features/seller/api/sellerArticlePayload.ts:56-74`** : `creeLe`, requis par le schéma `Article` du contrat, n'est pas validé (et le format `uuid` de `id` non plus). Une réponse sans `creeLe` est donc acceptée, alors que le README annonce que chaque réponse est validée. Correction : valider `creeLe` avec `parseDate` (même sans l'exposer), ou ajuster la phrase du README. → front
+
+### Suggestions
+
+F3. **`app/createAppServices.ts:11` et `app/AppProviders.tsx:22`** : `sellerClient` est optionnel uniquement pour que le banc de test d'US-010 compile sans lui. En production il est toujours fourni, et s'il manque, `useSellerClient` lève une erreur. Le rendre obligatoire et ajouter un faux client au banc de test rendrait le contrat de `AppServices` explicite. → front
+
+F4. **`features/seller/components/SellerSpacePage.tsx:33-35`** : l'identifiant `mes-articles` est écrit en dur, alors que `ArticleStatusPanel.tsx:16` utilise `useId`. Utiliser `useId` pour rester homogène et éviter une collision. → front
+
+F5. **`features/seller/api/createSellerClient.ts:6`** : le client vendeur suit `catalogue.source` (c'est documenté dans le README). Une clé `demo.source` commune, ou un nom neutre, éviterait ce couplage de nom quand d'autres écrans s'y brancheront. À trancher, non bloquant. → front
+
+### Couverture des AC (front)
+
+- US-013 AC10 : implémenté (annonce `aria-live` sur la page de l'article et sur « Mes articles »). La vérification axe-core revient au testeur (dossier `acceptance/US-013/` en cours).
+- US-009 AC11 : implémenté (libellés, erreurs annoncées, focus, résumé). La vérification axe-core revient elle aussi au testeur.
+
+Verdict front : 0 bloquante, 0 majeure, 2 mineures, 3 suggestions. La partie front est fusionnable en l'état. F1 et F2 sont à corriger de préférence dans la même US.

@@ -4,7 +4,7 @@ import type { SellerClient } from '../domain/sellerArticle';
 export const SellerClientContext = createContext<SellerClient | null>(null);
 
 type SellerClientProviderProps = {
-  readonly client: SellerClient | null;
+  readonly client: SellerClient;
   readonly children: ReactNode;
 };
 

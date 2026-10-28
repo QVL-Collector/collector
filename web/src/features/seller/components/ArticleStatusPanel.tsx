@@ -1,18 +1,21 @@
+import Alert from '@mui/material/Alert';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { revealSx } from '../../../ui/animations/revealSx';
 import type { ArticleStatus } from '../hooks/useArticleStatus';
 import { ArticleStateChip } from './ArticleStateChip';
 import { ControlInProgress } from './ControlInProgress';
 
 type ArticleStatusPanelProps = {
   readonly status: ArticleStatus;
+  readonly notice: string | null;
   readonly action?: ReactNode;
 };
 
-export function ArticleStatusPanel({ status, action }: ArticleStatusPanelProps) {
+export function ArticleStatusPanel({ status, notice, action }: ArticleStatusPanelProps) {
   const { t } = useTranslation();
   const headingId = useId();
   return (
@@ -35,6 +38,13 @@ export function ArticleStatusPanel({ status, action }: ArticleStatusPanelProps) 
         <Typography variant="body2" color="text.secondary">
           {status.detail}
         </Typography>
+        {notice !== null && (
+          <Stack alignSelf="stretch">
+            <Alert severity="error" sx={revealSx(0)}>
+              {notice}
+            </Alert>
+          </Stack>
+        )}
         {status.isUnderControl && (
           <Stack alignSelf="stretch">
             <ControlInProgress />

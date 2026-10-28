@@ -8,7 +8,7 @@ import type { SellerClient } from '../features/seller/domain/sellerArticle';
 
 export type AppServices = {
   readonly catalogueClient: CatalogueClient;
-  readonly sellerClient?: SellerClient;
+  readonly sellerClient: SellerClient;
   readonly authSession?: AuthSession;
 };
 

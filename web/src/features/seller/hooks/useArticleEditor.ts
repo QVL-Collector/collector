@@ -13,6 +13,7 @@ import {
 import { useArticleFieldFocus } from './useArticleFieldFocus';
 import { useArticleFieldModels, type ArticleFieldModels } from './useArticleFieldModels';
 import { useArticleFormState } from './useArticleFormState';
+import type { LockNoticeHandlers } from './useLockNotice';
 import { useSaveArticle, type SaveTarget } from './useSaveArticle';
 
 export type FormFeedback =
@@ -20,7 +21,6 @@ export type FormFeedback =
   | { readonly kind: 'saved'; readonly revision: number }
   | { readonly kind: 'invalid'; readonly count: number }
   | { readonly kind: 'conflict'; readonly revision: number }
-  | { readonly kind: 'locked' }
   | { readonly kind: 'unavailable' };
 
 export type ArticleEditorModel = {
@@ -38,6 +38,7 @@ export type ArticleEditorOptions = {
   readonly article: SellerArticle | null;
   readonly onCreated?: (article: SellerArticle) => void;
   readonly fetchLatest?: () => Promise<SellerArticle | null>;
+  readonly lockNotice?: LockNoticeHandlers;
 };
 
 const noFeedback: FormFeedback = { kind: 'none' };
@@ -46,6 +47,7 @@ export function useArticleEditor({
   article,
   onCreated,
   fetchLatest,
+  lockNotice,
 }: ArticleEditorOptions): ArticleEditorModel {
   const { t } = useTranslation();
   const form = useArticleFormState(article);
@@ -79,7 +81,7 @@ export function useArticleEditor({
         setFeedback({ kind: 'conflict', revision: form.baseRevision ?? 1 });
         return;
       case 'locked':
-        setFeedback({ kind: 'locked' });
+        lockNotice?.show('not-modifiable');
         void fetchLatest?.();
         return;
       case 'not-found':
@@ -93,6 +95,7 @@ export function useArticleEditor({
     if (save.isPending) {
       return;
     }
+    lockNotice?.clear();
     const conversion = toArticleDraft(form.values);
     if (conversion.status === 'invalid') {
       showFieldErrors(conversion.errors);

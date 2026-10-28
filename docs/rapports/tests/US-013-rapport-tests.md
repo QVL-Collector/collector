@@ -6,9 +6,9 @@
 | Branche | `feat/US-013-soumission-controle-completude` |
 | Date | 2026-10-26 |
 | Fonction | Test |
-| Périmètre | Back : AC1 à AC9 (Place de marché, Contrôle, `libs/platform`). AC10 (accessibilité, front) hors périmètre de cette campagne |
+| Périmètre | Back : AC1 à AC9 (Place de marché, Contrôle, `libs/platform`). Front (2026-10-28) : AC10 et volet écran de AC1 à AC4 (`/vendeur`, `/vendeur/articles/nouveau`, `/vendeur/articles/:id`) |
 | Référentiel | AC de l'US, READMEs de `services/place-de-marche` et `services/controle`, [contracts/README.md](../../../contracts/README.md), [D05](../../decisions/D05-communication-interservice.md) |
-| Verdict | **Conforme** : tous les AC back sont couverts et conformes ; aucune anomalie. Une clarification (catalogue, AC1) |
+| Verdict | **Conforme** : tous les AC back et l'AC10 front sont couverts et conformes ; aucune anomalie. Une clarification (catalogue, AC1) |
 
 ## 1. Livrables de test
 
@@ -147,7 +147,7 @@ La topologie est modifiée au moment du test (droit d'écriture de `controle` vi
 
 ### AC10 — Accessibilité
 
-Hors périmètre (front).
+Couvert par la campagne front, voir § 8.
 
 ## 5. Anomalies
 
@@ -162,4 +162,67 @@ Aucune.
 
 ## 7. Conclusion
 
-Tous les AC back (AC1 à AC9) sont couverts et conformes, en mémoire et de bout en bout avec PostgreSQL, RabbitMQ et les deux services réels. Les tests US-009 sont réparés sans perte de ce qu'ils prouvent.
+Tous les AC back (AC1 à AC9) sont couverts et conformes, en mémoire et de bout en bout avec PostgreSQL, RabbitMQ et les deux services réels. Les tests US-009 sont réparés sans perte de ce qu'ils prouvent. Côté front, AC10 et le volet écran de AC1 à AC4 sont couverts et conformes (§ 8).
+
+## 8. Campagne front (2026-10-28)
+
+Boîte noire : l'application complète démarre (`startApplication`), connexion vendeur simulée par le harnais US-008, Place de marché simulée au niveau HTTP d'après `contracts/api/place-de-marche/v1.openapi.yaml` (révision exigée, 409 `revision-perimee`, `article-non-modifiable`, `article-non-soumettable`, 400 Problem Details avec `erreurs[]`). L'issue du contrôle est posée côté serveur simulé ; l'écran la découvre par ses seules relectures. Aucun jeton écrit en clair : les jetons sont fabriqués à l'exécution par le harnais US-008.
+
+### 8.1 Livrables
+
+| Fichier (`web/src/acceptance/`) | Contenu |
+|---|---|
+| `US-013/sellerMarketplaceHarness.tsx` | Place de marché simulée (articles, catégories, réponses scriptées), axe-core, attente des annonces |
+| `US-013/sellerScreens.ts`, `US-013/sellerStatePanel.ts` | Libellés FR/EN attendus, panneau « État de l'annonce » |
+| `US-013/brouillon-creation-modification.test.tsx` | Création, liste, catégories de `GET /categories`, modification avec révision lue, article introuvable (9) |
+| `US-013/AC1-AC4-soumission-et-etats.test.tsx` | Soumission, relecture toutes les 2 s, publié / refusé / à vérifier, motif FR/EN, soumission bloquée, réponses hors contrat (19) |
+| `US-013/conflit-409.test.tsx` | 409 révision périmée (enregistrement et soumission), « Recharger la dernière version », 409 plus modifiable / plus soumettable (6) |
+| `US-013/AC10-accessibilite-etats-et-ecrans.test.tsx` | Zone `role="status"`, annonces des transitions, axe-core FR/EN sur les trois écrans et les cinq états, conflit, clavier, accès refusé (28) |
+| `US-009/AC11-formulaire-accessible.test.tsx` | Libellés, erreurs 400 rattachées aux champs, résumé `role="alert"`, focus, axe-core (12) |
+| `US-010/catalogueHarness.tsx` | Adapté : faux client vendeur neutre exigé par `AppServices` (F3) ; les tests US-010 et US-025 prouvent la même chose |
+
+### 8.2 Exécutions
+
+| Commande | Résultat |
+|---|---|
+| `npx vitest run --pool=forks --poolOptions.forks.maxForks=2` | 24 fichiers, **261 tests verts** (187 existants inchangés + 74 nouveaux), 173 s |
+| `npm run typecheck` | Vert |
+| `npm run lint` | 0 erreur, 0 avertissement |
+| `npm run i18n:check` | Traductions alignées : 146 clés, fr, en |
+| `npx prettier --check src/acceptance` | Conforme |
+
+axe-core est lancé avec `color-contrast` désactivé (jsdom ne calcule pas les contrastes ; ils sont prouvés par US-025 AC4). Les messages « HTMLCanvasElement.getContext not implemented » viennent d'axe-core sous jsdom, comme dans les campagnes US-008 et US-025.
+
+### 8.3 Résultats
+
+| AC | Scénario | Attendu | Réel | Statut |
+|---|---|---|---|---|
+| AC1 | Soumission d'un brouillon complet | `POST …/soumission` avec la révision lue, état « En contrôle » affiché et annoncé | Conforme | OK |
+| AC1 | Contrôle concluant « publié » | L'écran passe à « Publié » sans action, annonce « « titre » : Publié. » | Conforme, moins de 3 s après l'issue | OK |
+| AC1 | Relecture en contrôle | Environ une lecture toutes les 2 s | 2 à 3 lectures en 4,5 s | OK |
+| AC1 | Boutons | « Soumettre au contrôle » inutilisable en contrôle et une fois publié | Conforme | OK |
+| AC1 | Création, modification (US-009) | `POST` du contenu saisi (montants en centimes), révision 1 ; `PUT` avec la révision lue, nouvelle révision annoncée ; liste « Mes articles » | Conforme | OK |
+| AC2 | Brouillon sans description refusé | « Refusé » + « Motif : Annonce incomplète » dans le panneau, annoncé ; visible dans « Mes articles » | Conforme | OK |
+| AC2 | Motif traduit | EN : « Rejected », « Reason: Incomplete listing » ; bascule FR vers EN sans rechargement ; annonce en anglais | Conforme | OK |
+| AC3 | Refusé corrigé, enregistré, resoumis | Révision suivante envoyée, motif effacé, en contrôle puis publié | Conforme | OK |
+| AC4 | Issue « à vérifier », `categorie_inconnue` | « À vérifier » + « Motif : Catégorie inconnue », jamais « Publié », soumission inutilisable ; traduit en anglais | Conforme | OK |
+| — | Soumission bloquée | Désactivée avec raison tant que des modifications ne sont pas enregistrées ; aucune soumission envoyée ; réactivée après enregistrement | Conforme | OK |
+| — | 409 révision périmée à l'enregistrement | Conflit expliqué, rien d'écrasé côté serveur, « Recharger la dernière version » (souris et clavier) montre la dernière version, écriture suivante avec la nouvelle révision | Conforme | OK |
+| — | 409 révision périmée à la soumission | Conflit expliqué, article relu, rien de soumis | Conforme | OK |
+| — | F1 : 409 plus modifiable / plus soumettable | Article relu ; l'échec reste affiché (encore présent après 2,5 s, dans le panneau d'état pour la soumission) et figure dans une zone `status` ou `alert` | Conforme | OK |
+| — | F2 : réponse hors contrat | Article sans `creeLe` ou à `id` mal formé : « L'article est momentanément indisponible » ; liste avec un article sans `creeLe` : « Vos articles sont momentanément indisponibles » | Conforme | OK |
+| — | Catégories | Seules celles de `GET /marche/v1/categories` proposées ; indisponibilité signalée | Conforme | OK |
+| — | Accès refusé | Acheteur sur les trois routes : « Accès réservé », aucun appel `/vendeur/` | Conforme | OK |
+| AC10 | Zone `aria-live` | `role="status"` `aria-live="polite"` présente dès l'affichage ; transitions vers publié, refusé, à vérifier annoncées | Conforme | OK |
+| AC10 | axe-core FR et EN | Aucune violation serious ou critical : liste (vide et avec les cinq états), création, article dans chacun des cinq états, conflit 409 | Conforme (24 analyses) | OK |
+| AC10 | État avec icône et texte | Icône `aria-hidden` + libellé | Conforme | OK |
+| AC10 | Clavier | Tabulation jusqu'à « Nouvel article » + Entrée ; saisie et « Créer le brouillon » au clavier ; « Soumettre au contrôle » à la barre d'espace | Conforme | OK |
+
+### 8.4 Anomalies front
+
+Aucune.
+
+### 8.5 Limites
+
+- jsdom : ni rendu ni contrastes ; un passage axe-core dans un vrai navigateur (Playwright) reste prévu par l'US.
+- AC1 « apparaît au catalogue en moins de 10 secondes » reste à prouver de bout en bout (Playwright) : seul l'écran vendeur est prouvé ici.

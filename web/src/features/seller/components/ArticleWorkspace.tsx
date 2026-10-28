@@ -12,7 +12,7 @@ type ArticleWorkspaceProps = {
 };
 
 export function ArticleWorkspace({ article, fetchLatest }: ArticleWorkspaceProps) {
-  const { status, editor, submission, categories, isEditable, isSubmissionBlocked } =
+  const { status, editor, submission, categories, lockMessage, isEditable, isSubmissionBlocked } =
     useArticleWorkspace(article, fetchLatest);
   return (
     <Stack
@@ -24,6 +24,7 @@ export function ArticleWorkspace({ article, fetchLatest }: ArticleWorkspaceProps
       <Stack width={{ xs: '100%', md: '22rem' }} flexShrink={0}>
         <ArticleStatusPanel
           status={status}
+          notice={lockMessage}
           action={
             submission.canSubmit ? (
               <ArticleSubmitAction
