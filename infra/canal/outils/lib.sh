@@ -24,6 +24,15 @@ RABBITMQ_IMAGE="$(sed -n 's/^image: *//p' "$CANAL_DIR/values.yaml")"
 [[ -n "$RABBITMQ_IMAGE" ]] || { printf 'image absente de values.yaml\n' >&2; exit 1; }
 export RABBITMQ_IMAGE
 
+# Kubernetes : contexte explicite et en liste blanche, jamais le contexte courant (le poste en porte
+# d'autres). k3d-* pour le poste, *collector* pour le cluster du projet.
+CONTEXTES_AUTORISES=('k3d-*' '*collector*')
+# MSYS_NO_PATHCONV=1 empeche Git Bash de convertir KUBECONFIG : kubectl ignorerait un chemin /c/...
+if [[ "${KUBECONFIG:-}" == /* ]] && command -v cygpath >/dev/null 2>&1; then
+  KUBECONFIG="$(cygpath -m -p "$KUBECONFIG")"
+  export KUBECONFIG
+fi
+
 journal() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*" >&2; }
 echec() { journal "ECHEC : $*"; exit 1; }
 
@@ -52,3 +61,18 @@ charger_mdp() {
   source "$MDP_FILE"
   set +a
 }
+
+# A appeler avant toute commande kubectl ou helm : refus sans KUBE_CONTEXT ou hors liste blanche.
+exiger_contexte() {
+  local motif
+  [[ -n "${KUBE_CONTEXT:-}" ]] ||
+    echec "KUBE_CONTEXT absent : contexte explicite exige (${CONTEXTES_AUTORISES[*]}), le contexte courant n'est jamais utilise"
+  for motif in "${CONTEXTES_AUTORISES[@]}"; do
+    # shellcheck disable=SC2053 # motif glob voulu
+    [[ "$KUBE_CONTEXT" == $motif ]] && return 0
+  done
+  echec "contexte '$KUBE_CONTEXT' refuse : motifs autorises ${CONTEXTES_AUTORISES[*]}"
+}
+
+kc() { kubectl --context "$KUBE_CONTEXT" "$@"; }
+hm() { helm --kube-context "$KUBE_CONTEXT" "$@"; }

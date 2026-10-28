@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Canal sur Kubernetes (EKS, k3d) : namespaces, Secrets par l'entree standard, chart du broker.
-# Le contexte vise est celui de KUBE_CONTEXT, sinon le contexte courant.
+# KUBE_CONTEXT est obligatoire et doit etre en liste blanche (lib.sh, exiger_contexte).
 # Usage :
 #   outils/kubernetes.sh namespaces   namespaces du broker et des services, PSS "restricted" (D10 : hors chart)
 #   outils/kubernetes.sh secrets      Secret du broker, un Secret par service, Secret de supervision (MC5)
@@ -9,14 +9,12 @@
 #   outils/kubernetes.sh down         desinstalle le chart, supprime les Secrets, efface .genere/
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+exiger_contexte
 
 NS_CANAL="${NS_CANAL:-canal}"
 RELEASE="canal"
 NS_SUPERVISION_CIBLE="$(namespace_de controle)"
 ETIQUETTE="app.kubernetes.io/part-of=collector-canal"
-
-kc() { kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"} "$@"; }
-hm() { helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"} "$@"; }
 
 namespaces_clients() { local s; for s in "${SERVICES[@]}"; do namespace_de "$s"; printf '\n'; done; }
 

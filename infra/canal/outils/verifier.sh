@@ -15,7 +15,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 CIBLE="${1:-}"
 case "$CIBLE" in
   local) CAS_ATTENDUS=64 ;;
-  kubernetes) CAS_ATTENDUS=79 ;;
+  kubernetes) exiger_contexte; CAS_ATTENDUS=79 ;;
   *) echec "usage : $0 local|kubernetes" ;;
 esac
 SONDE_IMAGE="${SONDE_IMAGE:-collector/canal-sonde:1}"
@@ -26,9 +26,6 @@ ETIQUETTE_CANAL="app.kubernetes.io/part-of=collector-canal"
 ETIQUETTE_VERIF="app.kubernetes.io/part-of=collector-canal-verification"
 if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then POUBELLE=NUL; else POUBELLE=/dev/null; fi
 charger_mdp
-
-kc() { kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"} "$@"; }
-hm() { helm ${KUBE_CONTEXT:+--kube-context "$KUBE_CONTEXT"} "$@"; }
 
 total=0
 ok=0
@@ -174,7 +171,7 @@ if [[ "$CIBLE" == local ]]; then
   compter <<<"$(fuite journal-du-broker docker logs collector-canal-rabbitmq-1)"
 else
   trap nettoyer_kubernetes EXIT
-  contexte="$(kc config current-context)"
+  contexte="$KUBE_CONTEXT"
   if [[ "$contexte" == k3d-* ]]; then
     k3d image import -c "${contexte#k3d-}" "$SONDE_IMAGE" >/dev/null 2>&1 || journal "image de sonde non importee dans k3d"
   fi
