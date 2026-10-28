@@ -1,5 +1,7 @@
 import type { RouteObject } from 'react-router';
 import { signInCallbackPath } from '../auth/authPaths';
+import { publishedArticleRoutePattern } from '../features/catalogue/cataloguePaths';
+import { ArticlePage } from '../features/catalogue/components/ArticlePage';
 import { CataloguePage } from '../features/catalogue/components/CataloguePage';
 import { ArticleEditorPage } from '../features/seller/components/ArticleEditorPage';
 import { NewArticlePage } from '../features/seller/components/NewArticlePage';
@@ -21,6 +23,7 @@ export const appRoutes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <CataloguePage /> },
+      { path: publishedArticleRoutePattern, element: <ArticlePage /> },
       { path: signInCallbackPath, element: <SignInCallbackPage /> },
       {
         element: <RequireAuthentication requiredRole="vendeur" />,

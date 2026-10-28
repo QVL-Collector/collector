@@ -3,6 +3,7 @@ import { useMoneyFormatter } from '../../../i18n/useMoneyFormatter';
 import { CardGrid } from '../../../ui/components/CardGrid';
 import { CardGridItem } from '../../../ui/components/CardGridItem';
 import type { CatalogueArticle } from '../domain/catalogue';
+import { useArticleCardLink } from '../hooks/useArticleCardLink';
 import { ArticleCard } from './ArticleCard';
 
 type CatalogueGridProps = {
@@ -12,11 +13,16 @@ type CatalogueGridProps = {
 export function CatalogueGrid({ articles }: CatalogueGridProps) {
   const { t } = useTranslation();
   const formatMoney = useMoneyFormatter();
+  const linkTo = useArticleCardLink();
   return (
     <CardGrid label={t('catalogue.listLabel')}>
       {articles.map((article, index) => (
         <CardGridItem key={article.id} index={index}>
-          <ArticleCard article={article} priceLabel={formatMoney(article.price)} />
+          <ArticleCard
+            article={article}
+            priceLabel={formatMoney(article.price)}
+            link={linkTo(article.id)}
+          />
         </CardGridItem>
       ))}
     </CardGrid>

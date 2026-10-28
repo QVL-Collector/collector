@@ -1,10 +1,12 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { CatalogueArticle, CataloguePage } from '../domain/catalogue';
+import { isUnknownCategory } from '../domain/catalogueProblems';
 
 export type CatalogueView =
   | { readonly status: 'loading' }
   | { readonly status: 'error' }
-  | { readonly status: 'empty' }
+  | { readonly status: 'unknown-category' }
+  | { readonly status: 'empty'; readonly filtered: boolean }
   | { readonly status: 'out-of-range' }
   | {
       readonly status: 'ready';
@@ -22,16 +24,17 @@ function countPages(totalItems: number, pageSize: number): number {
 export function toCatalogueView(
   query: UseQueryResult<CataloguePage>,
   requestedPage: number,
+  categoryId: string | null,
 ): CatalogueView {
   if (query.status === 'error') {
-    return { status: 'error' };
+    return isUnknownCategory(query.error) ? { status: 'unknown-category' } : { status: 'error' };
   }
   if (query.status === 'pending') {
     return { status: 'loading' };
   }
   const { articles, totalItems, pageSize } = query.data;
   if (totalItems === 0) {
-    return { status: 'empty' };
+    return { status: 'empty', filtered: categoryId !== null };
   }
   if (articles.length === 0) {
     return { status: 'out-of-range' };

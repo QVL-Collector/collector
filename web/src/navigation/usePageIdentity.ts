@@ -1,17 +1,20 @@
 import { useEffect, useRef, type RefObject } from 'react';
-import { useLocation } from 'react-router';
+import { useLocation, type Location } from 'react-router';
 import { useDocumentTitle } from '../ui/hooks/useDocumentTitle';
+import { isFocusPreserved } from './focusPreservation';
 
 const initialLocationKey = 'default';
 
 export function usePageIdentity(documentTitle: string): RefObject<HTMLHeadingElement | null> {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const { key } = useLocation();
+  const location: Location<unknown> = useLocation();
+  const { key } = location;
+  const preserveFocus = isFocusPreserved(location.state);
   useDocumentTitle(documentTitle);
   useEffect(() => {
-    if (key !== initialLocationKey) {
+    if (key !== initialLocationKey && !preserveFocus) {
       headingRef.current?.focus();
     }
-  }, [key]);
+  }, [key, preserveFocus]);
   return headingRef;
 }

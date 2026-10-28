@@ -182,9 +182,27 @@ export const en: Translation = {
     loading: 'Loading the catalogue',
     loaded_one: '{{count}} published item, page {{page}} of {{pageCount}}',
     loaded_other: '{{count}} published items, page {{page}} of {{pageCount}}',
+    loadedInCategory_one:
+      '{{count}} published item in the {{category}} category, page {{page}} of {{pageCount}}',
+    loadedInCategory_other:
+      '{{count}} published items in the {{category}} category, page {{page}} of {{pageCount}}',
+    filter: {
+      label: 'Category',
+      all: 'All categories',
+      unavailable: 'Categories are temporarily unavailable.',
+    },
+    showAllCategories: 'Show all categories',
     empty: {
       title: 'No published items yet',
       description: 'New collectibles arrive regularly: come back soon.',
+    },
+    emptyCategory: {
+      title: 'No published items in this category',
+      description: 'Pick another category or browse the whole catalogue.',
+    },
+    unknownCategory: {
+      title: 'This category does not exist',
+      description: 'The link you followed points to a category unknown to the catalogue.',
     },
     outOfRange: {
       title: 'This catalogue page is empty',
@@ -193,6 +211,31 @@ export const en: Translation = {
     },
     error: {
       title: 'The catalogue is temporarily unavailable',
+      description: 'Check your connection, then try again.',
+      retry: 'Try again',
+    },
+  },
+  article: {
+    documentTitle: '{{title}} · Collector',
+    pendingDocumentTitle: 'Item details · Collector',
+    pendingTitle: 'Item details',
+    loading: 'Loading the item',
+    loaded: 'Details of the item {{title}} displayed',
+    summaryTitle: 'At a glance',
+    categoryLink: 'Category {{category}}: see its items',
+    shippingCost: 'Shipping',
+    shippingNotProvided: 'Not provided by the seller',
+    seller: 'Seller',
+    privateSeller: 'Private seller',
+    descriptionTitle: 'Description',
+    noDescription: 'The seller has not written a description.',
+    notFound: {
+      documentTitle: 'Item not found · Collector',
+      title: 'Item not found',
+      description: 'This item does not exist or is no longer for sale.',
+    },
+    error: {
+      title: 'The item is temporarily unavailable',
       description: 'Check your connection, then try again.',
       retry: 'Try again',
     },

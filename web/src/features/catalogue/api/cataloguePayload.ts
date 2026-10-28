@@ -1,32 +1,17 @@
-import { isCurrencyCode, type Money } from '../../../shared/Money';
+import { parseCategory, parseMoney, parseNullable } from '../../../shared/marketplacePayload';
 import {
   expectArray,
   expectInteger,
   expectNonEmptyString,
   expectRecord,
-  InvalidPayloadError,
+  expectString,
 } from '../../../shared/payload';
-import type { ArticleCategory, CatalogueArticle, CataloguePage } from '../domain/catalogue';
-
-function parseMoney(value: unknown, path: string): Money {
-  const price = expectRecord(value, path);
-  const currency = expectNonEmptyString(price.devise, `${path}.devise`);
-  if (!isCurrencyCode(currency)) {
-    throw new InvalidPayloadError(`${path}.devise`);
-  }
-  return {
-    amountInCents: expectInteger(price.montantCentimes, `${path}.montantCentimes`, 0),
-    currency,
-  };
-}
-
-function parseCategory(value: unknown, path: string): ArticleCategory {
-  const category = expectRecord(value, path);
-  return {
-    id: expectNonEmptyString(category.id, `${path}.id`),
-    label: expectNonEmptyString(category.libelle, `${path}.libelle`),
-  };
-}
+import type {
+  ArticleCategory,
+  CatalogueArticle,
+  CataloguePage,
+  PublishedArticle,
+} from '../domain/catalogue';
 
 function parseArticle(value: unknown, path: string): CatalogueArticle {
   const article = expectRecord(value, path);
@@ -47,5 +32,24 @@ export function parseCataloguePage(payload: unknown): CataloguePage {
     page: expectInteger(root.page, 'page', 1),
     pageSize: expectInteger(root.taille, 'taille', 1),
     totalItems: expectInteger(root.total, 'total', 0),
+  };
+}
+
+export function parseCatalogueCategories(payload: unknown): readonly ArticleCategory[] {
+  const root = expectRecord(payload, 'categories');
+  return expectArray(root.elements, 'elements').map((item, index) =>
+    parseCategory(item, `elements[${String(index)}]`),
+  );
+}
+
+export function parsePublishedArticle(payload: unknown): PublishedArticle {
+  const path = 'article';
+  const article = expectRecord(payload, path);
+  return {
+    ...parseArticle(article, path),
+    description: expectString(article.description, `${path}.description`),
+    shippingCost: parseNullable(article.fraisDePort, (shipping) =>
+      parseMoney(shipping, `${path}.fraisDePort`),
+    ),
   };
 }

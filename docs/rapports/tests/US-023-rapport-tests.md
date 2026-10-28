@@ -98,3 +98,98 @@ Aucune anomalie : aucun comportement observé ne contredit un AC du périmètre 
 
 - Les catégories amorcées en base (migration 00002 : `bandes-dessinees`, `cartes-a-collectionner`, `figurines`…) diffèrent du jeu fictif du banc en mémoire (`cartes-postales`, `figurines`, `timbres`) ; les scénarios lisent donc les catégories par `GET /categories`.
 - Le tri « du plus récemment publié » s'appuie sur la date de dernière modification (`modifie_le`) ; c'est équivalent tant qu'un article publié n'est plus modifiable, ce qu'impose US-013.
+
+## Front — catalogue filtré, fiche et page introuvable
+
+| Champ | Valeur |
+|---|---|
+| Fonction | Test |
+| Périmètre | `web/` : US-023 AC1 (filtre), AC2 (fiche), AC3 (page « Article introuvable »), AC5 (axe-core, clavier) |
+| Hors périmètre | AC4 (charge k6) ; photos d'AC2 (aucun champ photo dans le contrat v1, dépend d'US-020) |
+| Outils | Vitest 4 (jsdom), Testing Library, user-event, axe-core ; API simulée au niveau HTTP (`fetch`) selon `contracts/api/place-de-marche/v1.openapi.yaml`, client réel (`source: api`) |
+| Verdict | **Tous les AC du périmètre Front sont couverts et conformes** |
+
+### Méthode
+
+Scénarios dérivés des AC, étiquetés `US-023-ACn`, joués sur l'application complète. Le faux serveur (`publicMarketplaceHarness.tsx`) répond à `GET /marche/v1/categories`, `GET /marche/v1/articles` (filtre `categorie`, pagination, 400 `categorie_inconnue`) et `GET /marche/v1/articles/{id}` (404 pour tout article non publié), en `application/problem+json` pour les erreurs.
+
+| Fichier (`web/src/acceptance/`) | Contenu |
+|---|---|
+| `US-023/publicMarketplaceHarness.tsx` | Faux serveur HTTP de la Place de marché, jeu d'articles, analyse axe-core |
+| `US-023/AC1-filtre-par-categorie.test.tsx` | 12 scénarios |
+| `US-023/AC2-fiche-article.test.tsx` | 8 scénarios |
+| `US-023/AC3-article-introuvable.test.tsx` | 9 scénarios |
+| `US-023/AC5-accessibilite.test.tsx` | 13 scénarios |
+| `US-010/catalogueHarness.tsx` | `listCategories` (liste vide) et `getPublishedArticle` (rejet, hors périmètre) ajoutés au faux client : le typecheck échouait ; assertions US-010 inchangées |
+
+### Résultats d'exécution (depuis `web/`)
+
+| Commande | Résultat |
+|---|---|
+| `npx vitest run --pool=forks --poolOptions.forks.maxForks=2` | 28 fichiers, 303 tests verts (261 existants + 42 US-023) |
+| `npm run typecheck` | OK |
+| `npm run lint` | 0 erreur, 0 avertissement |
+| `npm run i18n:check` | 175 clés alignées FR/EN |
+| `npm run build` | OK |
+| `npm run format` | Appliqué |
+
+### US-023 AC1 — Filtre par catégorie
+
+| Scénario | Attendu (AC) | Réel | Statut |
+|---|---|---|---|
+| Nominal : 14 figurines et 3 timbres publiés, 4 timbres non publiés ; choix « Timbres » | Seuls les timbres publiés listés | 3 cartes, toutes « Timbres », aucun non publié ni figurine | Conforme |
+| Contenu du filtre | « Toutes les catégories » puis catégories de l'API | Options dans l'ordre de l'API, valeur initiale vide | Conforme |
+| Requête émise | `categorie` et page 1 | `GET /marche/v1/articles?categorie=timbres&page=1…` | Conforme |
+| Choix depuis la page 2 | `?categorie=` dans l'URL, retour page 1 | `categorie=figurines`, page 1, annonce « 14 articles publiés dans la catégorie Figurines, page 1 sur 2 » | Conforme |
+| Pagination sous filtre | Filtre conservé | Page 2 : `categorie` conservé, 2 cartes | Conforme |
+| Retour arrière après deux choix | Filtre précédent restauré | URL, valeur du filtre et liste reviennent à « Figurines » | Conforme |
+| Adresse directe `?categorie=timbres` | Filtre présélectionné | Valeur « timbres », 3 cartes | Conforme |
+| Choix « Toutes les catégories » | Paramètre retiré, tous les publiés | `categorie` absent, « 17 articles publiés, page 1 sur 2 » | Conforme |
+| Catégorie existante sans publié | État « catégorie vide » + action | Titre « Aucun article publié dans cette catégorie », pas de liste ; « Voir toutes les catégories » rétablit 12 cartes | Conforme |
+| Catégorie inconnue (400 `categorie_inconnue`) | État dédié, pas l'état d'erreur | « Cette catégorie n'existe pas », action de retour fonctionnelle | Conforme |
+| Identifiant hors motif (`<script>`) | Ignoré | Jamais transmis à l'API, catalogue affiché | Conforme |
+| Cartes filtrées | Mènent à la fiche | `href="/articles/{id}"` | Conforme |
+
+### US-023 AC2 — Fiche
+
+| Scénario | Attendu (AC) | Réel | Statut |
+|---|---|---|---|
+| Article publié avec frais | Titre, description, prix, frais, catégorie, « vendeur particulier » | Tous présents (150,00 €, 6,90 €, Figurines, « Vendeur particulier ») | Conforme |
+| Appel API | `GET /v1/articles/{id}` public | Chemin `/marche/v1/articles/{id}` appelé | Conforme |
+| Description multiligne | Texte lisible | Sauts de ligne conservés (`white-space: pre…`) | Conforme |
+| `fraisDePort: null` | Fiche lisible | « Frais de port … Non renseignés par le vendeur » | Conforme |
+| Titre et description piégés (`<b>`, `<script>`, `<img onerror>`) | Affichés comme texte (ES-08) | Texte littéral, aucun `script`, `img[onerror]` ni `b` créé, aucun code exécuté | Conforme |
+| Lien de catégorie | Catalogue filtré | `/?categorie=figurines`, 1 carte | Conforme |
+| Retour au catalogue depuis une fiche ouverte en page 2 filtrée | Filtre et page restaurés | `categorie=figurines&page=2` | Conforme |
+| Ouverture depuis une carte | Titre de page, focus `h1` | « Figurine Astérix 1985 · Collector », focus sur l'unique `h1` | Conforme |
+| Photos | Visibles | Non testable : absent du contrat v1 (US-020) | Clarification |
+
+### US-023 AC3 — Article introuvable
+
+| Scénario | Attendu (AC) | Réel | Statut |
+|---|---|---|---|
+| Article brouillon, en contrôle, refusé, à vérifier (404 API) | Page « article introuvable » | `h1` unique « Article introuvable », titre « Article introuvable · Collector », « Retour au catalogue », aucune donnée de l'article | Conforme |
+| Identifiant inexistant, identifiant mal formé | Idem | Idem | Conforme |
+| Article retiré entre la liste et la fiche | Idem, focus `h1` | Page introuvable, focus sur le `h1` | Conforme |
+| « Retour au catalogue » | Catalogue | `/`, `h1` « Catalogue » | Conforme |
+| Anglais | Page traduite | « Item not found » | Conforme |
+
+### US-023 AC5 — Accessibilité
+
+| Scénario | Attendu (AC) | Réel | Statut |
+|---|---|---|---|
+| axe-core : catalogue filtré FR/EN, catégorie vide FR, catégorie inconnue EN, fiche FR/EN (frais non renseignés, description piégée), article introuvable FR/EN | Aucune violation serious ou critical | Aucune ; `lang` suivi | Conforme |
+| Filtre au clavier | Atteignable par Tab, utilisable | Atteint par Tab, choix appliqué, focus conservé sur le filtre (pas sur le `h1`) | Conforme |
+| Annonce du résultat | Zone `role="status"` | Une seule zone, « 14 articles publiés dans la catégorie Figurines, page 1 sur 2 » | Conforme |
+| Nature du filtre | Liste native libellée | `select` « Catégorie » (« Category » en anglais), focalisable | Conforme |
+| Fiche au clavier | Liens atteignables | Lien de catégorie puis « Retour au catalogue » atteints par Tab, Entrée ramène au catalogue | Conforme |
+
+### Anomalies
+
+Aucune anomalie : aucun comportement observé ne contredit un AC du périmètre Front.
+
+### Observations (sans anomalie)
+
+- Photos d'AC2 : ni champ dans le contrat v1 ni affichage ; à couvrir à la livraison d'US-020 (clarification à trancher au niveau de l'US).
+- Sur une ouverture directe de l'adresse (sans navigation interne), le focus ne passe pas sur le `h1` ; les AC ne l'exigent pas, le focus est bien déplacé lors d'une navigation dans l'application.
+- Contraste non mesurable en jsdom (`color-contrast` désactivé, comme pour US-010 et US-025) : couvert par `AC4-contrastes-wcag.test.ts` d'US-025.
