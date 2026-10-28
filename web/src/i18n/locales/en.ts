@@ -55,7 +55,6 @@ export const en: Translation = {
     welcome: 'Welcome, {{name}}. Your listings will appear here.',
     navigation: 'Seller area',
     untitled: 'Untitled item',
-    notProvided: 'Not provided',
     newArticle: 'New item',
     backToList: 'Back to my items',
     states: {
@@ -102,7 +101,6 @@ export const en: Translation = {
         'Prepare your listing. It stays a draft, hidden from the catalogue, until you submit it.',
       documentTitle: '{{title}} · Collector',
       loading: 'Loading the item',
-      readOnly: 'The listing cannot be edited in its current state.',
       notFound: {
         title: 'Item not found',
         description: 'This item does not exist or does not belong to your account.',
@@ -128,6 +126,20 @@ export const en: Translation = {
       create: 'Create the draft',
       save: 'Save the draft',
       saved: 'Draft saved, revision {{revision}}.',
+      saveForControl: 'Save and send back for review',
+      savedForControl: 'Changes saved, revision {{revision}}: the listing is under review again.',
+      recontrol: {
+        published: {
+          title: 'The listing will be removed from the catalogue',
+          description:
+            'Any saved change, even to the title alone, removes the listing from the catalogue during the review. It comes back once the new version is accepted.',
+        },
+        underReview: {
+          title: 'The review will restart on the new version',
+          description:
+            'Any saved change restarts the review on your new version: the pending result for the current version will be ignored. The listing stays hidden from the catalogue until then.',
+        },
+      },
       invalid_one: 'The form contains {{count}} error: fix the highlighted field.',
       invalid_other: 'The form contains {{count}} errors: fix the highlighted fields.',
       locked:

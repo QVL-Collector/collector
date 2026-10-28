@@ -54,7 +54,6 @@ export const fr = {
     welcome: 'Bienvenue, {{name}}. Vos annonces apparaîtront ici.',
     navigation: 'Espace vendeur',
     untitled: 'Article sans titre',
-    notProvided: 'Non renseigné',
     newArticle: 'Nouvel article',
     backToList: 'Retour à mes articles',
     states: {
@@ -102,7 +101,6 @@ export const fr = {
         'Préparez votre annonce. Elle reste un brouillon invisible au catalogue tant que vous ne la soumettez pas.',
       documentTitle: '{{title}} · Collector',
       loading: 'Chargement de l’article en cours',
-      readOnly: 'L’annonce n’est pas modifiable dans son état actuel.',
       notFound: {
         title: 'Article introuvable',
         description: 'Cet article n’existe pas ou n’appartient pas à votre compte.',
@@ -128,6 +126,21 @@ export const fr = {
       create: 'Créer le brouillon',
       save: 'Enregistrer le brouillon',
       saved: 'Brouillon enregistré, révision {{revision}}.',
+      saveForControl: 'Enregistrer et renvoyer au contrôle',
+      savedForControl:
+        'Modifications enregistrées, révision {{revision}} : l’annonce repasse au contrôle.',
+      recontrol: {
+        published: {
+          title: 'L’annonce sera retirée du catalogue',
+          description:
+            'Toute modification enregistrée, même du seul titre, retire l’annonce du catalogue le temps du contrôle. Elle y revient une fois la nouvelle version acceptée.',
+        },
+        underReview: {
+          title: 'Le contrôle repartira sur la nouvelle version',
+          description:
+            'Toute modification enregistrée relance le contrôle sur votre nouvelle version : le résultat attendu pour la version actuelle sera ignoré. L’annonce reste invisible au catalogue d’ici là.',
+        },
+      },
       invalid_one: 'Le formulaire contient {{count}} erreur : corrigez le champ signalé.',
       invalid_other: 'Le formulaire contient {{count}} erreurs : corrigez les champs signalés.',
       locked: 'L’annonce n’est plus modifiable dans son état actuel. La page a été mise à jour.',

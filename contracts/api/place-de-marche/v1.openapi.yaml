@@ -171,8 +171,10 @@ paths:
       tags: [Vendeur]
       operationId: modifierBrouillon
       summary: >-
-        Remplacer le contenu d'un article brouillon ou refusé, sans changer son état ; la révision lue est exigée et
-        augmente de 1
+        Remplacer le contenu d'un article ; la révision lue est exigée et augmente de 1. Brouillon ou refusé : l'état
+        ne change pas. Publié, en_controle ou a_verifier : l'article passe en_controle, son motif est effacé, il quitte
+        le catalogue et la nouvelle révision est soumise au contrôle, quel que soit le champ modifié ; toute issue
+        portant sur une révision antérieure est ignorée
       security:
         - jetonKeycloak: []
       requestBody:
@@ -183,7 +185,7 @@ paths:
               $ref: "#/components/schemas/ModificationBrouillon"
       responses:
         "200":
-          description: Brouillon modifié
+          description: Article modifié, dans son nouvel état
           content:
             application/json:
               schema:
@@ -360,7 +362,7 @@ components:
           $ref: "#/components/schemas/SaisieFraisDePort"
     ModificationBrouillon:
       description: >-
-        Remplacement complet du contenu d'un brouillon : un champ absent est vidé. La révision lue est exigée ;
+        Remplacement complet du contenu d'un article : un champ absent est vidé. La révision lue est exigée ;
         une révision périmée répond 409.
       type: object
       additionalProperties: false

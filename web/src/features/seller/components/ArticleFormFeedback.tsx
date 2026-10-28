@@ -11,10 +11,15 @@ import type { FormFeedback } from '../hooks/useArticleEditor';
 
 type ArticleFormFeedbackProps = {
   readonly feedback: FormFeedback;
+  readonly savedMessage: string;
   readonly onReload: () => void;
 };
 
-export function ArticleFormFeedback({ feedback, onReload }: ArticleFormFeedbackProps) {
+export function ArticleFormFeedback({
+  feedback,
+  savedMessage,
+  onReload,
+}: ArticleFormFeedbackProps) {
   const { t } = useTranslation();
   switch (feedback.kind) {
     case 'none':
@@ -29,9 +34,7 @@ export function ArticleFormFeedback({ feedback, onReload }: ArticleFormFeedbackP
           sx={revealSx(0)}
         >
           <CheckCircleRounded fontSize="small" />
-          <Typography variant="body2">
-            {t('seller.form.saved', { revision: feedback.revision })}
-          </Typography>
+          <Typography variant="body2">{savedMessage}</Typography>
         </Stack>
       );
     case 'invalid':

@@ -1,6 +1,6 @@
 import { useCallback, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SellerArticle } from '../domain/sellerArticle';
+import { isUnderControl, type SellerArticle } from '../domain/sellerArticle';
 import { toArticleFailure } from './articleFailure';
 import {
   countFieldErrors,
@@ -14,20 +14,22 @@ import { useArticleFieldFocus } from './useArticleFieldFocus';
 import { useArticleFieldModels, type ArticleFieldModels } from './useArticleFieldModels';
 import { useArticleFormState } from './useArticleFormState';
 import type { LockNoticeHandlers } from './useLockNotice';
+import { useRecontrolWarning, type RecontrolWarning } from './useRecontrolWarning';
 import { useSaveArticle, type SaveTarget } from './useSaveArticle';
 
 export type FormFeedback =
   | { readonly kind: 'none' }
-  | { readonly kind: 'saved'; readonly revision: number }
+  | { readonly kind: 'saved'; readonly revision: number; readonly underControl: boolean }
   | { readonly kind: 'invalid'; readonly count: number }
   | { readonly kind: 'conflict'; readonly revision: number }
   | { readonly kind: 'unavailable' };
 
 export type ArticleEditorModel = {
-  readonly mode: SaveTarget['kind'];
   readonly fields: ArticleFieldModels;
   readonly feedback: FormFeedback;
   readonly savedAnnouncement: string;
+  readonly submitLabel: string;
+  readonly recontrolWarning: RecontrolWarning | null;
   readonly isSaving: boolean;
   readonly isDirty: boolean;
   readonly submit: (event: FormEvent<HTMLFormElement>) => void;
@@ -53,6 +55,7 @@ export function useArticleEditor({
   const form = useArticleFormState(article);
   const { refs, focusField } = useArticleFieldFocus();
   const save = useSaveArticle();
+  const recontrolWarning = useRecontrolWarning(article?.state ?? null);
   const [fieldErrors, setFieldErrors] = useState<ArticleFieldErrors>({});
   const [feedback, setFeedback] = useState<FormFeedback>(noFeedback);
 
@@ -112,7 +115,11 @@ export function useArticleEditor({
       {
         onSuccess: (saved) => {
           form.reset(saved);
-          setFeedback({ kind: 'saved', revision: saved.revision });
+          setFeedback({
+            kind: 'saved',
+            revision: saved.revision,
+            underControl: isUnderControl(saved.state),
+          });
           if (target.kind === 'create') {
             onCreated?.(saved);
           }
@@ -132,12 +139,27 @@ export function useArticleEditor({
     });
   };
 
+  const savedAnnouncement = (): string => {
+    if (feedback.kind !== 'saved') {
+      return '';
+    }
+    const key = feedback.underControl ? 'seller.form.savedForControl' : 'seller.form.saved';
+    return t(key, { revision: feedback.revision });
+  };
+
+  const submitLabel = (): string => {
+    if (article === null) {
+      return t('seller.form.create');
+    }
+    return recontrolWarning === null ? t('seller.form.save') : t('seller.form.saveForControl');
+  };
+
   return {
-    mode: article === null ? 'create' : 'update',
     fields,
     feedback,
-    savedAnnouncement:
-      feedback.kind === 'saved' ? t('seller.form.saved', { revision: feedback.revision }) : '',
+    savedAnnouncement: savedAnnouncement(),
+    submitLabel: submitLabel(),
+    recontrolWarning,
     isSaving: save.isPending,
     isDirty: form.isDirty,
     submit,

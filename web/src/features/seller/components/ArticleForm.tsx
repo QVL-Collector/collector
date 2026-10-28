@@ -2,6 +2,7 @@ import SaveRounded from '@mui/icons-material/SaveRounded';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LiveStatus } from '../../../ui/components/LiveStatus';
 import { articleLimits } from '../domain/sellerArticle';
@@ -10,6 +11,7 @@ import type { CategoryOptions } from '../hooks/useCategoryOptions';
 import { ArticleCategoryField } from './ArticleCategoryField';
 import { ArticleFormFeedback } from './ArticleFormFeedback';
 import { ArticleTextField } from './ArticleTextField';
+import { RecontrolWarningNotice } from './RecontrolWarningNotice';
 
 type ArticleFormProps = {
   readonly editor: ArticleEditorModel;
@@ -18,7 +20,17 @@ type ArticleFormProps = {
 
 export function ArticleForm({ editor, categories }: ArticleFormProps) {
   const { t } = useTranslation();
-  const { fields, feedback, savedAnnouncement, isSaving, mode, submit, reloadLatest } = editor;
+  const warningId = useId();
+  const {
+    fields,
+    feedback,
+    savedAnnouncement,
+    submitLabel,
+    recontrolWarning,
+    isSaving,
+    submit,
+    reloadLatest,
+  } = editor;
   const { titleMaxLength, descriptionMaxLength } = articleLimits;
   return (
     <Stack
@@ -28,9 +40,13 @@ export function ArticleForm({ editor, categories }: ArticleFormProps) {
       aria-label={t('seller.form.label')}
       spacing={3}
     >
-      <Typography variant="body2" color="text.secondary">
-        {t('seller.form.hint')}
-      </Typography>
+      {recontrolWarning === null ? (
+        <Typography variant="body2" color="text.secondary">
+          {t('seller.form.hint')}
+        </Typography>
+      ) : (
+        <RecontrolWarningNotice id={warningId} warning={recontrolWarning} />
+      )}
       <ArticleTextField
         field={fields.title}
         label={t('seller.form.title')}
@@ -65,7 +81,11 @@ export function ArticleForm({ editor, categories }: ArticleFormProps) {
           inputMode="decimal"
         />
       </Stack>
-      <ArticleFormFeedback feedback={feedback} onReload={reloadLatest} />
+      <ArticleFormFeedback
+        feedback={feedback}
+        savedMessage={savedAnnouncement}
+        onReload={reloadLatest}
+      />
       <LiveStatus message={savedAnnouncement} />
       <Stack alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
         <Button
@@ -74,9 +94,10 @@ export function ArticleForm({ editor, categories }: ArticleFormProps) {
           startIcon={<SaveRounded />}
           loading={isSaving}
           loadingPosition="start"
+          aria-describedby={recontrolWarning === null ? undefined : warningId}
           sx={{ minHeight: '2.75rem' }}
         >
-          {mode === 'create' ? t('seller.form.create') : t('seller.form.save')}
+          {submitLabel}
         </Button>
       </Stack>
     </Stack>

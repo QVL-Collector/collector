@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSellerClient } from '../api/useSellerClient';
-import { acceptsChanges, type SellerArticle } from '../domain/sellerArticle';
+import { acceptsSubmission, type SellerArticle } from '../domain/sellerArticle';
 import { toArticleFailure } from './articleFailure';
 import type { LockNoticeHandlers } from './useLockNotice';
 import { useStoreSellerArticle } from './useStoreSellerArticle';
@@ -52,7 +52,7 @@ export function useSubmitForControl(
     mutation.mutate({ id: article.id, revision: article.revision }, { onError: showFailure });
   };
   return {
-    canSubmit: acceptsChanges(article.state),
+    canSubmit: acceptsSubmission(article.state),
     isSubmitting: mutation.isPending,
     failure,
     submit,
