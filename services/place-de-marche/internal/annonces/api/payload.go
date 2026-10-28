@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"time"
 
 	"collector/libs/platform/problem"
@@ -16,6 +17,8 @@ const (
 	priceField      = "prix"
 	shippingField   = "fraisDePort"
 	revisionField   = "revision"
+	verdictField    = "decision"
+	reasonField     = "motif"
 )
 
 var fieldNames = map[annonces.Field]string{
@@ -106,6 +109,60 @@ func revisionOf(raw *int) (annonces.Revision, []problem.FieldError) {
 	return annonces.Revision(*raw), nil
 }
 
+type decisionPayload struct {
+	Revision *int    `json:"revision"`
+	Verdict  *string `json:"decision"`
+	Reason   *string `json:"motif"`
+}
+
+func (p decisionPayload) decision(admin annonces.AdminID, id annonces.ArticleID) (annonces.Decision, problem.Problem, bool) {
+	revision, revisionErrors := revisionOf(p.Revision)
+	verdict, verdictErrors := verdictOf(p.Verdict)
+	if fieldErrors := append(revisionErrors, verdictErrors...); len(fieldErrors) > 0 {
+		return annonces.Decision{}, problem.Validation(fieldErrors), true
+	}
+	reason, reasonErrors := refusalReasonOf(verdict, p.Reason)
+	if len(reasonErrors) > 0 {
+		return annonces.Decision{}, invalidReason(reasonErrors), true
+	}
+	decision := annonces.Decision{Admin: admin, Article: id, Revision: revision, Verdict: verdict, Reason: reason}
+	return decision, problem.Problem{}, false
+}
+
+func verdictOf(raw *string) (annonces.Verdict, []problem.FieldError) {
+	if raw == nil {
+		return "", []problem.FieldError{{Field: verdictField, Code: codeRequired}}
+	}
+	verdict, err := annonces.ParseVerdict(*raw)
+	if err != nil {
+		return "", []problem.FieldError{{Field: verdictField, Code: codeInvalid}}
+	}
+	return verdict, nil
+}
+
+func refusalReasonOf(verdict annonces.Verdict, raw *string) (*annonces.ReviewReason, []problem.FieldError) {
+	if !verdict.RequiresReason() {
+		if raw != nil {
+			return nil, []problem.FieldError{{Field: reasonField, Code: codeInvalid}}
+		}
+		return nil, nil
+	}
+	if raw == nil {
+		return nil, []problem.FieldError{{Field: reasonField, Code: codeRequired}}
+	}
+	reason, err := annonces.ParseRefusalReason(*raw)
+	if err != nil {
+		return nil, []problem.FieldError{{Field: reasonField, Code: codeInvalid}}
+	}
+	return &reason, nil
+}
+
+func invalidReason(fieldErrors []problem.FieldError) problem.Problem {
+	invalid := problem.Validation(fieldErrors)
+	invalid.Status = http.StatusUnprocessableEntity
+	return invalid
+}
+
 func violationErrors(violations []annonces.Violation) []problem.FieldError {
 	fieldErrors := make([]problem.FieldError, 0, len(violations))
 	for _, violation := range violations {
@@ -145,6 +202,26 @@ type articlePageResponse struct {
 	Total    int               `json:"total"`
 }
 
+type articleToVerifyResponse struct {
+	ID          string            `json:"id"`
+	Revision    int               `json:"revision"`
+	Title       string            `json:"titre"`
+	Description string            `json:"description"`
+	Category    *categoryResponse `json:"categorie"`
+	Price       *moneyResponse    `json:"prix"`
+	ShippingFee *moneyResponse    `json:"fraisDePort"`
+	Reason      string            `json:"motif"`
+	SellerID    string            `json:"vendeurId"`
+	UpdatedAt   time.Time         `json:"modifieLe"`
+}
+
+type articleToVerifyPageResponse struct {
+	Articles []articleToVerifyResponse `json:"elements"`
+	Page     int                       `json:"page"`
+	Size     int                       `json:"taille"`
+	Total    int                       `json:"total"`
+}
+
 type categoryListResponse struct {
 	Categories []categoryResponse `json:"elements"`
 }
@@ -171,6 +248,36 @@ func toArticlePageResponse(page annonces.ArticlePage, request annonces.PageReque
 		articles = append(articles, toArticleResponse(article))
 	}
 	return articlePageResponse{Articles: articles, Page: request.Number, Size: request.Size, Total: page.Total}
+}
+
+func toArticleToVerifyResponse(article annonces.Article) articleToVerifyResponse {
+	return articleToVerifyResponse{
+		ID:          article.ID.String(),
+		Revision:    int(article.Revision),
+		Title:       article.Title,
+		Description: article.Description,
+		Category:    toCategoryResponse(article.Category),
+		Price:       toMoneyResponse(article.Price),
+		ShippingFee: toMoneyResponse(article.ShippingFee),
+		Reason:      reasonText(article.Reason),
+		SellerID:    article.Seller.String(),
+		UpdatedAt:   article.UpdatedAt.UTC(),
+	}
+}
+
+func toArticleToVerifyPageResponse(page annonces.ArticlePage, request annonces.PageRequest) articleToVerifyPageResponse {
+	articles := make([]articleToVerifyResponse, 0, len(page.Articles))
+	for _, article := range page.Articles {
+		articles = append(articles, toArticleToVerifyResponse(article))
+	}
+	return articleToVerifyPageResponse{Articles: articles, Page: request.Number, Size: request.Size, Total: page.Total}
+}
+
+func reasonText(reason *annonces.ReviewReason) string {
+	if reason == nil {
+		return ""
+	}
+	return string(*reason)
 }
 
 func toCategoryListResponse(categories []annonces.Category) categoryListResponse {

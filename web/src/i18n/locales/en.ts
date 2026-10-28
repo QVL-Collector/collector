@@ -55,7 +55,6 @@ export const en: Translation = {
     welcome: 'Welcome, {{name}}. Your listings will appear here.',
     navigation: 'Seller area',
     untitled: 'Untitled item',
-    notProvided: 'Not provided',
     newArticle: 'New item',
     backToList: 'Back to my items',
     states: {
@@ -102,7 +101,6 @@ export const en: Translation = {
         'Prepare your listing. It stays a draft, hidden from the catalogue, until you submit it.',
       documentTitle: '{{title}} · Collector',
       loading: 'Loading the item',
-      readOnly: 'The listing cannot be edited in its current state.',
       notFound: {
         title: 'Item not found',
         description: 'This item does not exist or does not belong to your account.',
@@ -128,6 +126,20 @@ export const en: Translation = {
       create: 'Create the draft',
       save: 'Save the draft',
       saved: 'Draft saved, revision {{revision}}.',
+      saveForControl: 'Save and send back for review',
+      savedForControl: 'Changes saved, revision {{revision}}: the listing is under review again.',
+      recontrol: {
+        published: {
+          title: 'The listing will be removed from the catalogue',
+          description:
+            'Any saved change, even to the title alone, removes the listing from the catalogue during the review. It comes back once the new version is accepted.',
+        },
+        underReview: {
+          title: 'The review will restart on the new version',
+          description:
+            'Any saved change restarts the review on your new version: the pending result for the current version will be ignored. The listing stays hidden from the catalogue until then.',
+        },
+      },
       invalid_one: 'The form contains {{count}} error: fix the highlighted field.',
       invalid_other: 'The form contains {{count}} errors: fix the highlighted fields.',
       locked:
@@ -248,6 +260,77 @@ export const en: Translation = {
       prix_a_confirmer: 'Price to be confirmed',
       vendeur_a_verifier: 'Seller to be reviewed',
       categorie_inconnue: 'Unknown category',
+      prix_abusif: 'Excessive price',
+      article_interdit: 'Item not allowed for sale',
+      vendeur_non_fiable: 'Unreliable seller',
+    },
+  },
+  admin: {
+    documentTitle: 'Items to review · Collector',
+    navigation: 'Items to review',
+    review: {
+      title: 'Items to review',
+      subtitle:
+        'Listings the automatic review could not decide. Publish them or reject them with a reason.',
+      listTitle: 'Listings awaiting a decision',
+      listLabel: 'Listings to review',
+      paginationLabel: 'Items to review pagination',
+      loading: 'Loading the items to review',
+      loaded_one: '{{count}} item to review',
+      loaded_other: '{{count}} items to review',
+      untitled: 'Untitled item',
+      notProvided: 'Not provided',
+      controlReason: 'Review reason: {{reason}}',
+      revision: 'Reviewed revision: {{revision}}',
+      facts: {
+        description: 'Description',
+        category: 'Category',
+        price: 'Price',
+        shippingCost: 'Shipping cost',
+        seller: 'Seller identifier',
+        updatedAt: 'Updated on',
+      },
+      actions: {
+        publish: 'Publish',
+        publishLabel: 'Publish “{{title}}”',
+        refuse: 'Reject',
+        refuseLabel: 'Reject “{{title}}”',
+      },
+      refusal: {
+        title: 'Reject the listing',
+        description:
+          '“{{title}}” will not be published. The seller will see the “Rejected” state and the chosen reason.',
+        reasonLabel: 'Rejection reason',
+        missingReason: 'Choose a rejection reason.',
+        cancel: 'Cancel',
+        confirm: 'Confirm the rejection',
+      },
+      decided: {
+        publie: '“{{title}}” has been published.',
+        refuse: '“{{title}}” has been rejected.',
+      },
+      conflict: {
+        title: 'The item has changed, reload the list',
+        description:
+          'It was edited or already handled since it was displayed: your decision was not applied. Reload the list, then decide again.',
+        reload: 'Reload the list',
+      },
+      forbiddenDecision:
+        'Your account does not have the administrator role: the decision was not applied.',
+      failure: 'The decision could not be saved. Check your connection, then try again.',
+      empty: {
+        title: 'No items to review',
+        description: 'Every listing has been decided. Come back later.',
+      },
+      error: {
+        title: 'The items to review are temporarily unavailable',
+        description: 'Check your connection, then try again.',
+        retry: 'Try again',
+      },
+      forbidden: {
+        title: 'Restricted access',
+        description: 'Your account does not have the role required to open this area.',
+      },
     },
   },
   notFound: {

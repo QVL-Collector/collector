@@ -1,0 +1,11 @@
+export const adminProblemTypes = {
+  staleRevision: 'urn:collector:probleme:revision-perimee',
+  notUnderReview: 'urn:collector:probleme:article-non-a-verifier',
+} as const;
+
+export const adminHttpStatuses = {
+  forbidden: 403,
+  notFound: 404,
+  conflict: 409,
+  serviceUnavailable: 503,
+} as const;

@@ -58,14 +58,35 @@ const (
 	StatusToVerify    Status = "a_verifier"
 )
 
-var sellerHeldStatuses = []Status{StatusDraft, StatusRefused}
+var (
+	sellerHeldStatuses   = []Status{StatusDraft, StatusRefused}
+	reviewOnEditStatuses = []Status{StatusPublished, StatusUnderReview, StatusToVerify}
+)
 
 func SellerHeldStatuses() []Status {
 	return slices.Clone(sellerHeldStatuses)
 }
 
+func ReviewOnEditStatuses() []Status {
+	return slices.Clone(reviewOnEditStatuses)
+}
+
 func (s Status) Editable() bool {
-	return slices.Contains(sellerHeldStatuses, s)
+	return slices.Contains(sellerHeldStatuses, s) || s.ReviewedOnEdit()
+}
+
+func (s Status) ReviewedOnEdit() bool {
+	return slices.Contains(reviewOnEditStatuses, s)
+}
+
+func VerifyEditable(status Status, current, expected Revision) error {
+	if !status.Editable() {
+		return ErrArticleNotEditable
+	}
+	if current != expected {
+		return ErrStaleRevision
+	}
+	return nil
 }
 
 func (s Status) Submittable() bool {

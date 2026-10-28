@@ -60,6 +60,11 @@ export const categories: Category[] = [
 
 const vendorArticlesPath = '/marche/v1/vendeur/articles';
 const categoriesPath = '/marche/v1/categories';
+const statesReviewedOnEdit: ReadonlySet<ArticleState> = new Set([
+  'publie',
+  'en_controle',
+  'a_verifier',
+]);
 let sequence = 0;
 
 vi.setConfig({ testTimeout: 30000 });
@@ -211,14 +216,14 @@ function update(
   if (content.revision !== article.revision) {
     return staleRevision();
   }
-  if (article.etat !== 'brouillon' && article.etat !== 'refuse') {
-    return problem(409, 'urn:collector:probleme:article-non-modifiable');
-  }
   const errors = validationErrors(marketplace, content);
   if (errors.length > 0) {
     return invalidInput(errors);
   }
-  const updated = { ...withContent(marketplace, article, content), revision: article.revision + 1 };
+  const edited = { ...withContent(marketplace, article, content), revision: article.revision + 1 };
+  const updated: StoredArticle = statesReviewedOnEdit.has(article.etat)
+    ? { ...edited, etat: 'en_controle', motif: null }
+    : edited;
   marketplace.articles.set(article.id, updated);
   return { status: 200, body: updated };
 }

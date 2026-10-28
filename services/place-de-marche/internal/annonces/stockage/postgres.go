@@ -26,16 +26,30 @@ WITH cree AS (
 SELECT ` + articleColumns + `
 FROM cree AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 
+const memberSinceColumn = `(SELECT (min(premier.cree_le) AT TIME ZONE 'UTC')::date FROM article AS premier WHERE premier.vendeur_id = a.vendeur_id)`
+
+const contentAssignments = `titre = $5, description = $6, categorie_id = $7, prix_centimes = $8, frais_port_centimes = $9`
+
 const updateDraftQuery = `
 WITH modifie AS (
 	UPDATE article
-	SET titre = $5, description = $6, categorie_id = $7, prix_centimes = $8, frais_port_centimes = $9,
-		revision = revision + 1, modifie_le = now()
+	SET ` + contentAssignments + `, revision = revision + 1, modifie_le = now()
 	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
 	RETURNING *
 )
 SELECT ` + articleColumns + `
 FROM modifie AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const reviseQuery = `
+WITH revise AS (
+	UPDATE article
+	SET ` + contentAssignments + `, etat = $10, motif = NULL, revision = revision + 1, modifie_le = now()
+	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
+	RETURNING *
+)
+SELECT ` + articleColumns + `,
+	` + memberSinceColumn + `
+FROM revise AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 
 const submitQuery = `
 WITH soumis AS (
@@ -45,7 +59,7 @@ WITH soumis AS (
 	RETURNING *
 )
 SELECT ` + articleColumns + `,
-	(SELECT (min(premier.cree_le) AT TIME ZONE 'UTC')::date FROM article AS premier WHERE premier.vendeur_id = a.vendeur_id)
+	` + memberSinceColumn + `
 FROM soumis AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 
 const applyReviewQuery = `
@@ -69,9 +83,36 @@ WHERE a.vendeur_id = $1
 ORDER BY a.modifie_le DESC, a.id DESC
 LIMIT $2 OFFSET $3`
 
+const articlesToVerify = `
+FROM article AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id
+WHERE a.etat = 'a_verifier'`
+
 const (
+	countToVerifyQuery = `SELECT count(*)` + articlesToVerify
+	listToVerifyQuery  = `SELECT ` + articleColumns + articlesToVerify + `
+ORDER BY a.modifie_le ASC, a.id ASC
+LIMIT $1 OFFSET $2`
+)
+
+const decideQuery = `
+WITH tranche AS (
+	UPDATE article
+	SET etat = $4, motif = $5, modifie_le = now()
+	WHERE id = $1 AND revision = $2 AND etat = $3
+	RETURNING *
+)
+SELECT ` + articleColumns + `
+FROM tranche AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const recordDecisionQuery = `
+INSERT INTO decision_admin (article_id, revision, decision, motif, admin_id)
+VALUES ($1, $2, $3, $4, $5)`
+
+const (
+	articleStateQuery   = `SELECT etat, revision FROM article WHERE id = $1`
 	countOwnedQuery     = `SELECT count(*) FROM article WHERE vendeur_id = $1`
 	ownedStateQuery     = `SELECT etat, revision FROM article WHERE id = $1 AND vendeur_id = $2`
+	lockedStateQuery    = ownedStateQuery + ` FOR UPDATE`
 	listCategoriesQuery = `SELECT id, libelle FROM categorie ORDER BY libelle, id`
 	categoryExistsQuery = `SELECT EXISTS (SELECT 1 FROM categorie WHERE id = $1)`
 )
@@ -103,19 +144,54 @@ func (s *Store) CreateDraft(ctx context.Context, seller annonces.SellerID, conte
 }
 
 func (s *Store) UpdateDraft(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
+	var updated annonces.Article
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		status, err := lockEditable(ctx, tx, seller, id, expected)
+		if err != nil {
+			return err
+		}
+		if status.ReviewedOnEdit() {
+			updated, err = s.reviseInTransaction(ctx, tx, seller, id, expected, content)
+			return err
+		}
+		updated, err = updateDraftInTransaction(ctx, tx, seller, id, expected, content)
+		return err
+	})
+	if err != nil {
+		return annonces.Article{}, fmt.Errorf("modification de l'article : %w", err)
+	}
+	return updated, nil
+}
+
+func lockEditable(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Status, error) {
+	status, current, err := ownedState(ctx, tx, lockedStateQuery, seller, id)
+	if err != nil {
+		return "", err
+	}
+	return status, annonces.VerifyEditable(status, current, expected)
+}
+
+func updateDraftInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
 	columns := contentColumns(content)
-	row := s.pool.QueryRow(ctx, updateDraftQuery,
-		uuid.UUID(id), uuid.UUID(seller), int(expected), sellerHeldStatuses(),
+	row := tx.QueryRow(ctx, updateDraftQuery,
+		uuid.UUID(id), uuid.UUID(seller), int(expected), statusColumns(annonces.SellerHeldStatuses()),
 		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
 	)
-	article, err := scanArticle(row)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return annonces.Article{}, s.explainRefusal(ctx, seller, id, annonces.Status.Editable, annonces.ErrArticleNotEditable)
-	}
+	return scanArticle(row)
+}
+
+func (s *Store) reviseInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
+	columns := contentColumns(content)
+	row := tx.QueryRow(ctx, reviseQuery,
+		uuid.UUID(id), uuid.UUID(seller), int(expected), statusColumns(annonces.ReviewOnEditStatuses()),
+		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
+		string(annonces.StatusUnderReview),
+	)
+	request, err := scanReviewRequest(row)
 	if err != nil {
-		return annonces.Article{}, fmt.Errorf("modification du brouillon : %w", err)
+		return annonces.Article{}, err
 	}
-	return article, nil
+	return request.Article, s.enqueueReview(ctx, tx, request)
 }
 
 func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Article, error) {
@@ -125,12 +201,8 @@ func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonce
 		if err != nil {
 			return err
 		}
-		event, err := s.requests.Encode(ctx, request)
-		if err != nil {
-			return err
-		}
 		submitted = request.Article
-		return outbox.Enqueue(ctx, tx, event)
+		return s.enqueueReview(ctx, tx, request)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return annonces.Article{}, s.explainRefusal(ctx, seller, id, annonces.Status.Submittable, annonces.ErrArticleNotSubmittable)
@@ -143,8 +215,12 @@ func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonce
 
 func submitInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.ReviewRequest, error) {
 	row := tx.QueryRow(ctx, submitQuery,
-		uuid.UUID(id), uuid.UUID(seller), int(expected), sellerHeldStatuses(), string(annonces.StatusUnderReview),
+		uuid.UUID(id), uuid.UUID(seller), int(expected), statusColumns(annonces.SellerHeldStatuses()), string(annonces.StatusUnderReview),
 	)
+	return scanReviewRequest(row)
+}
+
+func scanReviewRequest(row pgx.Row) (annonces.ReviewRequest, error) {
 	var (
 		r           articleRow
 		memberSince time.Time
@@ -158,6 +234,14 @@ func submitInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerI
 		Seller:      annonces.SellerStatus{MemberSince: memberSince},
 		SubmittedAt: article.UpdatedAt,
 	}, nil
+}
+
+func (s *Store) enqueueReview(ctx context.Context, tx pgx.Tx, request annonces.ReviewRequest) error {
+	event, err := s.requests.Encode(ctx, request)
+	if err != nil {
+		return err
+	}
+	return outbox.Enqueue(ctx, tx, event)
 }
 
 func (s *Store) ApplyReview(ctx context.Context, outcome annonces.ReviewOutcome) (bool, error) {
@@ -183,21 +267,33 @@ func (s *Store) ApplyReview(ctx context.Context, outcome annonces.ReviewOutcome)
 }
 
 func (s *Store) explainRefusal(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, allowed func(annonces.Status) bool, notAllowed error) error {
+	status, _, err := ownedState(ctx, s.pool, ownedStateQuery, seller, id)
+	if err != nil {
+		return err
+	}
+	if !allowed(status) {
+		return notAllowed
+	}
+	return annonces.ErrStaleRevision
+}
+
+type rowQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+func ownedState(ctx context.Context, querier rowQuerier, query string, seller annonces.SellerID, id annonces.ArticleID) (annonces.Status, annonces.Revision, error) {
 	var (
 		status   string
 		revision int
 	)
-	err := s.pool.QueryRow(ctx, ownedStateQuery, uuid.UUID(id), uuid.UUID(seller)).Scan(&status, &revision)
+	err := querier.QueryRow(ctx, query, uuid.UUID(id), uuid.UUID(seller)).Scan(&status, &revision)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return annonces.ErrArticleNotFound
+		return "", 0, annonces.ErrArticleNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("lecture de l'état de l'article : %w", err)
+		return "", 0, fmt.Errorf("lecture de l'état de l'article : %w", err)
 	}
-	if !allowed(annonces.Status(status)) {
-		return notAllowed
-	}
-	return annonces.ErrStaleRevision
+	return annonces.Status(status), annonces.Revision(revision), nil
 }
 
 func (s *Store) FindOwned(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID) (annonces.Article, error) {
@@ -227,6 +323,77 @@ func (s *Store) ListOwned(ctx context.Context, seller annonces.SellerID, page an
 		return annonces.ArticlePage{}, fmt.Errorf("lecture des articles : %w", err)
 	}
 	return annonces.ArticlePage{Articles: articles, Total: total}, nil
+}
+
+func (s *Store) ListToVerify(ctx context.Context, page annonces.PageRequest) (annonces.ArticlePage, error) {
+	var toVerify annonces.ArticlePage
+	err := pgx.BeginTxFunc(ctx, s.pool, readOnlySnapshot, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, countToVerifyQuery).Scan(&toVerify.Total); err != nil {
+			return fmt.Errorf("décompte des articles à vérifier : %w", err)
+		}
+		rows, err := tx.Query(ctx, listToVerifyQuery, page.Size, page.Offset())
+		if err != nil {
+			return fmt.Errorf("liste des articles à vérifier : %w", err)
+		}
+		toVerify.Articles, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (annonces.Article, error) {
+			return scanArticle(row)
+		})
+		return err
+	})
+	if err != nil {
+		return annonces.ArticlePage{}, fmt.Errorf("lecture des articles à vérifier : %w", err)
+	}
+	return toVerify, nil
+}
+
+func (s *Store) Decide(ctx context.Context, decision annonces.Decision) (annonces.Article, error) {
+	var decided annonces.Article
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		var err error
+		decided, err = decideInTransaction(ctx, tx, decision)
+		if err != nil {
+			return err
+		}
+		return recordDecision(ctx, tx, decision)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.Article{}, s.explainDecisionConflict(ctx, decision)
+	}
+	if err != nil {
+		return annonces.Article{}, fmt.Errorf("décision sur l'article : %w", err)
+	}
+	return decided, nil
+}
+
+func decideInTransaction(ctx context.Context, tx pgx.Tx, decision annonces.Decision) (annonces.Article, error) {
+	row := tx.QueryRow(ctx, decideQuery,
+		uuid.UUID(decision.Article), int(decision.Revision), string(annonces.StatusToVerify),
+		string(decision.Verdict.Outcome()), reasonColumn(decision.Reason),
+	)
+	return scanArticle(row)
+}
+
+func recordDecision(ctx context.Context, tx pgx.Tx, decision annonces.Decision) error {
+	_, err := tx.Exec(ctx, recordDecisionQuery,
+		uuid.UUID(decision.Article), int(decision.Revision), string(decision.Verdict),
+		reasonColumn(decision.Reason), uuid.UUID(decision.Admin),
+	)
+	return err
+}
+
+func (s *Store) explainDecisionConflict(ctx context.Context, decision annonces.Decision) error {
+	var (
+		status   string
+		revision int
+	)
+	err := s.pool.QueryRow(ctx, articleStateQuery, uuid.UUID(decision.Article)).Scan(&status, &revision)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.ErrArticleNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lecture de l'état de l'article : %w", err)
+	}
+	return annonces.DecisionConflict(annonces.Status(status), annonces.Revision(revision), decision.Revision)
 }
 
 func (s *Store) ListCategories(ctx context.Context) ([]annonces.Category, error) {
@@ -329,8 +496,7 @@ func reasonColumn(reason *annonces.ReviewReason) *string {
 	return &value
 }
 
-func sellerHeldStatuses() []string {
-	statuses := annonces.SellerHeldStatuses()
+func statusColumns(statuses []annonces.Status) []string {
 	columns := make([]string, len(statuses))
 	for i, status := range statuses {
 		columns[i] = string(status)

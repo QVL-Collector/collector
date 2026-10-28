@@ -17,6 +17,11 @@ var jeuDeCategoriesFictif = []annonces.Category{
 	{ID: "timbres", Label: "Timbres"},
 }
 
+var (
+	etatsModifiablesSansControle    = []annonces.Status{annonces.StatusDraft, annonces.StatusRefused}
+	etatsRecontrolesALaModification = []annonces.Status{annonces.StatusPublished, annonces.StatusUnderReview, annonces.StatusToVerify}
+)
+
 type stockageEnMemoire struct {
 	mu         sync.Mutex
 	articles   map[annonces.ArticleID]annonces.Article
@@ -82,7 +87,8 @@ func (s *stockageEnMemoire) UpdateDraft(_ context.Context, vendeur annonces.Sell
 	if !ok || article.Seller != vendeur {
 		return annonces.Article{}, annonces.ErrArticleNotFound
 	}
-	if !article.Status.Editable() {
+	recontrole := slices.Contains(etatsRecontrolesALaModification, article.Status)
+	if !recontrole && !slices.Contains(etatsModifiablesSansControle, article.Status) {
 		return annonces.Article{}, annonces.ErrArticleNotEditable
 	}
 	if article.Revision != attendue {
@@ -90,8 +96,21 @@ func (s *stockageEnMemoire) UpdateDraft(_ context.Context, vendeur annonces.Sell
 	}
 	s.appliquer(&article, contenu)
 	article.Revision++
+	if recontrole {
+		article.Status = annonces.StatusUnderReview
+		article.Reason = nil
+		s.demander(article)
+	}
 	s.articles[id] = article
 	return article, nil
+}
+
+func (s *stockageEnMemoire) demander(article annonces.Article) {
+	s.demandes = append(s.demandes, annonces.ReviewRequest{
+		Article:     article,
+		Seller:      annonces.SellerStatus{MemberSince: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
+		SubmittedAt: article.UpdatedAt,
+	})
 }
 
 func (s *stockageEnMemoire) FindOwned(_ context.Context, vendeur annonces.SellerID, id annonces.ArticleID) (annonces.Article, error) {
@@ -145,11 +164,7 @@ func (s *stockageEnMemoire) Submit(_ context.Context, vendeur annonces.SellerID,
 	article.Reason = nil
 	article.UpdatedAt = s.maintenant()
 	s.articles[id] = article
-	s.demandes = append(s.demandes, annonces.ReviewRequest{
-		Article:     article,
-		Seller:      annonces.SellerStatus{MemberSince: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
-		SubmittedAt: article.UpdatedAt,
-	})
+	s.demander(article)
 	return article, nil
 }
 
@@ -214,6 +229,38 @@ func (s *stockageEnMemoire) FindPublished(_ context.Context, id annonces.Article
 		Description:    article.Description,
 		ShippingFee:    article.ShippingFee,
 	}, nil
+}
+
+func (s *stockageEnMemoire) ListToVerify(_ context.Context, page annonces.PageRequest) (annonces.ArticlePage, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var aVerifier []annonces.Article
+	for _, a := range s.articles {
+		if a.Status == annonces.StatusToVerify {
+			aVerifier = append(aVerifier, a)
+		}
+	}
+	slices.SortFunc(aVerifier, func(a, b annonces.Article) int { return a.UpdatedAt.Compare(b.UpdatedAt) })
+	debut := min(page.Offset(), len(aVerifier))
+	fin := min(debut+page.Size, len(aVerifier))
+	return annonces.ArticlePage{Articles: aVerifier[debut:fin], Total: len(aVerifier)}, nil
+}
+
+func (s *stockageEnMemoire) Decide(_ context.Context, decision annonces.Decision) (annonces.Article, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	article, ok := s.articles[decision.Article]
+	if !ok {
+		return annonces.Article{}, annonces.ErrArticleNotFound
+	}
+	if article.Status != annonces.StatusToVerify || article.Revision != decision.Revision {
+		return annonces.Article{}, annonces.DecisionConflict(article.Status, article.Revision, decision.Revision)
+	}
+	article.Status = decision.Verdict.Outcome()
+	article.Reason = decision.Reason
+	article.UpdatedAt = s.maintenant()
+	s.articles[decision.Article] = article
+	return article, nil
 }
 
 func (s *stockageEnMemoire) retirerDemandes() []annonces.ReviewRequest {

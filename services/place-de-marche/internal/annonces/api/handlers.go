@@ -19,8 +19,10 @@ const (
 	basePath          = "/marche/v1"
 	sellerArticles    = basePath + "/vendeur/articles"
 	publishedArticles = basePath + "/articles"
+	adminArticles     = basePath + "/admin/articles"
 	categoryParameter = "categorie"
 	sellerRole        = "vendeur"
+	adminRole         = "admin"
 	maxBodyBytes      = 32 << 10
 	pageParameter     = "page"
 	pageSizeParameter = "taille"
@@ -35,6 +37,9 @@ var notEditable = problem.Typed("urn:collector:probleme:article-non-modifiable",
 var notSubmittable = problem.Typed("urn:collector:probleme:article-non-soumettable", "Article non soumettable",
 	http.StatusConflict, "L'article ne peut pas être soumis au contrôle dans son état actuel.")
 
+var notToVerify = problem.Typed("urn:collector:probleme:article-non-a-verifier", "Article non à vérifier",
+	http.StatusConflict, "L'article n'est plus à vérifier.")
+
 type ArticleService interface {
 	CreateDraft(ctx context.Context, seller annonces.SellerID, content annonces.Content) (annonces.Article, error)
 	UpdateDraft(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error)
@@ -44,6 +49,8 @@ type ArticleService interface {
 	Categories(ctx context.Context) ([]annonces.Category, error)
 	Catalogue(ctx context.Context, filter annonces.CatalogueFilter, page annonces.PageRequest) (annonces.CataloguePage, error)
 	PublishedArticle(ctx context.Context, id annonces.ArticleID) (annonces.PublishedArticle, error)
+	ArticlesToVerify(ctx context.Context, page annonces.PageRequest) (annonces.ArticlePage, error)
+	Decide(ctx context.Context, decision annonces.Decision) (annonces.Article, error)
 }
 
 type Authenticator interface {
@@ -57,9 +64,13 @@ type handlers struct {
 
 func Register(mux *http.ServeMux, service ArticleService, authenticator Authenticator, logger *slog.Logger) {
 	h := handlers{service: service, logger: logger}
-	sellerOnly := func(handler http.HandlerFunc) http.Handler {
-		return authenticator.Authenticate(logger, token.RequireRole(sellerRole, handler))
+	restrictedTo := func(role string) func(http.HandlerFunc) http.Handler {
+		return func(handler http.HandlerFunc) http.Handler {
+			return authenticator.Authenticate(logger, token.RequireRole(role, handler))
+		}
 	}
+	sellerOnly := restrictedTo(sellerRole)
+	adminOnly := restrictedTo(adminRole)
 	mux.HandleFunc("GET "+basePath+"/categories", h.listCategories)
 	mux.HandleFunc("GET "+publishedArticles, h.listCatalogue)
 	mux.HandleFunc("GET "+publishedArticles+"/{id}", h.publishedArticle)
@@ -68,6 +79,8 @@ func Register(mux *http.ServeMux, service ArticleService, authenticator Authenti
 	mux.Handle("GET "+sellerArticles+"/{id}", sellerOnly(h.ownArticle))
 	mux.Handle("PUT "+sellerArticles+"/{id}", sellerOnly(h.updateDraft))
 	mux.Handle("POST "+sellerArticles+"/{id}/soumission", sellerOnly(h.submit))
+	mux.Handle("GET "+adminArticles, adminOnly(h.listArticlesToVerify))
+	mux.Handle("POST "+adminArticles+"/{id}/decision", adminOnly(h.decide))
 	mux.HandleFunc("/", httpserver.NotFound)
 }
 
@@ -179,18 +192,79 @@ func (h handlers) listOwnArticles(w http.ResponseWriter, r *http.Request) {
 	httpjson.Write(w, http.StatusOK, toArticlePageResponse(page, request))
 }
 
+func (h handlers) listArticlesToVerify(w http.ResponseWriter, r *http.Request) {
+	request, fieldErrors := pageRequestOf(r.URL.Query())
+	if len(fieldErrors) > 0 {
+		problem.Write(w, problem.Validation(fieldErrors))
+		return
+	}
+	page, err := h.service.ArticlesToVerify(r.Context(), request)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+	httpjson.Write(w, http.StatusOK, toArticleToVerifyPageResponse(page, request))
+}
+
+func (h handlers) decide(w http.ResponseWriter, r *http.Request) {
+	admin, authenticated := subjectOf(w, r, annonces.ParseAdminID)
+	if !authenticated {
+		return
+	}
+	id, err := annonces.ParseArticleID(r.PathValue("id"))
+	if err != nil {
+		problem.Write(w, problem.NotFound())
+		return
+	}
+	var payload decisionPayload
+	if !h.decode(w, r, &payload) {
+		return
+	}
+	decision, rejection, rejected := payload.decision(admin, id)
+	if rejected {
+		problem.Write(w, rejection)
+		return
+	}
+	article, err := h.service.Decide(r.Context(), decision)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+	h.logDecision(r.Context(), decision)
+	httpjson.Write(w, http.StatusOK, toArticleResponse(article))
+}
+
+func (h handlers) logDecision(ctx context.Context, decision annonces.Decision) {
+	attributes := []any{
+		slog.String("event", "annonces.decision_admin"),
+		slog.String("admin_id", decision.Admin.String()),
+		slog.String("article_id", decision.Article.String()),
+		slog.Int("revision", int(decision.Revision)),
+		slog.String("decision", string(decision.Verdict)),
+	}
+	if decision.Reason != nil {
+		attributes = append(attributes, slog.String("motif", string(*decision.Reason)))
+	}
+	h.logger.InfoContext(ctx, "décision d'administration appliquée", attributes...)
+}
+
 func sellerOf(w http.ResponseWriter, r *http.Request) (annonces.SellerID, bool) {
+	return subjectOf(w, r, annonces.ParseSellerID)
+}
+
+func subjectOf[ID any](w http.ResponseWriter, r *http.Request, parse func(string) (ID, error)) (ID, bool) {
+	var none ID
 	claims, found := token.ClaimsFrom(r.Context())
 	if !found {
 		token.Unauthorized(w)
-		return annonces.SellerID{}, false
+		return none, false
 	}
-	seller, err := annonces.ParseSellerID(claims.Subject)
+	id, err := parse(claims.Subject)
 	if err != nil {
 		token.Unauthorized(w)
-		return annonces.SellerID{}, false
+		return none, false
 	}
-	return seller, true
+	return id, true
 }
 
 func ownedArticleOf(w http.ResponseWriter, r *http.Request) (annonces.SellerID, annonces.ArticleID, bool) {
@@ -265,6 +339,8 @@ func (h handlers) writeError(w http.ResponseWriter, r *http.Request, err error) 
 		problem.Write(w, notEditable)
 	case errors.Is(err, annonces.ErrArticleNotSubmittable):
 		problem.Write(w, notSubmittable)
+	case errors.Is(err, annonces.ErrArticleNotToVerify):
+		problem.Write(w, notToVerify)
 	default:
 		h.logger.ErrorContext(r.Context(), "erreur interne", slog.String("event", "annonces.erreur_interne"), slog.Any("erreur", err))
 		problem.Write(w, problem.Internal())

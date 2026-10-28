@@ -3,7 +3,13 @@ import { waitForDemoLatency } from '../../../api/demoLatency';
 import type { FieldProblem } from '../../../api/problemDetails';
 import type { DemoScenario } from '../../../config/runtimeConfig';
 import { parseCategories } from '../../../shared/marketplacePayload';
-import { acceptsChanges, type ArticleDraft, type SellerClient } from '../domain/sellerArticle';
+import {
+  acceptsSubmission,
+  triggersRecontrol,
+  type ArticleDraft,
+  type ArticleState,
+  type SellerClient,
+} from '../domain/sellerArticle';
 import { httpStatuses, sellerProblemTypes } from '../domain/sellerProblems';
 import { controlDemoArticle } from './demoControl';
 import { validateDemoDraft } from './demoDraftValidation';
@@ -56,10 +62,20 @@ function expectValidDraft(draft: ArticleDraft): void {
   }
 }
 
-function expectChangeable(article: DemoArticle, problemType: string): void {
-  if (!acceptsChanges(article.etat)) {
+function expectAllowed(
+  allows: (state: ArticleState) => boolean,
+  article: DemoArticle,
+  problemType: string,
+): void {
+  if (!allows(article.etat)) {
     throw problemError(httpStatuses.conflict, problemType);
   }
+}
+
+function revisedState(article: DemoArticle): Pick<DemoArticle, 'etat' | 'motif'> {
+  return triggersRecontrol(article.etat)
+    ? { etat: 'en_controle', motif: null }
+    : { etat: article.etat, motif: article.motif };
 }
 
 function expectRevision(article: DemoArticle, revision: number): void {
@@ -155,23 +171,25 @@ export function createDemoSellerClient(scenario: DemoScenario): SellerClient {
       await waitForDemoLatency();
       const article = find(id);
       simulateChangeFromAnotherTab(article);
-      expectChangeable(article, sellerProblemTypes.notModifiable);
       expectRevision(article, revision);
       expectValidDraft(draft);
-      return parseSellerArticle(
-        save({
-          ...article,
-          ...draftFields(draft),
-          revision: article.revision + 1,
-          modifieLe: nowIso(),
-        }),
-      );
+      const updated = save({
+        ...article,
+        ...draftFields(draft),
+        ...revisedState(article),
+        revision: article.revision + 1,
+        modifieLe: nowIso(),
+      });
+      if (updated.etat === 'en_controle') {
+        scheduleControl(id, updated.revision);
+      }
+      return parseSellerArticle(updated);
     },
     async submitForControl(id, revision) {
       await waitForDemoLatency();
       const article = find(id);
       simulateChangeFromAnotherTab(article);
-      expectChangeable(article, sellerProblemTypes.notSubmittable);
+      expectAllowed(acceptsSubmission, article, sellerProblemTypes.notSubmittable);
       expectRevision(article, revision);
       const submitted = save({
         ...article,

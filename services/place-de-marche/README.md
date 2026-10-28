@@ -26,7 +26,20 @@ Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment
 3. Consommateur de la file `pdm.resultats-controle` (acquittement manuel, préchargement 10) : un message dont le `user-id` n'est pas `CANAL_EMETTEUR_ATTENDU`, ou non conforme au contrat, est rejeté sans remise en file (vers `.ecartes`) et journalisé. Un résultat n'est appliqué que si l'article est `en_controle` à la révision du résultat ; sinon (doublon, révision périmée) il est acquitté sans effet. L'application écrit l'état, le motif, et une ligne dans `resultat_controle` (journal des résultats, une issue par révision).
 4. Une erreur transitoire (base indisponible) ne rejette jamais le message : le consommateur réessaie avec une attente croissante, sans acquitter.
 
+## Recontrôle après modification (US-021)
+
+`PUT /marche/v1/vendeur/articles/{id}` sur un article `publie`, `en_controle` ou `a_verifier` : dans une transaction qui verrouille la ligne (`SELECT … FOR UPDATE`), contenu remplacé, révision + 1, état `en_controle`, motif effacé et nouvelle demande `controle.demande` v1 dans l'outbox. L'article quitte le catalogue sans seuil. Tout résultat portant sur l'ancienne révision est acquitté sans effet (étape 3). Brouillon et refusé : modification sans contrôle, comme avant.
+
 Le service ne déclare aucune file ni aucun échange : la topologie est posée par l'IaC ([D05](../../docs/decisions/D05-communication-interservice.md)). Une file ou un échange absent, ou un droit refusé, arrête le service en erreur.
+
+## Articles à vérifier (US-022)
+
+Routes réservées au rôle `admin` (403 pour tout autre rôle, 401 sans jeton valide) :
+
+- `GET /marche/v1/admin/articles?page&taille` : articles `a_verifier`, du plus ancien au plus récent (index partiel `article_a_verifier_idx`), avec le contenu de la révision examinée, le motif du contrôle et `vendeurId`.
+- `POST /marche/v1/admin/articles/{id}/decision` avec `{"revision": n, "decision": "publier" | "refuser", "motif"?}` : `publier` donne `publie`, `refuser` donne `refuse` avec un motif de la liste fermée (`annonce_incomplete`, `coordonnees_detectees`, `prix_abusif`, `article_interdit`, `vendeur_non_fiable`). La révision ne change pas. 409 `revision-perimee` si l'article est passé à une autre révision, 409 `article-non-a-verifier` s'il n'est plus à vérifier, 422 `saisie-invalide` sur le motif (absent pour refuser, présent pour publier, hors liste).
+
+Dans la même transaction que la décision, une ligne est ajoutée à `decision_admin` (admin, article, révision, décision, motif, date ; une seule décision par révision). Le rôle d'exécution peut seulement y insérer et lire : ni `UPDATE` ni `DELETE`. Après le commit, un journal Info `event=annonces.decision_admin` reprend les mêmes champs.
 
 ## Variables d'environnement
 

@@ -1,4 +1,4 @@
-import type { ControlReason } from '../../../shared/controlReason';
+import type { ArticleReason } from '../../../shared/articleReason';
 import type { Money } from '../../../shared/Money';
 
 export const articleStates = [
@@ -25,7 +25,7 @@ export type SellerArticle = {
   readonly category: SellerCategory | null;
   readonly price: Money | null;
   readonly shippingCost: Money | null;
-  readonly reason: ControlReason | null;
+  readonly reason: ArticleReason | null;
   readonly updatedAt: Date;
 };
 
@@ -76,8 +76,12 @@ export const sellerArticlesPageSize = 20;
 
 export const articleCurrency = 'EUR';
 
-export function acceptsChanges(state: ArticleState): boolean {
+export function acceptsSubmission(state: ArticleState): boolean {
   return state === 'brouillon' || state === 'refuse';
+}
+
+export function triggersRecontrol(state: ArticleState): boolean {
+  return state === 'publie' || state === 'en_controle' || state === 'a_verifier';
 }
 
 export function isUnderControl(state: ArticleState): boolean {

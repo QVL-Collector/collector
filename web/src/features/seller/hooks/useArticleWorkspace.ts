@@ -1,4 +1,4 @@
-import { acceptsChanges, type SellerArticle } from '../domain/sellerArticle';
+import type { SellerArticle } from '../domain/sellerArticle';
 import { useArticleEditor, type ArticleEditorModel } from './useArticleEditor';
 import { useArticleStatus, type ArticleStatus } from './useArticleStatus';
 import { useCategoryOptions, type CategoryOptions } from './useCategoryOptions';
@@ -12,7 +12,6 @@ export type ArticleWorkspaceModel = {
   readonly submission: SubmitForControlModel;
   readonly categories: CategoryOptions;
   readonly lockMessage: string | null;
-  readonly isEditable: boolean;
   readonly isSubmissionBlocked: boolean;
 };
 
@@ -32,7 +31,6 @@ export function useArticleWorkspace(
     submission,
     categories,
     lockMessage: lockNotice.message,
-    isEditable: acceptsChanges(article.state),
     isSubmissionBlocked: editor.isDirty || editor.isSaving,
   };
 }
