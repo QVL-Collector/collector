@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useControlReasonLabel } from '../../../i18n/useControlReasonLabel';
+import { useArticleReasonLabel } from '../../../i18n/useArticleReasonLabel';
 import type { ArticleState, SellerArticle } from '../domain/sellerArticle';
 
 export type ArticleLabels = {
@@ -13,7 +13,7 @@ export type ArticleLabels = {
 
 export function useArticleLabels(): ArticleLabels {
   const { t } = useTranslation();
-  const reasonLabel = useControlReasonLabel();
+  const reasonLabel = useArticleReasonLabel();
   return useMemo(() => {
     const stateLabel = (state: ArticleState) => t(`seller.states.${state}`);
     const titleOf = (article: SellerArticle) =>

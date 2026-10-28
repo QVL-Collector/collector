@@ -21,6 +21,21 @@ function isForbidden(error: unknown): boolean {
   return isApiError(error) && error.status === adminHttpStatuses.forbidden;
 }
 
+function pageCountOf(totalItems: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+export function lastPageIfBeyond(
+  data: ReviewArticlePage | undefined,
+  requestedPage: number,
+): number | null {
+  if (data === undefined || data.articles.length > 0 || data.totalItems === 0) {
+    return null;
+  }
+  const lastPage = pageCountOf(data.totalItems, data.pageSize);
+  return requestedPage > lastPage ? lastPage : null;
+}
+
 export function toReviewQueueView(
   query: UseQueryResult<ReviewArticlePage>,
   requestedPage: number,
@@ -32,14 +47,14 @@ export function toReviewQueueView(
     return isForbidden(query.error) ? { status: 'forbidden' } : { status: 'error' };
   }
   const { articles, totalItems, pageSize } = query.data;
-  if (totalItems === 0 || articles.length === 0) {
+  if (totalItems === 0) {
     return { status: 'empty' };
   }
   return {
     status: 'ready',
     articles,
     page: requestedPage,
-    pageCount: Math.max(1, Math.ceil(totalItems / pageSize)),
+    pageCount: pageCountOf(totalItems, pageSize),
     totalItems,
     isRefreshing: query.isPlaceholderData,
   };

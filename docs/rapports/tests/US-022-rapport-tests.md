@@ -19,7 +19,7 @@
 | `services/place-de-marche/cmd/place-de-marche/environnement_test.go` | `demarrerJournalise` : même serveur que `demarrer`, avec un journal fourni |
 | `services/place-de-marche/cmd/place-de-marche/canal_fictif_test.go` | Le banc capture aussi le journal HTTP (`journalHTTP`, JSON) pour vérifier l'événement d'audit |
 | `web/src/acceptance/US-022/adminReviewHarness.ts` | API d'administration simulée (liste triée, décision avec 409/422), libellés attendus, ouverture de l'écran en admin |
-| `web/src/acceptance/US-022/ecran-admin-a-verifier.test.tsx` | AC1, AC2, AC3, AC5, AC7, AC8 sur l'application complète (`startApplication`, connexion OIDC simulée, `adminClient` en source `api`) : 22 tests, 32 cas |
+| `web/src/acceptance/US-022/ecran-admin-a-verifier.test.tsx` | AC1, AC2, AC3, AC5, AC7, AC8 sur l'application complète (`startApplication`, connexion OIDC simulée, `adminClient` en source `api`) : 23 tests, 33 cas |
 
 ## 2. Exécutions
 
@@ -27,7 +27,7 @@
 |---|---|
 | `services/place-de-marche` : `go test ./...` (Docker, sans `-race`) | Vert, 104 s (tous les tests du service, dont US-022 en mémoire et sur PostgreSQL) |
 | `services/place-de-marche` : `go vet`, `gofmt -l`, `golangci-lint run ./...` | 0 constat |
-| `web` : `npx vitest run --pool=forks --poolOptions.forks.maxForks=2` | Vert : 30 fichiers, 346 tests (dont les 32 cas US-022) ; aucun dépassement de délai US-008 sur ce passage |
+| `web` : `npx vitest run --pool=forks --poolOptions.forks.maxForks=2` | Vert : 30 fichiers, 347 tests (dont les 33 cas US-022) ; aucun dépassement de délai US-008 sur ce passage |
 | `web` : `npm run -s typecheck` | 0 erreur |
 | `web` : `npx eslint src` | 0 constat |
 | `web` : `npx prettier --check src` | Conforme |
@@ -57,6 +57,7 @@ Le message jsdom « HTMLCanvasElement.prototype.getContext » affiché pendant l
 | Refuser avec chacun des 5 motifs (`annonce_incomplete`, `coordonnees_detectees`, `prix_abusif`, `article_interdit`, `vendeur_non_fiable`) → 200 `refuse` + motif ; `GET` du vendeur et « Mes articles » : `refuse` + motif ; hors catalogue, fiche 404 ; sorti de la liste | `TestUS022AC2RefuserAvecChaqueMotifDeLaListeFermee` (5 cas) | Conforme |
 | PostgreSQL : publier → catalogue ; refuser `prix_abusif` → vendeur lit `refuse`/`prix_abusif` (lecture et liste), hors catalogue | intégration « AC2 AC4 publier » et « AC2 AC4 refuser » | Conforme |
 | Écran : « Publier « titre » » → `POST …/{id}/decision` `{revision: 5, decision: "publier"}` (révision affichée, sans motif), annonce « … a été publié. », carte retirée | front « AC2 … le publie » | Conforme |
+| Écran : 21 articles à vérifier (taille de page 20), l'admin va en page 2 et publie le seul article de cette page → annonce « … a été publié. », l'écran revient en page 1 avec les 20 restants dans l'ordre, « Aucun article à vérifier » n'est pas affiché, plus de bouton « Aller à la page 2 » ni de page 2 courante (correction de la majeure 1 de la revue) | front « AC2 … tranche le seul article de la page 2 » | Conforme |
 | Écran : le dialogue « Refuser l’annonce » propose exactement les 5 motifs de la liste fermée, aucun présélectionné | front « AC2 … exactement les cinq motifs » | Conforme |
 | Écran : refus avec chacun des 5 motifs → `{revision, decision: "refuser", motif}`, annonce « … a été refusé. », liste vide ensuite | front « AC2 … refuse avec le motif » (5 cas) | Conforme |
 | Écran : confirmer sans motif → « Choisissez un motif de refus. », aucun appel ; annuler → aucun appel, article toujours listé | front « AC2 » (2 cas) | Conforme |

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
-import { useControlReasonLabel } from '../../../i18n/useControlReasonLabel';
+import { useArticleReasonLabel } from '../../../i18n/useArticleReasonLabel';
 import { refusalReasons, type RefusalReason } from '../../../shared/articleReason';
 
 export type RefusalReasonOption = {
@@ -23,7 +23,7 @@ function toRefusalReason(value: string): RefusalReason | null {
 }
 
 export function useRefusalDialog(onConfirm: (reason: RefusalReason) => void): RefusalDialogModel {
-  const reasonLabel = useControlReasonLabel();
+  const reasonLabel = useArticleReasonLabel();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<RefusalReason | null>(null);
   const [missingReason, setMissingReason] = useState(false);

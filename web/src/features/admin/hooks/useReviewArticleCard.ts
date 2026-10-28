@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useControlReasonLabel } from '../../../i18n/useControlReasonLabel';
+import { useArticleReasonLabel } from '../../../i18n/useArticleReasonLabel';
 import type { ReviewArticle } from '../domain/reviewArticle';
 import { useRefusalDialog, type RefusalDialogModel } from './useRefusalDialog';
 import { useReviewArticleFacts, type ReviewFact } from './useReviewArticleFacts';
@@ -32,7 +32,7 @@ export function useReviewArticleCard(
   onDecided: DecisionListener,
 ): ReviewArticleCardModel {
   const { t } = useTranslation();
-  const reasonLabel = useControlReasonLabel();
+  const reasonLabel = useArticleReasonLabel();
   const titleOf = useReviewArticleTitle();
   const facts = useReviewArticleFacts(article);
   const decision = useReviewDecision(article, onDecided);
