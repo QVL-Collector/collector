@@ -1,0 +1,37 @@
+XC2|publication-echange-autre:controle.resultats|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC2|lecture-file-autre:controle.demandes|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC2|declaration-file|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC2|declaration-echange|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC2|publication-echange-autre:controle.demandes|svc-controle|403|403 ACCESS_REFUSED|oui
+XC2|lecture-file-autre:pdm.resultats-controle|svc-controle|403|403 ACCESS_REFUSED|oui
+XC2|declaration-file|svc-controle|403|403 ACCESS_REFUSED|oui
+XC2|declaration-echange|svc-controle|403|403 ACCESS_REFUSED|oui
+XC2|publication-echange-autre:pdm.evenements|svc-interactions|403|403 ACCESS_REFUSED|oui
+XC2|lecture-file-autre:test.publication-decidee|svc-interactions|403|403 ACCESS_REFUSED|oui
+XC2|declaration-file|svc-interactions|403|403 ACCESS_REFUSED|oui
+XC2|declaration-echange|svc-interactions|403|403 ACCESS_REFUSED|oui
+XC2|publication-echange-autre:pdm.evenements|svc-test|403|403 ACCESS_REFUSED|oui
+XC2|lecture-file-autre:interactions.publication-decidee|svc-test|403|403 ACCESS_REFUSED|oui
+XC2|declaration-file|svc-test|403|403 ACCESS_REFUSED|oui
+XC2|declaration-echange|svc-test|403|403 ACCESS_REFUSED|oui
+XC2|publication-cle-non-accordee:publication.annulee.v1|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC9|liaison-file:pdm.resultats-controle->pdm.evenements#|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC9|purge-file-autre:controle.demandes|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC9|suppression-file-autre:controle.demandes|svc-pdm|403|403 ACCESS_REFUSED|oui
+XC9|liaison-file:controle.demandes->pdm.evenements#|svc-controle|403|403 ACCESS_REFUSED|oui
+XC9|purge-file-autre:pdm.resultats-controle|svc-controle|403|403 ACCESS_REFUSED|oui
+XC9|suppression-file-autre:pdm.resultats-controle|svc-controle|403|403 ACCESS_REFUSED|oui
+XC9|liaison-file:interactions.publication-decidee->pdm.evenements#|svc-interactions|403|403 ACCESS_REFUSED|oui
+XC9|purge-file-autre:test.publication-decidee|svc-interactions|403|403 ACCESS_REFUSED|oui
+XC9|suppression-file-autre:test.publication-decidee|svc-interactions|403|403 ACCESS_REFUSED|oui
+XC9|liaison-file:test.publication-decidee->pdm.evenements#|svc-test|403|403 ACCESS_REFUSED|oui
+XC9|purge-file-autre:interactions.publication-decidee|svc-test|403|403 ACCESS_REFUSED|oui
+XC9|suppression-file-autre:interactions.publication-decidee|svc-test|403|403 ACCESS_REFUSED|oui
+XC2|lecture-file:controle.demandes|keda-monitoring|403|403 ACCESS_REFUSED|oui
+XC2|publication:controle.demandes/v1|keda-monitoring|403|403 ACCESS_REFUSED|oui
+XC9|purge-file:controle.demandes|keda-monitoring|403|403 ACCESS_REFUSED|oui
+XC9|user-id-usurpe:svc-controle|svc-pdm|406|406 PRECONDITION_FAILED|oui
+XC9|user-id-usurpe:svc-pdm|svc-controle|406|406 PRECONDITION_FAILED|oui
+XC9|connexion-guest|guest|403|403 ACCESS_REFUSED (authentification)|oui
+TEMOIN|publication-autorisee:controle.demandes/v1|svc-pdm|OK|OK|oui
+TEMOIN|lecture-autorisee:controle.demandes|svc-controle|OK|KO message temoin absent|non

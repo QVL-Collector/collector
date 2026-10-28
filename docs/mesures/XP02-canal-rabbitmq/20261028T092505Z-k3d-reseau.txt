@@ -1,0 +1,10 @@
+ns-intrus rabbitmq.collector-canal.svc:5672 ferme
+ns-intrus rabbitmq.collector-canal.svc:15672 ferme
+ns-intrus rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:4369 ferme
+ns-intrus rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:25672 ferme
+pdm-test rabbitmq.collector-canal.svc:5672 ouvert
+pdm-test rabbitmq.collector-canal.svc:15672 ferme
+pdm-test rabbitmq.collector-canal.svc:15692 ferme
+pdm-test rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:4369 ferme
+pdm-test rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:25672 ferme
+keda-operator rabbitmq:15672 ouvert
