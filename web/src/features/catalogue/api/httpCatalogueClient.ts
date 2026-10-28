@@ -1,10 +1,7 @@
 import type { HttpClient, QueryParameters } from '../../../api/httpClient';
+import { parseCategories } from '../../../shared/marketplacePayload';
 import type { CatalogueClient, CatalogueQuery } from '../domain/catalogue';
-import {
-  parseCatalogueCategories,
-  parseCataloguePage,
-  parsePublishedArticle,
-} from './cataloguePayload';
+import { parseCataloguePage, parsePublishedArticle } from './cataloguePayload';
 
 const publishedArticlesPath = '/v1/articles';
 const categoriesPath = '/v1/categories';
@@ -28,7 +25,7 @@ export function createHttpCatalogueClient(http: HttpClient): CatalogueClient {
       return parseCataloguePage(payload);
     },
     async listCategories(signal) {
-      return parseCatalogueCategories(await http.getJson(categoriesPath, { signal }));
+      return parseCategories(await http.getJson(categoriesPath, { signal }));
     },
     async getPublishedArticle(id, signal) {
       return parsePublishedArticle(await http.getJson(publishedArticlePath(id), { signal }));

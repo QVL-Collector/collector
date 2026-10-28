@@ -1,5 +1,11 @@
 import { isCurrencyCode, type Money } from './Money';
-import { expectInteger, expectNonEmptyString, expectRecord, InvalidPayloadError } from './payload';
+import {
+  expectArray,
+  expectInteger,
+  expectNonEmptyString,
+  expectRecord,
+  InvalidPayloadError,
+} from './payload';
 
 export type CategoryPayload = {
   readonly id: string;
@@ -28,4 +34,11 @@ export function parseCategory(value: unknown, path: string): CategoryPayload {
     id: expectNonEmptyString(category.id, `${path}.id`),
     label: expectNonEmptyString(category.libelle, `${path}.libelle`),
   };
+}
+
+export function parseCategories(payload: unknown): readonly CategoryPayload[] {
+  const root = expectRecord(payload, 'categories');
+  return expectArray(root.elements, 'elements').map((item, index) =>
+    parseCategory(item, `elements[${String(index)}]`),
+  );
 }

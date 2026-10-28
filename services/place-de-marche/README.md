@@ -16,7 +16,7 @@ Module Annonces : catalogue public, brouillons du vendeur, catégories, soumissi
 
 ## Catalogue public (US-010, US-023)
 
-Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment publié au plus ancien) et `GET /marche/v1/articles/{id}`. Seuls les articles `publie` sont lus ; un article inexistant ou non publié répond le même 404. Aucune donnée du vendeur n'est exposée. Paramètre répété, vide ou hors bornes : 400 ; catégorie inconnue : 400 `categorie_inconnue`. Lectures en transaction `READ ONLY`, index partiels `etat = 'publie'` (migration 00004).
+Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment publié au plus ancien) et `GET /marche/v1/articles/{id}`. Seuls les articles `publie` sont lus ; un article inexistant ou non publié répond le même 404. Aucune donnée du vendeur n'est exposée. Paramètre répété, vide ou hors bornes : 400 ; catégorie inconnue : 400 `categorie_inconnue`. Liste lue en transaction `READ ONLY` `REPEATABLE READ` (total et page cohérents), fiche en lecture directe ; index partiels `etat = 'publie'` (migration 00004).
 
 ## Cycle de soumission (US-013)
 

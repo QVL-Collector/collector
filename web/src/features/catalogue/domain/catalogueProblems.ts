@@ -2,9 +2,9 @@ import { isApiError } from '../../../api/ApiError';
 
 export const unknownCategoryCode = 'categorie_inconnue';
 
-const notFoundStatuses: readonly number[] = [400, 404];
-
 const badRequestStatus = 400;
+
+const notFoundStatus = 404;
 
 export function isUnknownCategory(error: unknown): boolean {
   return (
@@ -15,5 +15,5 @@ export function isUnknownCategory(error: unknown): boolean {
 }
 
 export function isArticleNotFound(error: unknown): boolean {
-  return isApiError(error) && error.status !== null && notFoundStatuses.includes(error.status);
+  return isApiError(error) && error.status === notFoundStatus;
 }

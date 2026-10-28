@@ -6,12 +6,7 @@ import {
   expectRecord,
   expectString,
 } from '../../../shared/payload';
-import type {
-  ArticleCategory,
-  CatalogueArticle,
-  CataloguePage,
-  PublishedArticle,
-} from '../domain/catalogue';
+import type { CatalogueArticle, CataloguePage, PublishedArticle } from '../domain/catalogue';
 
 function parseArticle(value: unknown, path: string): CatalogueArticle {
   const article = expectRecord(value, path);
@@ -33,13 +28,6 @@ export function parseCataloguePage(payload: unknown): CataloguePage {
     pageSize: expectInteger(root.taille, 'taille', 1),
     totalItems: expectInteger(root.total, 'total', 0),
   };
-}
-
-export function parseCatalogueCategories(payload: unknown): readonly ArticleCategory[] {
-  const root = expectRecord(payload, 'categories');
-  return expectArray(root.elements, 'elements').map((item, index) =>
-    parseCategory(item, `elements[${String(index)}]`),
-  );
 }
 
 export function parsePublishedArticle(payload: unknown): PublishedArticle {

@@ -9,12 +9,7 @@ import {
   expectString,
   InvalidPayloadError,
 } from '../../../shared/payload';
-import {
-  articleStates,
-  type SellerArticle,
-  type SellerArticlePage,
-  type SellerCategory,
-} from '../domain/sellerArticle';
+import { articleStates, type SellerArticle, type SellerArticlePage } from '../domain/sellerArticle';
 
 function parseReason(value: unknown, path: string): ControlReason | null {
   return parseNullable(value, (reason) => expectOneOf(reason, controlReasons, path));
@@ -69,11 +64,4 @@ export function parseSellerArticlePage(payload: unknown): SellerArticlePage {
     pageSize: expectInteger(root.taille, 'taille', 1),
     totalItems: expectInteger(root.total, 'total', 0),
   };
-}
-
-export function parseSellerCategories(payload: unknown): readonly SellerCategory[] {
-  const root = expectRecord(payload, 'categories');
-  return expectArray(root.elements, 'elements').map((item, index) =>
-    parseCategory(item, `elements[${String(index)}]`),
-  );
 }

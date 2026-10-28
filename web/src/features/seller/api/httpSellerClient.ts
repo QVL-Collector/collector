@@ -1,11 +1,8 @@
 import type { HttpClient } from '../../../api/httpClient';
+import { parseCategories } from '../../../shared/marketplacePayload';
 import type { SellerClient } from '../domain/sellerArticle';
 import { toDraftPayload, toRevisionPayload } from './draftPayload';
-import {
-  parseSellerArticle,
-  parseSellerArticlePage,
-  parseSellerCategories,
-} from './sellerArticlePayload';
+import { parseSellerArticle, parseSellerArticlePage } from './sellerArticlePayload';
 
 const categoriesPath = '/v1/categories';
 const myArticlesPath = '/v1/vendeur/articles';
@@ -24,7 +21,7 @@ export function createHttpSellerClient(http: HttpClient): SellerClient {
       return parseSellerArticlePage(payload);
     },
     async listCategories(signal) {
-      return parseSellerCategories(await http.getJson(categoriesPath, { signal }));
+      return parseCategories(await http.getJson(categoriesPath, { signal }));
     },
     async getMyArticle(id, signal) {
       return parseSellerArticle(await http.getJson(myArticlePath(id), { signal }));

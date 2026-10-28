@@ -1,13 +1,10 @@
 import { ApiError } from '../../../api/ApiError';
 import { waitForDemoLatency } from '../../../api/demoLatency';
 import type { DemoScenario } from '../../../config/runtimeConfig';
+import { parseCategories } from '../../../shared/marketplacePayload';
 import type { CatalogueClient, CatalogueQuery } from '../domain/catalogue';
 import { unknownCategoryCode } from '../domain/catalogueProblems';
-import {
-  parseCatalogueCategories,
-  parseCataloguePage,
-  parsePublishedArticle,
-} from './cataloguePayload';
+import { parseCataloguePage, parsePublishedArticle } from './cataloguePayload';
 import { demoArticles, demoCategories, type DemoArticlePayload } from './demoArticles';
 
 const httpStatuses = { badRequest: 400, notFound: 404, serviceUnavailable: 503 } as const;
@@ -67,7 +64,7 @@ export function createDemoCatalogueClient(scenario: DemoScenario): CatalogueClie
     },
     async listCategories(signal) {
       await answerAfterLatency(scenario, signal);
-      return parseCatalogueCategories({ elements: demoCategories });
+      return parseCategories({ elements: demoCategories });
     },
     async getPublishedArticle(id, signal) {
       await answerAfterLatency(scenario, signal);

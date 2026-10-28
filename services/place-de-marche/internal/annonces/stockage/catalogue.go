@@ -76,9 +76,7 @@ func (s *Store) ListPublished(ctx context.Context, filter annonces.CatalogueFilt
 
 func (s *Store) FindPublished(ctx context.Context, id annonces.ArticleID) (annonces.PublishedArticle, error) {
 	var r publishedArticleRow
-	err := pgx.BeginTxFunc(ctx, s.pool, readOnlySnapshot, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, findPublishedQuery, uuid.UUID(id)).Scan(r.targets()...)
-	})
+	err := s.pool.QueryRow(ctx, findPublishedQuery, uuid.UUID(id)).Scan(r.targets()...)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return annonces.PublishedArticle{}, annonces.ErrArticleNotFound
 	}

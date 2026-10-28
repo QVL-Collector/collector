@@ -54,7 +54,7 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, routes publiques sans
 - `/` : catalogue paginé (`GET /v1/articles?page=&taille=12`), filtre par catégorie (`GET /v1/categories`, `?categorie=` combiné à `?page=`) ; chaque carte mène à sa fiche.
 - `/articles/:id` : fiche (`GET /v1/articles/{id}`) avec titre, prix, frais de port (« non renseignés » si `null`), catégorie (lien vers le catalogue filtré), description et « Vendeur particulier ».
 - Filtre : liste native au clavier, libellé « Catégorie » ; un choix pousse une entrée d'historique (retour arrière vers le filtre précédent), revient à la page 1 et garde le focus sur la liste ; résultat annoncé dans la zone `role="status"`. Un identifiant hors motif du contrat est ignoré ; un 400 `categorie_inconnue` affiche « Cette catégorie n'existe pas » (US-023).
-- Fiche : description en texte brut (sauts de ligne conservés, aucun HTML interprété) ; un 404 (ou 400) affiche « Article introuvable » en `h1`, focus sur le titre. « Retour au catalogue » restaure le filtre et la page d'origine (état de navigation, US-023).
+- Fiche : description en texte brut (sauts de ligne conservés, aucun HTML interprété) ; un 404 affiche « Article introuvable » (tout autre échec : état d'erreur avec « Réessayer ») en `h1`, focus sur le titre. « Retour au catalogue » restaure le filtre et la page d'origine (état de navigation, US-023).
 - Démonstration : catégories tirées du jeu d'articles, 400 `categorie_inconnue` et 404 simulés ; une description contient du balisage.
 - Photos : hors périmètre tant qu'US-020 n'est pas livrée.
 

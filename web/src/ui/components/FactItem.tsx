@@ -21,7 +21,13 @@ export function FactItem({ label, icon, children }: FactItemProps) {
           {label}
         </Typography>
       </Stack>
-      <Typography component="dd" variant="body1" margin={0} fontWeight={500}>
+      <Typography
+        component="dd"
+        variant="body1"
+        margin={0}
+        fontWeight={500}
+        sx={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}
+      >
         {children}
       </Typography>
     </Stack>
