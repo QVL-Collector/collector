@@ -32,7 +32,7 @@ Il utilise `gitleaks` s'il est installé, sinon l'image épinglée de [tools/ci/
 
 | Chemin modifié | Jobs exécutés |
 |---|---|
-| `services/<service>/**` | Go pour ce service |
+| `services/<service>/**`, `infra/<module>/**` (si `go.mod`) | Go pour ce module |
 | `libs/**`, `contracts/**`, `.github/**`, `tools/ci/**`, `.golangci.yml` | Go pour tous les modules (et front pour `contracts/` et l'outillage) |
 | `web/**` | Front |
 | `.github/**`, `tools/**`, `*.sh` | Workflows et scripts : actionlint, zizmor, shellcheck |
@@ -40,6 +40,7 @@ Il utilise `gitleaks` s'il est installé, sinon l'image épinglée de [tools/ci/
 Ce que la CI attend d'un nouveau module :
 
 - **Service Go** : `services/<service>/go.mod` (nom en minuscules), construit avec `GOWORK=off` ; `Dockerfile` dans le même dossier, construit depuis la racine du dépôt (`docker build -f services/<service>/Dockerfile .`). Job : `go mod verify`, `go vet`, golangci-lint ([.golangci.yml](.golangci.yml)), `go test -race -cover` (couverture publiée, non bloquante au sprint 1), construction de l'image sans poussée.
+- **Module Go d'infrastructure** : `infra/<module>/go.mod` (par exemple [infra/identite/](infra/identite/README.md), tests du realm Keycloak par testcontainers), même job que les services, sans image.
 - **Front** : `web/package.json` et `web/package-lock.json` ; dépendances de développement `typescript`, `eslint` avec `eslint-plugin-react` et `eslint-plugin-jsx-a11y`, `vitest` et `@vitest/coverage-v8`. `react/no-danger` et les règles `jsx-a11y` doivent être actives en erreur, sinon le job échoue.
 
 **Portes de sécurité** (bloquantes, seuils de [devsecops.md](docs/processus/devsecops.md) § 3) : gitleaks (diff de la PR, historique complet sur `main`), govulncheck (vulnérabilité Go atteignable), Semgrep (règles du projet dans [tools/ci/semgrep/](tools/ci/semgrep/), sévérité ERROR), Trivy `fs` (verrou npm), `config` (infra, Dockerfile, manifests, charts) et `image` (critique ou élevée corrigeable, secret embarqué). La CI tourne aussi chaque jour sur `main`. Les journaux n'affichent que des compteurs ; le détail est publié en SARIF dans l'onglet sécurité, les compteurs I6 dans l'artefact `i6`.
