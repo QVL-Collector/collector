@@ -4,6 +4,7 @@
 |---|---|
 | Décision testée | [D05](../decisions/D05-communication-interservice.md) (statut `Candidate (XP02)`) |
 | Dates prévues | docker compose 2026-10-28 ; k3d 2026-10-29 ; EKS session 1 2026-10-30 (≈ 1 h) |
+| Date d'exécution | 2026-10-28, locale : docker compose de 08 h 42 à 09 h 06 UTC, k3d (cluster jetable `xp02-essai`, 1 serveur + 2 agents) de 09 h 22 à 09 h 45 UTC ; EKS non exécutée |
 | Exécutée par | Martin |
 | Scripts | `sandbox/XP02-canal-rabbitmq/` (fichier de définitions, génération des identifiants, producteur, consommateur, outbox et rejeu de test) |
 | Dépend de | [XP01](XP01-orchestrateur.md) : cluster EKS de la session 1, politiques réseau actives (G7-5) |
@@ -16,17 +17,17 @@ Hypothèse : le modèle de droits de RabbitMQ (`configure` vide, `write` et `rea
 
 ### Critères
 
-| # | Mesure | Seuil | Bloquant | Si échec |
-|---|---|---|---|---|
-| XC1 | 1 000 messages point à point (`controle.demandes`) et 1 000 en diffusion (`pdm.evenements`, deux files abonnées), confirmations de publication | 100 % des confirmations ; 100 % des identifiants reçus par chaque abonné | **Oui** | Bascule vers NATS JetStream |
-| XC2 | Avec l'identité d'un service : publier sur l'échange d'un autre ; lire la file d'un autre ; déclarer une file ou un échange ; publier avec une clé de routage non accordée | Refus dans 100 % des cas (`ACCESS_REFUSED`) | **Oui** | Bascule vers NATS, XC2 rejoué sur la liste complète de `$JS.API` |
-| XC3 | Consommateur arrêté pendant une vague de 1 000 messages, relancé après 2 min | Aucun message perdu (ENF-12) | **Oui** | Bascule vers NATS |
-| XC4 | Message malformé et message à clé JSON dupliquée dans un flux valide | Écarté sans bloquer les suivants ; mis à l'écart vers `.ecartes` après 5 livraisons ; rejouable | Non | À corriger avant J4 |
-| XC5 | Redémarrage du conteneur du broker, puis suppression de son pod (`emptyDir` perdu) | Producteurs et consommateurs reconnectés sans intervention ≤ 60 s après le retour `Ready` ; après suppression, filet et rejeu de l'outbox de test rétablissent 100 % des événements (identifiants uniques) | **Oui** | Reconnexion instable : bascule vers NATS. Rejeu insuffisant : pilote EBS CSI réexaminé |
-| XC6 | KEDA sur `controle.demandes` (scaler `rabbitmq` en mode `http`, identité `monitoring`) | 1 → au moins 2 consommateurs ≤ 60 s après le seuil (5 messages) ; retour à 1 après vidage | Non | Contrôle sur la CPU ou à nombre fixe |
-| XC7 | Pod quelconque (`ns-intrus`) vers 5672 et 15672 ; flux témoins : service → 5672, KEDA → 15672 | Refus constatés ; flux témoins passants | **Oui** (reclassé par l'avis sécurité de D14) | Politique corrigée et rejouée ; politiques inopérantes : G7 de XP01, bascule de D03 |
-| XC8 | Empreinte au repos et sous vague | Dans la demande (0,25 vCPU, 512 Mio) et la limite (1 Gio) ; aucun nœud ajouté au repos | Non | Revue du dimensionnement ou bascule vers NATS |
-| XC9 | Identité de service : connexion à l'API de gestion, liaison d'une file, purge et suppression de la file d'un autre service ; pod applicatif vers 4369 et 25672 ; publication avec un `user-id` usurpé ; utilisateur `guest` | Refus dans 100 % des cas ; `guest` absent | **Oui** | Erreur de configuration : corrigée et rejouée avant verdict. Défaut structurel (`user-id` non vérifié, droits contournables) : bascule vers NATS |
+| # | Mesure | Seuil | Bloquant | Si échec | Mesure obtenue (local, 2026-10-28) | Atteint |
+|---|---|---|---|---|---|---|
+| XC1 | 1 000 messages point à point (`controle.demandes`) et 1 000 en diffusion (`pdm.evenements`, deux files abonnées), confirmations de publication | 100 % des confirmations ; 100 % des identifiants reçus par chaque abonné | **Oui** | Bascule vers NATS JetStream | compose : point à point 1 000 confirmés, 0 `nack`, 1 000/1 000 uniques ; diffusion par l'outbox 1 000 relayés, 1 000/1 000 uniques sur chacune des deux files, 0 manquant | Oui (local) ; EKS reporté à la session EKS |
+| XC2 | Avec l'identité d'un service : publier sur l'échange d'un autre ; lire la file d'un autre ; déclarer une file ou un échange ; publier avec une clé de routage non accordée | Refus dans 100 % des cas (`ACCESS_REFUSED`) | **Oui** | Bascule vers NATS, XC2 rejoué sur la liste complète de `$JS.API` | compose : 19/19 refus `ACCESS_REFUSED` par la sonde + 3/3 par les programmes `go/` ; k3d : refus conformes une fois la sonde différée (voir Difficultés) | Oui (local) ; EKS reporté à la session EKS |
+| XC3 | Consommateur arrêté pendant une vague de 1 000 messages, relancé après 2 min | Aucun message perdu (ENF-12) | **Oui** | Bascule vers NATS | compose : consommateur tué à 326 messages, relancé 2 min 17 s après ; 1 000 uniques cumulés, 1 doublon absorbé | Oui (local) ; EKS reporté à la session EKS |
+| XC4 | Message malformé et message à clé JSON dupliquée dans un flux valide | Écarté sans bloquer les suivants ; mis à l'écart vers `.ecartes` après 5 livraisons ; rejouable | Non | À corriger avant J4 | Sonde (`basic.reject`) : 6 livraisons puis `.ecartes`, suivant non bloqué ; `go/` en `reject` : 2 pièges écartés, 1 000/1 000 uniques ; `go/` en `requeue` : pièges relivrés sans fin (44 183 livraisons en 3 min), jamais écartés ; rejeu par l'outbox conforme | Non (client `go/` à corriger : `Nack` ne fait pas avancer le compteur) |
+| XC5 | Redémarrage du conteneur du broker, puis suppression de son pod (`emptyDir` perdu) | Producteurs et consommateurs reconnectés sans intervention ≤ 60 s après le retour `Ready` ; après suppression, filet et rejeu de l'outbox de test rétablissent 100 % des événements (identifiants uniques) | **Oui** | Reconnexion instable : bascule vers NATS. Rejeu insuffisant : pilote EBS CSI réexaminé | compose : `docker restart` sous charge, reconnexion 2 à 4 s après le retour, 10 000/10 000 uniques ; k3d : pod et conteneur, reconnexion 10 à 12 s ; suppression du pod sous charge : 24 et 26 perdus (`emptyDir`), rejeu de l'outbox, 0 manquant | Oui (local) ; EKS reporté à la session EKS |
+| XC6 | KEDA sur `controle.demandes` (scaler `rabbitmq` en mode `http`, identité `monitoring`) | 1 → au moins 2 consommateurs ≤ 60 s après le seuil (5 messages) ; retour à 1 après vidage | Non | Contrôle sur la CPU ou à nombre fixe | k3d : 1 → 2 consommateurs 28 s après le seuil (pic 4), retour à 1 58 s après vidage | Oui (débogage) ; EKS reporté à la session EKS |
+| XC7 | Pod quelconque (`ns-intrus`) vers 5672 et 15672 ; flux témoins : service → 5672, KEDA → 15672 | Refus constatés ; flux témoins passants | **Oui** (reclassé par l'avis sécurité de D14) | Politique corrigée et rejouée ; politiques inopérantes : G7 de XP01, bascule de D03 | k3d : `ns-intrus` → 5672 et 15672 fermés ; témoins `pdm-test` → 5672 et KEDA → 15672 ouverts | Oui (débogage) ; EKS reporté à la session EKS |
+| XC8 | Empreinte au repos et sous vague | Dans la demande (0,25 vCPU, 512 Mio) et la limite (1 Gio) ; aucun nœud ajouté au repos | Non | Revue du dimensionnement ou bascule vers NATS | Mémoire max 233 à 239 Mio au repos et sous vague (compose, k3d) ; CPU k3d 0,9 à 1,3 vCPU au repos, jusqu'à 2,4 vCPU sous vague, due aux sondes `exec` | Mémoire oui, CPU non ; nœuds EKS reportés à la session EKS |
+| XC9 | Identité de service : connexion à l'API de gestion, liaison d'une file, purge et suppression de la file d'un autre service ; pod applicatif vers 4369 et 25672 ; publication avec un `user-id` usurpé ; utilisateur `guest` | Refus dans 100 % des cas ; `guest` absent | **Oui** | Erreur de configuration : corrigée et rejouée avant verdict. Défaut structurel (`user-id` non vérifié, droits contournables) : bascule vers NATS | compose : 20/20 refus (liaison, purge, suppression, `user-id` usurpé `PRECONDITION_FAILED`, `guest` refusé et absent, API de gestion 401) ; k3d réseau : 4369 et 25672 fermés (4/4) | Oui (local) ; EKS reporté à la session EKS |
 
 ## Environnement
 
@@ -110,19 +111,30 @@ Producteur `svc-pdm` (outbox de test : journal local des identifiants publiés) 
 
 | # | docker compose | k3d | EKS | Atteint |
 |---|---|---|---|---|
-| XC1 | | | | |
-| XC2 | | | | |
-| XC3 | | | | |
-| XC4 | | | | |
-| XC5 | | | | |
-| XC6 | — | | | |
-| XC7 | — | | | |
-| XC8 | | | | |
-| XC9 | | | | |
+| XC1 | Point à point : 1 000 confirmés, 1 000 uniques, confirmation p50 28 ms, p99 73 ms, bout en bout p50 718 ms (rafale à 927 msg/s) ; diffusion par l'outbox : 1 000/1 000 sur chaque file, 0 manquant | — (non rejoué) | Reporté à la session EKS | Oui en local |
+| XC2 | 19/19 `ACCESS_REFUSED` (sonde) + 3/3 (`go/`) | 37/37 AMQP avec la sonde différée de 20 s et le consommateur lent en pause | Reporté à la session EKS | Oui en local |
+| XC3 | Arrêt à 326 messages, relance 2 min 17 s après : 1 000 uniques cumulés, 1 doublon absorbé | — | Reporté à la session EKS | Oui en local |
+| XC4 | Sonde : 6 livraisons puis `.ecartes` ; `go/` `reject` : 2 écartés, 1 000 uniques ; `go/` `requeue` : boucle sans mise à l'écart ; rejeu : 13 000 republiés, absorbés | — | Reporté à la session EKS | **Non** (client `go/`) |
+| XC5 | `docker restart` sous charge : prêt en 20 s, reconnexion 4 s après, 10 000/10 000 uniques, 46 doublons absorbés | Pod : reconnexion 12 s ; conteneur : 10 s ; suppression sous charge : 24 et 26 perdus, rejeu de l'outbox, 0 manquant | Reporté à la session EKS | Oui en local |
+| XC6 | — | 1 → 2 en 28 s (pic 4), retour à 1 en 58 s | Reporté à la session EKS | Oui (débogage) |
+| XC7 | — | `ns-intrus` → 5672 et 15672 fermés ; témoins ouverts | Reporté à la session EKS | Oui (débogage) |
+| XC8 | 233 Mio repos, 236 Mio vague (200 msg/s, 5 min) ; CPU au plafond compose (1 vCPU) par pics | 225 Mio repos, 239 Mio vague ; CPU 0,9 à 2,4 vCPU | Reporté à la session EKS | Mémoire oui, CPU **non** |
+| XC9 | 20/20 refus hors réseau, `guest` absent | 4369 et 25672 fermés (4/4) ; API de gestion 401 pour les services | Reporté à la session EKS | Oui en local |
+
+Relevés : [`docs/mesures/XP02-canal-rabbitmq.csv`](../mesures/XP02-canal-rabbitmq.csv) et sorties d'état, de sonde et de vague dans [`docs/mesures/XP02-canal-rabbitmq/`](../mesures/XP02-canal-rabbitmq/). Le CSV suit le format de celui d'XP00 (`horodatage_utc;xp;point;commande;resultat;code_erreur;politique_citee;decision`) et non les colonnes annoncées dans « Données collectées » ; les scripts du bac à sable écrivent encore l'ancien format.
 
 ## Difficultés
 
 À compléter par Martin pendant l'exécution, sans réécriture.
+
+- **XC4, client `go/`** : sur RabbitMQ 4.3.7, `basic.nack` avec remise en file (`multiple` faux ou vrai) ne pose pas `x-delivery-count` et ne fait pas avancer le compteur des files quorum ; `basic.reject` le fait (6 livraisons puis `.ecartes`). Le consommateur `go/` en politique `requeue` utilise `Nack(false, true)` : deux messages piégés ont tourné 44 183 fois en 3 min sans être écartés (boucle chaude, flux valide non bloqué). Correction à faire par les devs : `Reject(true)` pour la remise en file, et vérifier `libs/platform` et `infra/canal` sur le même point.
+- **XC8, CPU** : au repos, une sonde de disponibilité `exec` (`check_running` puis `check_local_alarms`) coûte 17,3 s de CPU (une VM Erlang par appel, autant d'ordonnanceurs que de cœurs de l'hôte) ; au repos, le pod consomme 1,17 vCPU, alors que les ordonnanceurs du broker sont à 100 % en sommeil. Mêmes sondes dans le chart de production `infra/canal/templates/statefulset.yaml` : sur deux t3.medium (crédits CPU), risque réel. Pistes : sonde `tcpSocket` ou HTTP, période allongée, `RABBITMQ_CTL_ERL_ARGS` limitant les ordonnanceurs de la CLI, ou limite CPU ; à mesurer en session EKS.
+- **k3d, sonde immédiate** : les 6 premières connexions d'un pod neuf de `pdm-test` échouent (`AMQPConnectionError`) pendant quelques secondes, le temps que les politiques réseau de k3s prennent en compte l'adresse du pod ; une attente de 20 s les fait passer. Le témoin de lecture échoue tant que le consommateur lent de XC6 (`svc-controle`) lit `controle.demandes` : pause KEDA (`autoscaling.keda.sh/paused-replicas: "0"`) pendant la sonde. Les deux sont des artefacts de banc ; le script `k3d.sh` devrait attendre et suspendre le consommateur lent.
+- **XC5 compose, premier essai** : le relevé d'état avant coupure prend environ 25 s, la production de 3 000 événements était finie avant la coupure ; essai rejoué avec 10 000 événements pour avoir des messages en vol.
+- **XC1, latences de bout en bout** : mesurées en rafale (publication sans limite de débit, puis relais après production pour la diffusion) ; elles traduisent la file d'attente, pas la latence du canal.
+- **XC3** : arrêt du consommateur par fin de processus (pas de Ctrl+C sous Windows) : 1 message traité mais non acquitté, relivré et absorbé par l'idempotence.
+- **K3d XC5 avec l'outbox** : programmes `go/` lancés depuis le poste par `kubectl port-forward` (pas d'image des programmes) ; la reconnexion passe donc aussi par la relance du port-forward.
+- **Écart avec `infra/canal` (US-011)** : sondes `exec` identiques (voir XC8) ; le reste de la topologie n'a pas été comparé en détail.
 
 ## Limites
 

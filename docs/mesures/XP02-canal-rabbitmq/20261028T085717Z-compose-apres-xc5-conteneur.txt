@@ -1,0 +1,34 @@
+### list_users
+user	tags
+admin-canal	[administrator]
+keda-monitoring	[monitoring]
+svc-controle	[]
+svc-interactions	[]
+svc-pdm	[]
+svc-test	[]
+### list_permissions -p collector
+user	configure	write	read
+admin-canal	.*	.*	.*
+keda-monitoring			
+svc-controle		^controle[.]resultats$	^controle[.]demandes$
+svc-interactions			^interactions[.]publication-decidee$
+svc-pdm		^(controle[.]demandes|pdm[.]evenements)$	^pdm[.]resultats-controle$
+svc-test			^test[.]publication-decidee$
+### list_topic_permissions -p collector
+user	exchange	write	read
+svc-pdm	pdm.evenements	^publication[.]decidee[.]v1$	^$
+### list_queues -p collector
+name	type	messages	messages_ready	messages_unacknowledged	consumers	policy
+test.publication-decidee.ecartes	quorum	0	0	0	0	ecartes
+controle.demandes	quorum	0	0	0	0	travail-controle-demandes
+pdm.resultats-controle	quorum	0	0	0	0	travail-pdm-resultats-controle
+interactions.publication-decidee.ecartes	quorum	0	0	0	0	ecartes
+interactions.publication-decidee	quorum	0	0	0	1	travail-interactions-publication-decidee
+pdm.resultats-controle.ecartes	quorum	0	0	0	0	ecartes
+test.publication-decidee	quorum	231	221	10	1	travail-test-publication-decidee
+controle.demandes.ecartes	quorum	3	3	0	0	ecartes
+### list_connections
+user	state
+svc-interactions	running
+svc-pdm	running
+svc-test	running
