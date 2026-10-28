@@ -1,10 +1,8 @@
 package coordonnees_test
 
 import (
-	"slices"
 	"strings"
 	"testing"
-	"time"
 	"unicode/utf8"
 
 	"collector/services/controle/internal/coordonnees"
@@ -13,8 +11,6 @@ import (
 const (
 	longueurMaxTitre       = 200
 	longueurMaxDescription = 5000
-	budgetParAnnonce       = 50 * time.Millisecond
-	mesuresParTexte        = 7
 )
 
 type cas struct {
@@ -202,29 +198,6 @@ func textesPiegesDeLongueur(longueur int) map[string]string {
 		"chiffres et séparateurs":    repeter("0.1-2 (3) ", longueur),
 		"pleine chasse et invisible": repeter("０\u200b＠\u200b．", longueur),
 		"texte réaliste":             repeter("Figurine Tintin en bon état, édition 1987, 30 x 40 cm. ", longueur),
-	}
-}
-
-func meilleureDuree(texte string) time.Duration {
-	durees := make([]time.Duration, mesuresParTexte)
-	for i := range durees {
-		debut := time.Now()
-		coordonnees.Detected(texte)
-		durees[i] = time.Since(debut)
-	}
-	return slices.Min(durees)
-}
-
-func TestUS018AC6TexteMaximalPiegeAnalyseEnMoinsDe50ms(t *testing.T) {
-	titres := textesPiegesDeLongueur(longueurMaxTitre)
-	for nom, description := range textesPiegesDeLongueur(longueurMaxDescription) {
-		t.Run(nom, func(t *testing.T) {
-			duree := meilleureDuree(titres[nom]) + meilleureDuree(description)
-			t.Logf("annonce piégée %q : %s", nom, duree)
-			if duree >= budgetParAnnonce {
-				t.Errorf("détection en %s, budget %s", duree, budgetParAnnonce)
-			}
-		})
 	}
 }
 

@@ -17,7 +17,8 @@ Scénarios Given/When/Then dérivés des AC, étiquetés `US018ACn`. Données fi
 
 | Fichier | Contenu | Tests |
 |---|---|---|
-| `services/controle/internal/coordonnees/coordonnees_test.go` | Tables positives (emails, liens, pseudos et réseaux, téléphones, en clair et masqués) et négatives ; AC6 sur 13 textes piégés de longueur maximale ; benchmark ; `FuzzDetected` | 118 cas + 13 mesures |
+| `services/controle/internal/coordonnees/coordonnees_test.go` | Tables positives (emails, liens, pseudos et réseaux, téléphones, en clair et masqués) et négatives ; 13 textes piégés de longueur maximale ; benchmark AC6 ; `FuzzDetected` | 118 cas |
+| `services/controle/internal/coordonnees/coordonnees_perf_test.go` | Test chronométré AC6 (< 50 ms par annonce), contrainte de build `//go:build !race` | 13 mesures |
 | `services/controle/internal/regles/coordonnees_test.go` | Titre et description séparément, ordre des règles, correction puis resoumission, textes réalistes publiés | 7 tests, 30 cas |
 | `services/controle/internal/regles/regles_test.go` | `TestUS013AC5…` renommé `TestUS013AC5US018AC5VersionDesReglesEgaleA2` : exige `RulesVersion == 2` (même assertion d'égalité stricte, valeur mise à jour) | 1 |
 | `contracts/messages/controle.resultat/exemples/v1/valides/refuse-coordonnees-detectees.json` | Paire contrat v1 / règles v2 avec le motif `coordonnees_detectees`, validée par la suite de contrats de `libs/platform/message` | 1 exemple |
@@ -54,6 +55,8 @@ Scénarios Given/When/Then dérivés des AC, étiquetés `US018ACn`. Données fi
 
 ## Mesures AC6
 
+La preuve AC6 est faite hors détecteur de concurrence : sous `-race`, l'analyse est ralentie d'un facteur 5 à 10 (53 à 102 ms mesurés en CI), ce qui mesure l'instrumentation et non la détection. Le test chronométré est donc exclu des builds `-race` ; le benchmark et le fuzzing restent dans tous les builds.
+
 Passe 2 (après le retour de revue) : benchmark 0,1 à 9,5 ms par annonce sur 3 répétitions ; une valeur isolée à 34 ms (`+33` répétés), non reproduite (8 ms aux 3 répétitions suivantes).
 
 Machine de test chargée par d'autres processus (charge CPU mesurée à 76 % hors tests). Benchmark `BenchmarkUS018AC6AnnonceMaximalePiegee`, par annonce complète : 0,1 ms (`www.`) à 8 ms (chiffres espacés) au calme, jusqu'à 20 ms sous la charge. Le test `TestUS018AC6TexteMaximalPiegeAnalyseEnMoinsDe50ms` retient la meilleure de 7 mesures par texte : une mesure isolée ou une médiane dépassait parfois 50 ms (66 à 131 ms) lorsque d'autres suites tournaient en parallèle sur la machine, sans être reproductible ; le benchmark linéaire montre que ce n'est pas un coût de l'analyse.
@@ -81,6 +84,7 @@ README du service, § « Limites connues », complété par la revue. Comporteme
 | `go test ./... -count=1 -cover` (Place de marché, Docker) | vert (113 s) ; bout en bout 16 sous-tests verts dont le nouveau |
 | `go test ./message/` (`libs/platform`) | vert avec le nouvel exemple de contrat |
 | `go test -fuzz FuzzDetected -fuzztime 30s -fuzzminimizetime 1x` | 551 140 exécutions, aucune panique (sans ce drapeau, la minimisation des entrées intéressantes affiche 0 exécution/s sous Windows, sans blocage réel) |
+| `go test -race ./... -count=1` (Contrôle) | Pas de compilateur C sur le poste (cgo absent) : exécuté dans un conteneur `golang:1.26` (Linux), vert ; test chronométré exclu, autres tests exécutés |
 | golangci-lint 2.15.0 `--config .golangci.yml` | 0 problème dans les deux services (Contrôle relancé en passe 2) |
 | gitleaks sur les fichiers ajoutés | aucune fuite |
 
