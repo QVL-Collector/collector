@@ -88,8 +88,7 @@ export const fr = {
       noPrice: 'Prix non renseigné',
       empty: {
         title: 'Aucun article pour le moment',
-        description:
-          'Créez un brouillon : il reste invisible au catalogue jusqu’à sa publication.',
+        description: 'Créez un brouillon : il reste invisible au catalogue jusqu’à sa publication.',
       },
       error: {
         title: 'Vos articles sont momentanément indisponibles',
@@ -116,8 +115,7 @@ export const fr = {
     },
     form: {
       label: 'Contenu de l’annonce',
-      hint:
-        'Un brouillon peut rester incomplet. Titre, description, catégorie et prix sont exigés pour la publication.',
+      hint: 'Un brouillon peut rester incomplet. Titre, description, catégorie et prix sont exigés pour la publication.',
       title: 'Titre',
       description: 'Description',
       category: 'Catégorie',
@@ -132,8 +130,7 @@ export const fr = {
       saved: 'Brouillon enregistré, révision {{revision}}.',
       invalid_one: 'Le formulaire contient {{count}} erreur : corrigez le champ signalé.',
       invalid_other: 'Le formulaire contient {{count}} erreurs : corrigez les champs signalés.',
-      locked:
-        'L’annonce n’est plus modifiable dans son état actuel. La page a été mise à jour.',
+      locked: 'L’annonce n’est plus modifiable dans son état actuel. La page a été mise à jour.',
       failure: 'L’enregistrement a échoué. Vérifiez votre connexion, puis réessayez.',
       conflict: {
         title: 'Cet article a été modifié entre-temps',

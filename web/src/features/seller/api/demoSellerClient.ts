@@ -21,7 +21,10 @@ import {
 
 const controlDelayMs = 2500;
 
-type DraftFields = Pick<DemoArticle, 'titre' | 'description' | 'categorie' | 'prix' | 'fraisDePort'>;
+type DraftFields = Pick<
+  DemoArticle,
+  'titre' | 'description' | 'categorie' | 'prix' | 'fraisDePort'
+>;
 
 function problemError(
   status: number,
@@ -100,7 +103,11 @@ export function createDemoSellerClient(scenario: DemoScenario): SellerClient {
   const scheduleControl = (id: string, revision: number): void => {
     window.setTimeout(() => {
       const article = articles.get(id);
-      if (article === undefined || article.revision !== revision || article.etat !== 'en_controle') {
+      if (
+        article === undefined ||
+        article.revision !== revision ||
+        article.etat !== 'en_controle'
+      ) {
         return;
       }
       const outcome = controlDemoArticle(article);

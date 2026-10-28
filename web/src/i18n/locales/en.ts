@@ -115,8 +115,7 @@ export const en: Translation = {
     },
     form: {
       label: 'Listing content',
-      hint:
-        'A draft may stay incomplete. Title, description, category and price are required for publication.',
+      hint: 'A draft may stay incomplete. Title, description, category and price are required for publication.',
       title: 'Title',
       description: 'Description',
       category: 'Category',

@@ -18,9 +18,7 @@ function changedArticles(
   });
 }
 
-export function useStateChangeAnnouncement(
-  articles: readonly SellerArticle[] | undefined,
-): string {
+export function useStateChangeAnnouncement(articles: readonly SellerArticle[] | undefined): string {
   const { stateSentence } = useArticleLabels();
   const knownStates = useRef<KnownStates | null>(null);
   const [announcement, setAnnouncement] = useState('');

@@ -61,10 +61,10 @@ La réponse est validée champ par champ avant affichage ; un écart de contrat 
 
 Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, isolé dans `src/features/seller/api/` (`sellerArticlePayload.ts` valide chaque réponse).
 
-| Route                       | Écran                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `/vendeur`                  | « Mes articles » (`GET /v1/vendeur/articles`), état, motif traduit, date de modification                 |
-| `/vendeur/articles/nouveau` | Création d'un brouillon (`POST /v1/vendeur/articles`), catégories de `GET /v1/categories`                |
+| Route                       | Écran                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `/vendeur`                  | « Mes articles » (`GET /v1/vendeur/articles`), état, motif traduit, date de modification                |
+| `/vendeur/articles/nouveau` | Création d'un brouillon (`POST /v1/vendeur/articles`), catégories de `GET /v1/categories`               |
 | `/vendeur/articles/:id`     | Modification (`PUT`, révision lue envoyée), « Soumettre au contrôle » (`POST …/soumission`), état suivi |
 
 - Erreurs `application/problem+json` lues par `src/api/problemDetails.ts` : `erreurs[].champ` est rattaché au champ du formulaire (message par `code`, focus sur le premier champ en erreur, résumé en `role="alert"`).
