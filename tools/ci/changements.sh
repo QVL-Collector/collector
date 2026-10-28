@@ -5,13 +5,13 @@
 #   EVENEMENT  nom de l'événement GitHub (pull_request, push, schedule, workflow_dispatch)
 #   BASE, TETE empreintes de commit comparées en pull_request (diff depuis la base commune)
 # Sorties (dans $GITHUB_OUTPUT, sinon sur la sortie standard) :
-#   modules_go  tableau JSON des modules Go concernés (services/<service>, libs/<module>)
+#   modules_go  tableau JSON des modules Go concernés (services/<service>, libs/<module>, infra/<module>)
 #   go          true si au moins un module Go est concerné
 #   web         true si le front existe et est concerné
 #   outillage   true si les workflows ou les scripts sont concernés
 #   analyse     true si un fichier hors documentation est concerné (Semgrep, Trivy config et dépendances)
 #
-# Règles : services/<service>/** déclenche ce service ; libs/**, contracts/** et l'outillage de CI
+# Règles : services/<service>/** et infra/<module>/** déclenchent ce module ; libs/**, contracts/** et l'outillage de CI
 # déclenchent tous les modules ; hors pull_request (push sur main, planification), tout s'exécute.
 
 set -euo pipefail
@@ -32,7 +32,7 @@ ecrire_sortie() {
 
 lister_modules_go() {
   local fichier dossier nom
-  for fichier in services/*/go.mod libs/*/go.mod; do
+  for fichier in services/*/go.mod libs/*/go.mod infra/*/go.mod; do
     [[ -f "$fichier" ]] || continue
     dossier="${fichier%/go.mod}"
     nom="${dossier#*/}"
@@ -83,9 +83,10 @@ for f in "${FICHIERS[@]}"; do
     docs/*|backlog/*|presentation/*|*.md) ;;
     *) ANALYSE=true ;;
   esac
-  if [[ "$f" == services/*/* ]]; then
-    reste="${f#services/}"
-    MODULES_TOUCHES["services/${reste%%/*}"]=1
+  if [[ "$f" == services/*/* || "$f" == infra/*/* ]]; then
+    racine="${f%%/*}"
+    reste="${f#*/}"
+    MODULES_TOUCHES["${racine}/${reste%%/*}"]=1
   fi
 done
 
