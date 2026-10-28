@@ -1,6 +1,8 @@
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
+import { FactItem } from '../../../ui/components/FactItem';
+import { FactList } from '../../../ui/components/FactList';
 import type { SellerArticle } from '../domain/sellerArticle';
 import { useArticleSummary } from '../hooks/useArticleSummary';
 
@@ -16,23 +18,13 @@ export function ArticleSummary({ article }: ArticleSummaryProps) {
       <Typography variant="body2" color="text.secondary">
         {t('seller.editor.readOnly')}
       </Typography>
-      <Stack component="dl" spacing={2} margin={0}>
+      <FactList>
         {entries.map(({ label, value }) => (
-          <Stack key={label} spacing={0.5}>
-            <Typography component="dt" variant="subtitle2" color="text.secondary">
-              {label}
-            </Typography>
-            <Typography
-              component="dd"
-              variant="body1"
-              margin={0}
-              sx={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}
-            >
-              {value}
-            </Typography>
-          </Stack>
+          <FactItem key={label} label={label}>
+            {value}
+          </FactItem>
         ))}
-      </Stack>
+      </FactList>
     </Stack>
   );
 }

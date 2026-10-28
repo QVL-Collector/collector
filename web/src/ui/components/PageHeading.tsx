@@ -11,7 +11,13 @@ type PageHeadingProps = {
 export function PageHeading({ title, subtitle, headingRef }: PageHeadingProps) {
   return (
     <Stack spacing={1} maxWidth="48rem">
-      <Typography ref={headingRef} component="h1" variant="h1" tabIndex={-1}>
+      <Typography
+        ref={headingRef}
+        component="h1"
+        variant="h1"
+        tabIndex={-1}
+        sx={{ overflowWrap: 'anywhere' }}
+      >
         {title}
       </Typography>
       {subtitle !== undefined && (

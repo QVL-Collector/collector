@@ -19,9 +19,7 @@ export function AppProviders({ services, queryClient, children }: AppProvidersPr
       <AuthSessionProvider session={services.authSession ?? anonymousSession}>
         <QueryClientProvider client={queryClient}>
           <CatalogueClientProvider client={services.catalogueClient}>
-            <SellerClientProvider client={services.sellerClient}>
-              {children}
-            </SellerClientProvider>
+            <SellerClientProvider client={services.sellerClient}>{children}</SellerClientProvider>
           </CatalogueClientProvider>
         </QueryClientProvider>
       </AuthSessionProvider>

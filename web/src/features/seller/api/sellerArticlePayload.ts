@@ -1,5 +1,5 @@
 import { controlReasons, type ControlReason } from '../../../shared/controlReason';
-import { isCurrencyCode, type Money } from '../../../shared/Money';
+import { parseCategory, parseMoney, parseNullable } from '../../../shared/marketplacePayload';
 import {
   expectArray,
   expectInteger,
@@ -9,36 +9,7 @@ import {
   expectString,
   InvalidPayloadError,
 } from '../../../shared/payload';
-import {
-  articleStates,
-  type SellerArticle,
-  type SellerArticlePage,
-  type SellerCategory,
-} from '../domain/sellerArticle';
-
-function parseNullable<T>(value: unknown, parse: (present: unknown) => T): T | null {
-  return value === null ? null : parse(value);
-}
-
-function parseMoney(value: unknown, path: string): Money {
-  const money = expectRecord(value, path);
-  const currency = expectNonEmptyString(money.devise, `${path}.devise`);
-  if (!isCurrencyCode(currency)) {
-    throw new InvalidPayloadError(`${path}.devise`);
-  }
-  return {
-    amountInCents: expectInteger(money.montantCentimes, `${path}.montantCentimes`, 0),
-    currency,
-  };
-}
-
-function parseCategory(value: unknown, path: string): SellerCategory {
-  const category = expectRecord(value, path);
-  return {
-    id: expectNonEmptyString(category.id, `${path}.id`),
-    label: expectNonEmptyString(category.libelle, `${path}.libelle`),
-  };
-}
+import { articleStates, type SellerArticle, type SellerArticlePage } from '../domain/sellerArticle';
 
 function parseReason(value: unknown, path: string): ControlReason | null {
   return parseNullable(value, (reason) => expectOneOf(reason, controlReasons, path));
@@ -93,11 +64,4 @@ export function parseSellerArticlePage(payload: unknown): SellerArticlePage {
     pageSize: expectInteger(root.taille, 'taille', 1),
     totalItems: expectInteger(root.total, 'total', 0),
   };
-}
-
-export function parseSellerCategories(payload: unknown): readonly SellerCategory[] {
-  const root = expectRecord(payload, 'categories');
-  return expectArray(root.elements, 'elements').map((item, index) =>
-    parseCategory(item, `elements[${String(index)}]`),
-  );
 }

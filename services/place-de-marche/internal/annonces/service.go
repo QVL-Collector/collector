@@ -32,6 +32,8 @@ type Articles interface {
 	ListOwned(ctx context.Context, seller SellerID, page PageRequest) (ArticlePage, error)
 	Submit(ctx context.Context, seller SellerID, id ArticleID, expected Revision) (Article, error)
 	ApplyReview(ctx context.Context, outcome ReviewOutcome) (bool, error)
+	ListPublished(ctx context.Context, filter CatalogueFilter, page PageRequest) (CataloguePage, error)
+	FindPublished(ctx context.Context, id ArticleID) (PublishedArticle, error)
 }
 
 type Categories interface {

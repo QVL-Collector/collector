@@ -183,9 +183,27 @@ export const fr = {
     loading: 'Chargement du catalogue en cours',
     loaded_one: '{{count}} article publié, page {{page}} sur {{pageCount}}',
     loaded_other: '{{count}} articles publiés, page {{page}} sur {{pageCount}}',
+    loadedInCategory_one:
+      '{{count}} article publié dans la catégorie {{category}}, page {{page}} sur {{pageCount}}',
+    loadedInCategory_other:
+      '{{count}} articles publiés dans la catégorie {{category}}, page {{page}} sur {{pageCount}}',
+    filter: {
+      label: 'Catégorie',
+      all: 'Toutes les catégories',
+      unavailable: 'Les catégories sont momentanément indisponibles.',
+    },
+    showAllCategories: 'Voir toutes les catégories',
     empty: {
       title: 'Aucun article publié pour le moment',
       description: 'De nouveaux objets arrivent régulièrement : revenez bientôt.',
+    },
+    emptyCategory: {
+      title: 'Aucun article publié dans cette catégorie',
+      description: 'Choisissez une autre catégorie ou parcourez tout le catalogue.',
+    },
+    unknownCategory: {
+      title: 'Cette catégorie n’existe pas',
+      description: 'Le lien suivi mène à une catégorie inconnue du catalogue.',
     },
     outOfRange: {
       title: 'Cette page du catalogue est vide',
@@ -194,6 +212,31 @@ export const fr = {
     },
     error: {
       title: 'Le catalogue est momentanément indisponible',
+      description: 'Vérifiez votre connexion, puis réessayez.',
+      retry: 'Réessayer',
+    },
+  },
+  article: {
+    documentTitle: '{{title}} · Collector',
+    pendingDocumentTitle: 'Fiche article · Collector',
+    pendingTitle: 'Fiche article',
+    loading: 'Chargement de l’article en cours',
+    loaded: 'Fiche de l’article {{title}} affichée',
+    summaryTitle: 'En bref',
+    categoryLink: 'Catégorie {{category}} : voir ses articles',
+    shippingCost: 'Frais de port',
+    shippingNotProvided: 'Non renseignés par le vendeur',
+    seller: 'Vendeur',
+    privateSeller: 'Vendeur particulier',
+    descriptionTitle: 'Description',
+    noDescription: 'Le vendeur n’a pas rédigé de description.',
+    notFound: {
+      documentTitle: 'Article introuvable · Collector',
+      title: 'Article introuvable',
+      description: 'Cet article n’existe pas ou n’est plus en vente.',
+    },
+    error: {
+      title: 'L’article est momentanément indisponible',
       description: 'Vérifiez votre connexion, puis réessayez.',
       retry: 'Réessayer',
     },

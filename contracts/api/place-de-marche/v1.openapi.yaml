@@ -4,7 +4,9 @@ info:
   version: 1.0.0
   description: >-
     API HTTP de la Place de marché. Erreurs au format Problem Details (RFC 9457, application/problem+json),
-    sans trace technique. Les routes du vendeur exigent un jeton d'accès Keycloak valide (signature RS256,
+    sans trace technique. Les routes du catalogue et des catégories sont publiques : elles n'exposent que les
+    articles publiés, sans aucune donnée du vendeur, et un article non publié y répond 404 comme un article
+    inexistant. Les routes du vendeur exigent un jeton d'accès Keycloak valide (signature RS256,
     émetteur, audience place-de-marche, client autorisé collector-web, type Bearer, expiration) portant le rôle
     de realm vendeur. Un article d'un autre vendeur répond 404, sans révéler son existence. Corps JSON refusés :
     clé dupliquée (casse ignorée), champ inconnu, type inattendu, valeur racine autre qu'un objet, plus de 32 Kio.
@@ -12,8 +14,54 @@ servers:
   - url: /marche/v1
 tags:
   - name: Catégories
+  - name: Catalogue
   - name: Vendeur
 paths:
+  /articles:
+    get:
+      tags: [Catalogue]
+      operationId: listerCatalogue
+      summary: Articles publiés, du plus récemment publié au plus ancien, filtrables par catégorie
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Categorie"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Taille"
+      responses:
+        "200":
+          description: Page du catalogue ; une page au-delà du total est vide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageCatalogue"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+  /articles/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Catalogue]
+      operationId: lireArticlePublie
+      summary: Fiche d'un article publié
+      security: []
+      responses:
+        "200":
+          description: Fiche de l'article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArticlePublie"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
   /categories:
     get:
       tags: [Catégories]
@@ -209,6 +257,17 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    Categorie:
+      name: categorie
+      in: query
+      required: false
+      description: >-
+        Identifiant d'une catégorie de GET /categories ; présent une seule fois et non vide (sinon code invalide),
+        catégorie existante (sinon code categorie_inconnue)
+      schema:
+        type: string
+        maxLength: 64
+        pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
     Page:
       name: page
       in: query
@@ -421,6 +480,60 @@ components:
         total:
           type: integer
           minimum: 0
+    EntreeCatalogue:
+      type: object
+      additionalProperties: false
+      required: [id, titre, prix, categorie]
+      properties:
+        id:
+          type: string
+          format: uuid
+        titre:
+          type: string
+        prix:
+          $ref: "#/components/schemas/Montant"
+        categorie:
+          $ref: "#/components/schemas/Categorie"
+    ArticlePublie:
+      description: Fiche publique d'un article publié ; aucune donnée du vendeur n'y figure.
+      type: object
+      additionalProperties: false
+      required: [id, titre, prix, categorie, description, fraisDePort]
+      properties:
+        id:
+          type: string
+          format: uuid
+        titre:
+          type: string
+        prix:
+          $ref: "#/components/schemas/Montant"
+        categorie:
+          $ref: "#/components/schemas/Categorie"
+        description:
+          type: string
+        fraisDePort:
+          description: null si le vendeur ne les a pas renseignés
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+          nullable: true
+    PageCatalogue:
+      type: object
+      additionalProperties: false
+      required: [elements, page, taille, total]
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/EntreeCatalogue"
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
     ErreurDeChamp:
       type: object
       additionalProperties: false
@@ -485,7 +598,9 @@ components:
           schema:
             $ref: "#/components/schemas/Probleme"
     Introuvable:
-      description: Article inexistant ou appartenant à un autre vendeur
+      description: >-
+        Article inexistant, appartenant à un autre vendeur (routes du vendeur) ou non publié (routes du catalogue) ;
+        réponse identique dans tous les cas
       content:
         application/problem+json:
           schema:

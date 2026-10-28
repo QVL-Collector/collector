@@ -2,6 +2,7 @@ import { ApiError } from '../../../api/ApiError';
 import { waitForDemoLatency } from '../../../api/demoLatency';
 import type { FieldProblem } from '../../../api/problemDetails';
 import type { DemoScenario } from '../../../config/runtimeConfig';
+import { parseCategories } from '../../../shared/marketplacePayload';
 import { acceptsChanges, type ArticleDraft, type SellerClient } from '../domain/sellerArticle';
 import { httpStatuses, sellerProblemTypes } from '../domain/sellerProblems';
 import { controlDemoArticle } from './demoControl';
@@ -13,11 +14,7 @@ import {
   type DemoArticle,
 } from './demoSellerData';
 import { toAmountPayload } from './draftPayload';
-import {
-  parseSellerArticle,
-  parseSellerArticlePage,
-  parseSellerCategories,
-} from './sellerArticlePayload';
+import { parseSellerArticle, parseSellerArticlePage } from './sellerArticlePayload';
 
 const controlDelayMs = 2500;
 
@@ -132,7 +129,7 @@ export function createDemoSellerClient(scenario: DemoScenario): SellerClient {
     },
     async listCategories(signal) {
       await waitForDemoLatency(signal);
-      return parseSellerCategories({ elements: demoCategories });
+      return parseCategories({ elements: demoCategories });
     },
     async getMyArticle(id, signal) {
       await waitForDemoLatency(signal);

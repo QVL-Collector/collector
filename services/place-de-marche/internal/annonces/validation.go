@@ -90,10 +90,14 @@ func appendCategoryViolations(found []Violation, id *CategoryID) []Violation {
 	if id == nil {
 		return found
 	}
-	if len(*id) > maxCategoryIDLength || !categoryIDFormat.MatchString(string(*id)) {
+	if !id.wellFormed() {
 		return append(found, Violation{Field: FieldCategory, Code: CodeUnknownCategory})
 	}
 	return found
+}
+
+func (id CategoryID) wellFormed() bool {
+	return len(id) <= maxCategoryIDLength && categoryIDFormat.MatchString(string(id))
 }
 
 type moneyFields struct {

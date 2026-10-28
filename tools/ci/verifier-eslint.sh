@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-FICHIER="$(git ls-files -- 'src/*.tsx' 'src/**/*.tsx' | head -n 1)"
+FICHIER="$(git ls-files -- 'src/*.tsx' 'src/**/*.tsx' | awk 'NR == 1')"
 if [[ -z "$FICHIER" ]]; then
   echo "::error::aucun fichier .tsx suivi sous web/src : impossible de résoudre la configuration ESLint"
   exit 1

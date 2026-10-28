@@ -93,9 +93,20 @@ export function pageOf(
   };
 }
 
+function articleOutOfScope(): Promise<never> {
+  return Promise.reject(new Error('Fiche article hors du périmètre du catalogue paginé'));
+}
+
 export function fakeCatalogue(implementation: ListPublishedArticles): FakeCatalogue {
   const listPublishedArticles = vi.fn<ListPublishedArticles>(implementation);
-  return { client: { listPublishedArticles }, listPublishedArticles };
+  return {
+    client: {
+      listPublishedArticles,
+      listCategories: () => Promise.resolve([]),
+      getPublishedArticle: articleOutOfScope,
+    },
+    listPublishedArticles,
+  };
 }
 
 export function catalogueContaining(articles: readonly CatalogueArticle[]): FakeCatalogue {
