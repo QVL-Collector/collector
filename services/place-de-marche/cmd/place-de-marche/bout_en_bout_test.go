@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +19,9 @@ const (
 	delaiDePublication   = 10 * time.Second
 	delaiDeTraitement    = 20 * time.Second
 	categorieNonReconnue = "timbres"
+	versionDesReglesV2   = 2
+	motifCoordonnees     = "coordonnees_detectees"
+	telephoneFictif      = "01 99 00 12 34"
 )
 
 type ligneOutbox struct {
@@ -202,7 +206,8 @@ func TestUS013BoutEnBoutPlaceDeMarcheEtControle(t *testing.T) {
 	t.Run("AC2 brouillon sans description refusé pour annonce incomplète", b.ac2SansDescriptionRefuse)
 	t.Run("AC3 article refusé corrigé et resoumis repasse en contrôle puis publié", b.ac3RefuseCorrigeResoumisPublie)
 	t.Run("AC4 catégorie inconnue du Contrôle à vérifier, jamais publiée", b.ac4CategorieInconnueAVerifier)
-	t.Run("AC5 AC8 chaque résultat porte la version des règles v1 et respecte le contrat", b.ac5ac8ResultatsEnVersionDeReglesV1)
+	t.Run("US-018 AC1 AC4 annonce avec téléphone refusée pour coordonnées puis publiée une fois corrigée", b.us018TelephoneRefusePuisCorrigePublie)
+	t.Run("AC5 AC8 US-018 AC5 chaque résultat porte la version des règles v2 et respecte le contrat v1", b.ac5ac8ResultatsEnVersionDeReglesV2)
 	t.Run("AC6 résultat livré deux fois ou de révision antérieure sans effet", b.ac6DoublonEtRevisionAnterieureSansEffet)
 	t.Run("AC9 soumission par un autre vendeur introuvable", b.ac9AutreVendeurIntrouvable)
 }
@@ -362,19 +367,19 @@ func (b *bancComplet) ac4CategorieInconnueAVerifier(t *testing.T) {
 	exigerEtat(t, b.relire(t, b.jeton, soumis.ID), etatAVerifier, motifCategorieInconnu)
 }
 
-func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV1(t *testing.T) {
+func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV2(t *testing.T) {
 	b.releverLesResultats(t)
 	if len(b.captures) == 0 {
 		t.Fatal("aucun résultat capturé")
 	}
 	for id, captures := range b.captures {
 		for _, c := range captures {
-			if c.donnees.RulesVersion != versionDesRegles {
+			if c.donnees.RulesVersion != versionDesReglesV2 {
 				t.Errorf("résultat de %s en version de règles %d", id, c.donnees.RulesVersion)
 			}
 		}
 		for _, r := range b.resultatsEnregistres(t, id) {
-			if r.version != versionDesRegles {
+			if r.version != versionDesReglesV2 {
 				t.Errorf("résultat enregistré de %s en version de règles %d", id, r.version)
 			}
 		}
@@ -387,6 +392,27 @@ func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV1(t *testing.T) {
 	if c := b.capture(t, b.enAttente.ID, b.enAttente.Revision); c.enveloppe.CorrelationID != demande.CorrelationID {
 		t.Errorf("corrélation du résultat %s, demande %s", c.enveloppe.CorrelationID, demande.CorrelationID)
 	}
+}
+
+func (b *bancComplet) us018TelephoneRefusePuisCorrigePublie(t *testing.T) {
+	soumis := b.creerEtSoumettre(t, corpsComplet("Figurine Milou, appelez le "+telephoneFictif, categorieSure, 3000, 0))
+	refuse, _ := b.attendreEtat(t, soumis.ID, etatRefuse, delaiDeTraitement)
+	exigerEtat(t, refuse, etatRefuse, motifCoordonnees)
+	exigerEtat(t, b.dansMesArticles(t, b.jeton, soumis.ID), etatRefuse, motifCoordonnees)
+	resultat := b.capture(t, soumis.ID, refuse.Revision)
+	for _, revele := range []string{telephoneFictif, "0199001234", "Milou", "telephone", "regex"} {
+		if strings.Contains(strings.ToLower(string(resultat.livraison.Body)), strings.ToLower(revele)) {
+			t.Errorf("le résultat publié révèle %q : %s", revele, resultat.livraison.Body)
+		}
+		if b.journalControle.contient(revele) || b.journal.contient(revele) {
+			t.Errorf("le journal révèle %q", revele)
+		}
+	}
+	var modifie articleRecu
+	b.modifier(t, b.jeton, refuse.ID, corpsRevision(refuse.Revision, corpsComplet("Figurine Milou", categorieSure, 3000, 0))).exiger(t, http.StatusOK).lire(t, &modifie)
+	resoumis := b.soumettreAvecSucces(t, b.jeton, modifie)
+	publie, _ := b.attendreEtat(t, resoumis.ID, etatPublie, delaiDeTraitement)
+	exigerEtat(t, publie, etatPublie, "")
 }
 
 func (b *bancComplet) ac6DoublonEtRevisionAnterieureSansEffet(t *testing.T) {

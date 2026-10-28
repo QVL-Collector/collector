@@ -1,8 +1,12 @@
 package regles
 
-import "strings"
+import (
+	"strings"
 
-const RulesVersion = 1
+	"collector/services/controle/internal/coordonnees"
+)
+
+const RulesVersion = 2
 
 type Issue string
 
@@ -16,6 +20,7 @@ type Reason string
 
 const (
 	ReasonIncompleteListing Reason = "annonce_incomplete"
+	ReasonContactDetected   Reason = "coordonnees_detectees"
 	ReasonUnknownCategory   Reason = "categorie_inconnue"
 )
 
@@ -53,6 +58,9 @@ func (r Rules) Evaluate(listing Listing) Verdict {
 	if !complete(listing) {
 		return Verdict{Issue: IssueRefused, Reason: ReasonIncompleteListing}
 	}
+	if containsContactDetails(listing) {
+		return Verdict{Issue: IssueRefused, Reason: ReasonContactDetected}
+	}
 	if !r.knows(*listing.CategoryCode) {
 		return Verdict{Issue: IssueToVerify, Reason: ReasonUnknownCategory}
 	}
@@ -69,6 +77,10 @@ func complete(listing Listing) bool {
 		filled(listing.Description) &&
 		listing.CategoryCode != nil && filled(string(*listing.CategoryCode)) &&
 		listing.PriceCents != nil
+}
+
+func containsContactDetails(listing Listing) bool {
+	return coordonnees.Detected(listing.Title) || coordonnees.Detected(listing.Description)
 }
 
 func filled(text string) bool {

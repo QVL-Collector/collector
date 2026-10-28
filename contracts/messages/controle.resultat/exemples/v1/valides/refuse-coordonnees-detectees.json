@@ -1,0 +1,14 @@
+{
+  "id": "5d7f9b1c-3e5a-4c7e-9a1b-2c4e6a8b0d2f",
+  "type": "controle.resultat",
+  "version": 1,
+  "emitted_at": "2026-11-02T10:05:12.004Z",
+  "correlation_id": "7e9a1c3b-5d7f-4b9d-8e0a-1c3e5a7b9d0f",
+  "data": {
+    "article_id": "1f3b5d7a-9c1e-4d3f-8a5b-7c9e1a3b5d7f",
+    "revision": 2,
+    "rules_version": 2,
+    "issue": "refuse",
+    "reason": "coordonnees_detectees"
+  }
+}

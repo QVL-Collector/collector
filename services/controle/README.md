@@ -11,15 +11,25 @@ Applique les règles de publication à chaque demande de contrôle et publie le 
 
 Le service ne déclare aucune file ni aucun échange : la topologie est posée par l'IaC. Une file ou un échange absent, ou un droit refusé, arrête le service en erreur.
 
-## Règles, version 1 (US-013)
+## Règles, version 2
+
+Évaluées dans cet ordre, la première qui s'applique fixe l'issue :
 
 | Condition | Issue | Motif |
 |---|---|---|
-| Titre, description ou catégorie vides (espaces seuls compris), ou prix absent | `refuse` | `annonce_incomplete` |
-| Catégorie absente du référentiel du Contrôle | `a_verifier` | `categorie_inconnue` |
+| Titre, description ou catégorie vides (espaces seuls compris), ou prix absent (US-013) | `refuse` | `annonce_incomplete` |
+| Titre ou description contenant des coordonnées (US-018) | `refuse` | `coordonnees_detectees` |
+| Catégorie absente du référentiel du Contrôle (US-013) | `a_verifier` | `categorie_inconnue` |
 | Sinon | `publie` | — |
 
-Chaque résultat porte `rules_version: 1`. Référentiel des catégories : `internal/regles/referentiel.go`, aligné sur le jeu de catégories amorcé par la Place de marché. Coordonnées, prix, statut du vendeur et photos : US-018 à US-020.
+Chaque résultat porte `rules_version: 2`, contrat inchangé en v1. Référentiel des catégories : `internal/regles/referentiel.go`, aligné sur le jeu de catégories amorcé par la Place de marché. Prix, statut du vendeur et photos : US-019 et US-020.
+
+Détection des coordonnées (`internal/coordonnees`) : texte normalisé (NFKD, accents et caractères invisibles retirés, minuscules), puis expressions RE2 à coût linéaire, compilées une fois. Elle repère les emails (`@`, « arobase », « (at) », « point », « dot »), les liens (`http://`, `www`, domaine suivi d'une extension connue), les pseudos `@…` et les noms de réseaux sociaux, et les numéros français (`0X` + 8 chiffres, `+33`, `0033`), chiffres séparés par espaces, points, tirets ou parenthèses, ou écrits en toutes lettres, ainsi que les paires séparées par `/` (`06/12/34/56/78`). Les dates complètes (`12.05.1987`, `1987-05-12`) sont écartées avant la recherche de numéros. Le résultat ne cite ni la règle ni le texte détecté.
+
+### Limites connues
+
+- Faux positifs : numéros de cartes ou de tomes en suite (`01 02 03 04 05`), référence de 10 chiffres au format d'un numéro (`n°0102030405`), nom de réseau seul (« Messenger » dans un titre), point collé suivi d'une extension (`France.Net`, `Prince.Fr`), date écrite avec des espaces suivie de chiffres (`01 02 2003 12`).
+- Non couverts : chiffres arabes-indiens et autres systèmes de chiffres, homoglyphes cyrilliques ou grecs, « O » pour zéro, numéro accolé à une date complète (`06.12.2019.78`), adresse dont le point est collé au mot qui précède puis suivi d'une espace (`site. fr`).
 
 ## Port
 
