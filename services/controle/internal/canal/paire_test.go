@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"collector/contracts"
+	"collector/libs/platform/broker"
 	"collector/libs/platform/message"
 	"collector/services/controle/internal/regles"
 )
@@ -153,6 +154,25 @@ func TestUS019AC4DemandeAvecNomOuEmailDuVendeurRejeteeParLeContrat(t *testing.T)
 			})
 			if err := v.Validate(corps); err == nil {
 				t.Fatalf("demande portant %s acceptée", champ)
+			}
+		})
+	}
+}
+
+func TestUS019AC4DateDInscriptionMalFormeeEcarteeSansResultat(t *testing.T) {
+	for nom, date := range map[string]string{"format français": "14/03/2025", "jour inexistant": "2025-02-30", "horodatage": "2025-03-14T00:00:00Z", "vide": ""} {
+		t.Run(nom, func(t *testing.T) {
+			corps := demandeAvec(t, exempleDeDemande(t, "annonce-complete.json"), func(d map[string]any) {
+				d["seller"].(map[string]any)["member_since"] = date
+			})
+			var journal strings.Builder
+			responder := NewResponder(validateur(t), regles.Reference(), slog.New(slog.NewJSONHandler(&journal, nil)))
+			disposition, err := responder.handle(t.Context(), broker.Delivery{MessageID: "demande-mal-formee", Body: corps}, nil)
+			if err != nil || disposition != broker.Reject {
+				t.Fatalf("disposition %v, erreur %v : demande non écartée", disposition, err)
+			}
+			if !strings.Contains(journal.String(), "controle.demande_ecartee") || strings.Contains(journal.String(), "controle.demande_controlee") {
+				t.Fatalf("journal inattendu : %s", journal.String())
 			}
 		})
 	}

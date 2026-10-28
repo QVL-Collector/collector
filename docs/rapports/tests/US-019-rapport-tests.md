@@ -18,11 +18,12 @@ Scénarios Given/When/Then dérivés des AC, étiquetés `US019ACn`. Les seuils 
 | Fichier | Contenu | Tests |
 |---|---|---|
 | `services/controle/internal/regles/prix_vendeur_test.go` | Bornes de prix par catégorie, seuil de vigilance, ancienneté autour de 30 jours, suspension, ordre des règles, non-divulgation, pureté | 14 tests, 125 cas |
-| `services/controle/internal/canal/paire_test.go` | Paire demande → résultat à travers le contrat v1 (exemples réels, prix hors plage, ancienneté lue dans la demande, données du vendeur) | 5 tests |
+| `services/controle/internal/canal/paire_test.go` | Paire demande → résultat à travers le contrat v1 (exemples réels, prix hors plage, ancienneté lue dans la demande, données du vendeur) ; date d'inscription mal formée écartée par `handle` du répondeur sans publication (publieur absent : toute tentative de publication ferait échouer le test) | 6 tests |
 | `services/controle/internal/regles/regles_test.go` | Adapté à `New(Catalogue, SeniorityPolicy)` et `Evaluate(Submission)` (vendeur inscrit en 2025, non suspendu) ; version exigée passée à 3 ; `TestUS013AC1TexteMinimalSuffit` à 45 € au lieu d'1 centime pour continuer à prouver la complétude ; référentiel fourni = catalogue d'une seule catégorie | 8 tests adaptés |
 | `services/controle/internal/regles/coordonnees_test.go` | Même évaluation par une soumission d'un vendeur en règle | 7 tests adaptés |
 | `contracts/messages/controle.resultat/exemples/v1/valides/` | `refuse-compte-non-autorise.json`, `a-verifier-prix-a-confirmer.json`, `a-verifier-vendeur-a-verifier.json` (règles v3) | 3 exemples |
 | `contracts/messages/controle.demande/exemples/v1/invalides/schema_non_respecte/nom-vendeur.json` | Demande portant un nom de vendeur, rejetée par le contrat | 1 exemple |
+| `contracts/messages/controle.demande/exemples/v1/invalides/schema_non_respecte/date-d-inscription-mal-formee.json` | `member_since` au format `14/03/2025`, rejetée par le contrat (`format: date`) | 1 exemple |
 | `services/place-de-marche/cmd/place-de-marche/bout_en_bout_test.go` | Version des règles v3 ; prix du scénario « chaque catégorie » passé de 15 € à 25 € (15 € est hors de la plage `montres`) ; 2 scénarios US-019 ajoutés | 2 sous-tests ajoutés, 2 adaptés |
 
 `vendeur-suspendu.json` reste un exemple valide du contrat (suite `libs/platform/message` verte) ; le Contrôle le refuse `compte_non_autorise`, ce que prouve `TestUS019AC2ExempleVendeurSuspenduConformeEtRefuse`.
@@ -48,6 +49,7 @@ Scénarios Given/When/Then dérivés des AC, étiquetés `US019ACn`. Les seuils 
 | AC4 | Évaluations datées de 2020 et de 2040 | Issue fixée par `submitted_at`, pas par l'horloge | Conforme | ✅ |
 | AC4 | Même soumission évaluée 1 000 fois ; catalogue modifié après `New` | Même verdict | Conforme | ✅ |
 | AC4 | Demande portant `email`, `display_name` ou `name` du vendeur | Rejetée par le contrat | Rejetée | ✅ |
+| AC4 | `member_since` `14/03/2025`, `2025-02-30`, horodatage complet, vide, passée à `handle` | Demande écartée (`Reject`, événement `controle.demande_ecartee`), aucun résultat publié | Conforme dans les 4 cas | ✅ |
 | AC4 | Bout en bout : demande écrite dans l'outbox | Vendeur limité à `account_id`, `member_since`, `suspended` | Conforme | ✅ |
 | AC5 | 7 catégories, prix au milieu de la plage, vendeur ancien, sans coordonnées | Publié | Conforme | ✅ |
 | AC5 | Bout en bout : scénarios US-013 de publication (dont chaque catégorie à 25 €) | Publié | Conforme | ✅ |
@@ -62,13 +64,15 @@ Toutes les suites US-013 et US-018 du Contrôle et le bout en bout Place de marc
 
 | Commande | Résultat |
 |---|---|
-| `go test ./... -count=1 -cover` dans `services/controle` | ✅ `regles` 100,0 %, `coordonnees` 98,5 %, `canal` 45,5 % |
+| `go test ./... -count=1 -cover` dans `services/controle` | ✅ `regles` 100,0 %, `coordonnees` 98,5 %, `canal` 61,4 % |
 | `go test ./... -count=1 -cover` dans `services/place-de-marche` (Docker) | ✅ `cmd/place-de-marche` 50,0 %, bout en bout 18/18 |
 | `go test ./message -count=1` dans `libs/platform` | ✅ exemples valides acceptés, invalides rejetés |
 | `golangci-lint run --config ../../.golangci.yml ./...` (2.15.0) dans les deux services | ✅ 0 issue |
 | `go test -race` | Non exécuté localement (cgo indisponible) ; les tests ajoutés ne sont pas chronométrés |
 
 Conteneurs de test supprimés en fin de campagne.
+
+Le test de paire nominal n'est pas passé par `handle` : le publieur est un type concret lié à un canal AMQP, la publication réelle reste prouvée par le bout en bout.
 
 ## Points à clarifier
 
