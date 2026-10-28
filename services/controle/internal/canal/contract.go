@@ -1,6 +1,10 @@
 package canal
 
 import (
+	"encoding/json"
+	"fmt"
+	"time"
+
 	"collector/libs/platform/message"
 	"collector/services/controle/internal/regles"
 )
@@ -18,9 +22,46 @@ var (
 )
 
 type requestData struct {
-	ArticleID string      `json:"article_id"`
-	Revision  int         `json:"revision"`
-	Listing   listingData `json:"listing"`
+	ArticleID   string      `json:"article_id"`
+	Revision    int         `json:"revision"`
+	SubmittedAt time.Time   `json:"submitted_at"`
+	Seller      sellerData  `json:"seller"`
+	Listing     listingData `json:"listing"`
+}
+
+func (r requestData) submission() regles.Submission {
+	return regles.Submission{
+		SubmittedAt: r.SubmittedAt,
+		Seller:      r.Seller.seller(),
+		Listing:     r.Listing.listing(),
+	}
+}
+
+type sellerData struct {
+	MemberSince calendarDate `json:"member_since"`
+	Suspended   bool         `json:"suspended"`
+}
+
+func (s sellerData) seller() regles.Seller {
+	return regles.Seller{
+		MemberSince: time.Time(s.MemberSince),
+		Suspended:   s.Suspended,
+	}
+}
+
+type calendarDate time.Time
+
+func (d *calendarDate) UnmarshalJSON(raw []byte) error {
+	var text string
+	if err := json.Unmarshal(raw, &text); err != nil {
+		return err
+	}
+	parsed, err := time.Parse(time.DateOnly, text)
+	if err != nil {
+		return fmt.Errorf("date du compte vendeur : %w", err)
+	}
+	*d = calendarDate(parsed)
+	return nil
 }
 
 type listingData struct {

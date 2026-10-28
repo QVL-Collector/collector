@@ -11,18 +11,41 @@ Applique les règles de publication à chaque demande de contrôle et publie le 
 
 Le service ne déclare aucune file ni aucun échange : la topologie est posée par l'IaC. Une file ou un échange absent, ou un droit refusé, arrête le service en erreur.
 
-## Règles, version 2
+## Règles, version 3
 
-Évaluées dans cet ordre, la première qui s'applique fixe l'issue :
+Évaluées dans cet ordre, la première qui s'applique fixe l'issue ; les refus passent avant les « à vérifier » :
 
-| Condition | Issue | Motif |
+| Condition | Issue | Motif | Fichier |
+|---|---|---|---|
+| Vendeur suspendu (US-019) | `refuse` | `compte_non_autorise` | `compte.go` |
+| Titre, description ou catégorie vides (espaces seuls compris), ou prix absent (US-013) | `refuse` | `annonce_incomplete` | `completude.go` |
+| Titre ou description contenant des coordonnées (US-018) | `refuse` | `coordonnees_detectees` | `coordonnees.go` |
+| Catégorie absente du référentiel du Contrôle (US-013) | `a_verifier` | `categorie_inconnue` | `categorie.go` |
+| Prix hors de la plage de la catégorie, bornes incluses dans la plage (US-019) | `a_verifier` | `prix_a_confirmer` | `prix.go` |
+| Ancienneté du vendeur sous le seuil et prix strictement au-dessus du seuil de vigilance de la catégorie (US-019) | `a_verifier` | `vendeur_a_verifier` | `vendeur.go` |
+| Sinon | `publie` | — | |
+
+Chaque résultat porte `rules_version: 3`, contrat inchangé en v1. Les règles sont des fonctions pures de la demande, seuils injectés par `regles.New(catalogue, politique d'ancienneté)`.
+
+### Seuils
+
+Fichier versionné `internal/regles/referentiel.go`, et non variables d'environnement : un seuil modifié change l'issue des règles, il passe donc par une revue et une nouvelle `rules_version`. Les seuils ne figurent jamais dans le résultat (motif fermé, US-012 AC5). Catégories alignées sur le jeu amorcé par la Place de marché.
+
+| Catégorie | Plage acceptée | Vigilance (vendeur récent) |
 |---|---|---|
-| Titre, description ou catégorie vides (espaces seuls compris), ou prix absent (US-013) | `refuse` | `annonce_incomplete` |
-| Titre ou description contenant des coordonnées (US-018) | `refuse` | `coordonnees_detectees` |
-| Catégorie absente du référentiel du Contrôle (US-013) | `a_verifier` | `categorie_inconnue` |
-| Sinon | `publie` | — |
+| `bandes-dessinees` | 1 € à 5 000 € | 300 € |
+| `cartes-a-collectionner` | 0,50 € à 10 000 € | 500 € |
+| `figurines` | 1 € à 3 000 € | 300 € |
+| `jouets-anciens` | 2 € à 5 000 € | 400 € |
+| `monnaies` | 1 € à 20 000 € | 1 000 € |
+| `montres` | 20 € à 50 000 € | 2 000 € |
+| `vinyles` | 1 € à 2 000 € | 200 € |
 
-Chaque résultat porte `rules_version: 2`, contrat inchangé en v1. Référentiel des catégories : `internal/regles/referentiel.go`, aligné sur le jeu de catégories amorcé par la Place de marché. Prix, statut du vendeur et photos : US-019 et US-020.
+- Plage : un prix très bas sert d'appât vers un contact hors plateforme, un prix très élevé de blanchiment par auto-achat (M-FRA-02). Les bornes encadrent les prix courants du jeu de données fictif ; au-delà, l'admin confirme.
+- Vigilance : montant à partir duquel une fraude d'un vendeur sans historique coûte cher en remboursement (M-FRA-01), sans soumettre à l'admin les petites ventes d'un nouveau venu.
+- Ancienneté minimale : 30 jours, calculés en jours entiers UTC entre `seller.member_since` et la date de `submitted_at` de la demande ; le Contrôle ne lit pas l'horloge. Un mois laisse le temps aux premières ventes d'un compte d'être livrées et contestées avant qu'il vende cher sans relecture.
+
+Photos : US-020.
 
 Détection des coordonnées (`internal/coordonnees`) : texte normalisé (NFKD, accents et caractères invisibles retirés, minuscules), puis expressions RE2 à coût linéaire, compilées une fois. Elle repère les emails (`@`, « arobase », « (at) », « point », « dot »), les liens (`http://`, `www`, domaine suivi d'une extension connue), les pseudos `@…` et les noms de réseaux sociaux, et les numéros français (`0X` + 8 chiffres, `+33`, `0033`), chiffres séparés par espaces, points, tirets ou parenthèses, ou écrits en toutes lettres, ainsi que les paires séparées par `/` (`06/12/34/56/78`). Les dates complètes (`12.05.1987`, `1987-05-12`) sont écartées avant la recherche de numéros. Le résultat ne cite ni la règle ni le texte détecté.
 

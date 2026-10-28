@@ -41,7 +41,7 @@ func (r *Responder) handle(ctx context.Context, delivery broker.Delivery, publis
 	if envelope.Type != requestContract.Type || envelope.Version != requestContract.Version {
 		return r.discard(ctx, delivery, errUnexpectedContract), nil
 	}
-	verdict := r.rules.Evaluate(request.Listing.listing())
+	verdict := r.rules.Evaluate(request.submission())
 	result, err := r.resultMessage(request, verdict, envelope.CorrelationID)
 	if err != nil {
 		return r.discard(ctx, delivery, err), nil
