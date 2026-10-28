@@ -16,12 +16,14 @@ import (
 )
 
 const (
-	delaiDePublication   = 10 * time.Second
-	delaiDeTraitement    = 20 * time.Second
-	categorieNonReconnue = "timbres"
-	versionDesReglesV2   = 2
-	motifCoordonnees     = "coordonnees_detectees"
-	telephoneFictif      = "01 99 00 12 34"
+	delaiDePublication    = 10 * time.Second
+	delaiDeTraitement     = 20 * time.Second
+	categorieNonReconnue  = "timbres"
+	versionDesReglesV3    = 3
+	motifPrixAConfirmer   = "prix_a_confirmer"
+	motifVendeurAVerifier = "vendeur_a_verifier"
+	motifCoordonnees      = "coordonnees_detectees"
+	telephoneFictif       = "01 99 00 12 34"
 )
 
 type ligneOutbox struct {
@@ -207,7 +209,9 @@ func TestUS013BoutEnBoutPlaceDeMarcheEtControle(t *testing.T) {
 	t.Run("AC3 article refusé corrigé et resoumis repasse en contrôle puis publié", b.ac3RefuseCorrigeResoumisPublie)
 	t.Run("AC4 catégorie inconnue du Contrôle à vérifier, jamais publiée", b.ac4CategorieInconnueAVerifier)
 	t.Run("US-018 AC1 AC4 annonce avec téléphone refusée pour coordonnées puis publiée une fois corrigée", b.us018TelephoneRefusePuisCorrigePublie)
-	t.Run("AC5 AC8 US-018 AC5 chaque résultat porte la version des règles v2 et respecte le contrat v1", b.ac5ac8ResultatsEnVersionDeReglesV2)
+	t.Run("US-019 AC1 AC4 prix hors de la plage de la catégorie à vérifier pour prix à confirmer, sans divulguer la plage", b.us019PrixHorsPlageAVerifier)
+	t.Run("US-019 AC3 vendeur récent au-dessus du seuil de vigilance à vérifier", b.us019VendeurRecentAuDessusDeLaVigilanceAVerifier)
+	t.Run("AC5 AC8 US-018 AC5 US-019 chaque résultat porte la version des règles v3 et respecte le contrat v1", b.ac5ac8ResultatsEnVersionDeReglesV3)
 	t.Run("AC6 résultat livré deux fois ou de révision antérieure sans effet", b.ac6DoublonEtRevisionAnterieureSansEffet)
 	t.Run("AC9 soumission par un autre vendeur introuvable", b.ac9AutreVendeurIntrouvable)
 }
@@ -334,7 +338,7 @@ func (b *bancComplet) ac1PublieEnMoinsDe10Secondes(t *testing.T) {
 func (b *bancComplet) ac1PublieDansChaqueCategorie(t *testing.T) {
 	var soumis []articleRecu
 	for _, c := range b.categories(t) {
-		soumis = append(soumis, b.creerEtSoumettre(t, corpsComplet("Pièce "+c.Libelle, c.ID, 1500, 0)))
+		soumis = append(soumis, b.creerEtSoumettre(t, corpsComplet("Pièce "+c.Libelle, c.ID, 2500, 0)))
 	}
 	for _, a := range soumis {
 		b.attendreEtat(t, a.ID, etatPublie, delaiDeTraitement)
@@ -367,19 +371,19 @@ func (b *bancComplet) ac4CategorieInconnueAVerifier(t *testing.T) {
 	exigerEtat(t, b.relire(t, b.jeton, soumis.ID), etatAVerifier, motifCategorieInconnu)
 }
 
-func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV2(t *testing.T) {
+func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV3(t *testing.T) {
 	b.releverLesResultats(t)
 	if len(b.captures) == 0 {
 		t.Fatal("aucun résultat capturé")
 	}
 	for id, captures := range b.captures {
 		for _, c := range captures {
-			if c.donnees.RulesVersion != versionDesReglesV2 {
+			if c.donnees.RulesVersion != versionDesReglesV3 {
 				t.Errorf("résultat de %s en version de règles %d", id, c.donnees.RulesVersion)
 			}
 		}
 		for _, r := range b.resultatsEnregistres(t, id) {
-			if r.version != versionDesReglesV2 {
+			if r.version != versionDesReglesV3 {
 				t.Errorf("résultat enregistré de %s en version de règles %d", id, r.version)
 			}
 		}
@@ -413,6 +417,53 @@ func (b *bancComplet) us018TelephoneRefusePuisCorrigePublie(t *testing.T) {
 	resoumis := b.soumettreAvecSucces(t, b.jeton, modifie)
 	publie, _ := b.attendreEtat(t, resoumis.ID, etatPublie, delaiDeTraitement)
 	exigerEtat(t, publie, etatPublie, "")
+}
+
+func (b *bancComplet) us019PrixHorsPlageAVerifier(t *testing.T) {
+	soumis := b.creerEtSoumettre(t, corpsComplet("Figurine Tintin à prix cassé", categorieSure, 99, 0))
+	aVerifier, _ := b.attendreEtat(t, soumis.ID, etatAVerifier, delaiDeTraitement)
+	exigerEtat(t, aVerifier, etatAVerifier, motifPrixAConfirmer)
+	exigerEtat(t, b.dansMesArticles(t, b.jeton, soumis.ID), etatAVerifier, motifPrixAConfirmer)
+	var resultat struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(b.capture(t, soumis.ID, aVerifier.Revision).livraison.Body, &resultat); err != nil {
+		t.Fatalf("résultat : %v", err)
+	}
+	for _, revele := range []string{"300000", "plage", "seuil", "min", "max"} {
+		if strings.Contains(string(resultat.Data), revele) {
+			t.Errorf("le résultat publié révèle %q : %s", revele, resultat.Data)
+		}
+	}
+	b.exigerDemandeSansIdentiteDuVendeur(t, soumis.ID)
+}
+
+func (b *bancComplet) exigerDemandeSansIdentiteDuVendeur(t *testing.T, id string) {
+	t.Helper()
+	var demande struct {
+		Data struct {
+			Seller map[string]json.RawMessage `json:"seller"`
+		} `json:"data"`
+	}
+	lignes := b.outboxDe(t, id)
+	if err := json.Unmarshal(lignes[len(lignes)-1].corps, &demande); err != nil {
+		t.Fatalf("demande : %v", err)
+	}
+	attendus := map[string]bool{"account_id": true, "member_since": true, "suspended": true}
+	if len(demande.Data.Seller) != len(attendus) {
+		t.Fatalf("attributs du vendeur dans la demande : %v", demande.Data.Seller)
+	}
+	for cle := range demande.Data.Seller {
+		if !attendus[cle] {
+			t.Errorf("attribut %q du vendeur transmis au Contrôle", cle)
+		}
+	}
+}
+
+func (b *bancComplet) us019VendeurRecentAuDessusDeLaVigilanceAVerifier(t *testing.T) {
+	soumis := b.creerEtSoumettre(t, corpsComplet("Figurine Tintin de collection", categorieSure, 30_001, 0))
+	aVerifier, _ := b.attendreEtat(t, soumis.ID, etatAVerifier, delaiDeTraitement)
+	exigerEtat(t, aVerifier, etatAVerifier, motifVendeurAVerifier)
 }
 
 func (b *bancComplet) ac6DoublonEtRevisionAnterieureSansEffet(t *testing.T) {
