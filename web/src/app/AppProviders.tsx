@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { anonymousSession } from '../auth/AuthSession';
 import { AuthSessionProvider } from '../auth/AuthSessionContext';
 import { CatalogueClientProvider } from '../features/catalogue/api/CatalogueClientContext';
+import { SellerClientProvider } from '../features/seller/api/SellerClientContext';
 import { AppThemeRoot } from './AppThemeRoot';
 import type { AppServices } from './createAppServices';
 
@@ -18,7 +19,9 @@ export function AppProviders({ services, queryClient, children }: AppProvidersPr
       <AuthSessionProvider session={services.authSession ?? anonymousSession}>
         <QueryClientProvider client={queryClient}>
           <CatalogueClientProvider client={services.catalogueClient}>
-            {children}
+            <SellerClientProvider client={services.sellerClient}>
+              {children}
+            </SellerClientProvider>
           </CatalogueClientProvider>
         </QueryClientProvider>
       </AuthSessionProvider>

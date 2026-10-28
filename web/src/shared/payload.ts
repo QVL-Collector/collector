@@ -14,6 +14,10 @@ export function isRecord(value: unknown): value is PayloadRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+export function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
 export function expectRecord(value: unknown, path: string): PayloadRecord {
   if (!isRecord(value)) {
     throw new InvalidPayloadError(path);

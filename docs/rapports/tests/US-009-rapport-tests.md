@@ -7,7 +7,7 @@
 | Date | 2026-10-26 |
 | Fonction | Test |
 | Périmètre de ce lot | Back (`services/place-de-marche`, `libs/platform`) : AC1, AC2, AC3, AC4 (partie API), AC6, AC7, AC8, AC9 |
-| Hors périmètre de ce lot | AC5 (validation et publication de l'OpenAPI en CI, DevOps), AC10 (Job d'amorçage, DevOps), AC11 (accessibilité, Front), affichage de l'erreur dans le formulaire (AC4, Front) |
+| Hors périmètre de ce lot | AC5 (validation et publication de l'OpenAPI en CI, DevOps), AC10 (Job d'amorçage, DevOps). AC11 et l'affichage de l'erreur dans le formulaire (AC4) : couverts par la campagne front du 2026-10-28, voir § AC11 |
 | Outils | `go test` (Go 1.26.10), `httptest`, testcontainers-go v0.44.0 et module `postgres` v0.44.0 (image `postgres:18.3` épinglée par empreinte), kin-openapi v0.152.0, golangci-lint v2.15.0 |
 | Verdict | **Tous les AC du périmètre sont couverts et conformes sur le stockage en mémoire ; la preuve sur PostgreSQL réel reste à obtenir en CI (Docker indisponible sur le poste)** |
 
@@ -153,6 +153,14 @@ Observations sans impact sur un AC :
 - Masquage des URL présignées (D09, MD7 de D07) : à la première exécution, la chaîne de requête d'une URL présignée sortait en clair dans le journal. Le back a corrigé le masquage ; les cas sont réintroduits et verts : `X-Amz-Credential`, `X-Amz-Signature`, `X-Amz-Security-Token`, en casse d'origine et en minuscules, dans un attribut, un message et une `*url.Error`. L'hôte et les noms de paramètres restent visibles.
 - au niveau de `libs/platform/httpjson`, `{"titre":"a","TITRE":"b"}` est rejeté avec la raison `champ_inconnu` et non `cle_dupliquee` ; le corps est bien refusé en 400, comme l'exige AC9.
 
+## AC11 — Accessibilité du formulaire (front, 2026-10-28, branche US-013)
+
+| AC | Scénario | Attendu | Réel | Statut |
+|---|---|---|---|---|
+| AC11 (et AC4, affichage) | `web/src/acceptance/US-009/AC11-formulaire-accessible.test.tsx` (12 tests) : libellés des cinq champs en FR et EN ; 400 Problem Details `erreurs[]` (titre `trop_long`, `categorieId` `categorie_inconnue`, `prix.montantCentimes` `negatif` puis `au_dela_du_plafond`, création `caractere_interdit`) ; axe-core sur le formulaire vide et en erreur, FR et EN | Chaque champ a un libellé ; chaque erreur est rattachée à son champ (`aria-invalid`, description accessible) et annoncée (résumé `role="alert"` au bon nombre, focus sur le premier champ en erreur) ; erreurs effacées après un enregistrement réussi ; aucune violation serious ou critical | Conforme | OK |
+
+Détail et exécutions : [rapport US-013, § 8](US-013-rapport-tests.md#8-campagne-front-2026-10-28).
+
 ## Reste à prouver (Docker requis)
 
 | Point | Moyen | Où |
@@ -162,7 +170,7 @@ Observations sans impact sur un AC :
 | Idempotence des migrations (deux applications successives) | Même test | CI |
 | Conformité au contrat des réponses issues de PostgreSQL | Même test | CI |
 | AC6 contre le Keycloak de compose | Acceptation Playwright `request` | Lot acceptation |
-| AC5, AC10, AC11 | Hors lot | DevOps, Front |
+| AC5, AC10 | Hors lot | DevOps |
 
 Le test d'intégration tourne sans changement du workflow : la CI exécute `go test -race ./...` sur `ubuntu-24.04`, où Docker est disponible. Il crée les rôles nommés dans le README du service ; le Job d'amorçage (AC10) doit créer exactement les mêmes. Il n'a pas encore été exécuté : un échec à la première exécution en CI pourrait venir du banc de test lui-même, pas forcément du service.
 

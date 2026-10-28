@@ -122,7 +122,9 @@ paths:
     put:
       tags: [Vendeur]
       operationId: modifierBrouillon
-      summary: Remplacer le contenu d'un brouillon ; la révision lue est exigée et augmente de 1
+      summary: >-
+        Remplacer le contenu d'un article brouillon ou refusé, sans changer son état ; la révision lue est exigée et
+        augmente de 1
       security:
         - jetonKeycloak: []
       requestBody:
@@ -134,6 +136,52 @@ paths:
       responses:
         "200":
           description: Brouillon modifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "409":
+          $ref: "#/components/responses/Conflit"
+        "413":
+          $ref: "#/components/responses/CorpsTropVolumineux"
+        "415":
+          $ref: "#/components/responses/TypeNonPrisEnCharge"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+  /vendeur/articles/{id}/soumission:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Vendeur]
+      operationId: soumettreAuControle
+      summary: >-
+        Soumettre un article brouillon ou refusé au contrôle de publication ; la révision lue est exigée et augmente
+        de 1. L'article passe en_controle, son motif est effacé, et l'issue arrive de façon asynchrone : publie,
+        refuse ou a_verifier, avec le motif de l'issue, à relire par GET /vendeur/articles/{id}
+      security:
+        - jetonKeycloak: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Soumission"
+      responses:
+        "202":
+          description: Soumission acceptée, article en_controle
           content:
             application/json:
               schema:
@@ -272,6 +320,29 @@ components:
           $ref: "#/components/schemas/SaisiePrix"
         fraisDePort:
           $ref: "#/components/schemas/SaisieFraisDePort"
+    Soumission:
+      description: Révision lue de l'article ; une révision périmée répond 409.
+      type: object
+      additionalProperties: false
+      required: [revision]
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+    Motif:
+      type: string
+      nullable: true
+      description: >-
+        Catégorie du motif de la dernière issue de contrôle ; présente pour les états refuse et a_verifier, null sinon.
+        Ne cite jamais la règle ni le seuil appliqués.
+      enum:
+        - annonce_incomplete
+        - coordonnees_detectees
+        - compte_non_autorise
+        - prix_a_confirmer
+        - vendeur_a_verifier
+        - categorie_inconnue
+        - null
     Categorie:
       type: object
       additionalProperties: false
@@ -297,7 +368,7 @@ components:
     Article:
       type: object
       additionalProperties: false
-      required: [id, etat, revision, titre, description, categorie, prix, fraisDePort, creeLe, modifieLe]
+      required: [id, etat, revision, titre, description, categorie, prix, fraisDePort, motif, creeLe, modifieLe]
       properties:
         id:
           type: string
@@ -324,6 +395,8 @@ components:
           allOf:
             - $ref: "#/components/schemas/Montant"
           nullable: true
+        motif:
+          $ref: "#/components/schemas/Motif"
         creeLe:
           type: string
           format: date-time
@@ -376,8 +449,8 @@ components:
           type: string
           description: >-
             about:blank pour les erreurs génériques ; sinon urn:collector:probleme:saisie-invalide,
-            urn:collector:probleme:corps-invalide, urn:collector:probleme:revision-perimee ou
-            urn:collector:probleme:article-non-modifiable
+            urn:collector:probleme:corps-invalide, urn:collector:probleme:revision-perimee,
+            urn:collector:probleme:article-non-modifiable ou urn:collector:probleme:article-non-soumettable
         title:
           type: string
         status:
@@ -418,7 +491,7 @@ components:
           schema:
             $ref: "#/components/schemas/Probleme"
     Conflit:
-      description: Révision périmée, ou article non modifiable dans son état
+      description: Révision périmée, ou article non modifiable ou non soumettable dans son état
       content:
         application/problem+json:
           schema:

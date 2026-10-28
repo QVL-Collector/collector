@@ -33,7 +33,8 @@ type echange struct {
 }
 
 type environnement struct {
-	serveur  *httptest.Server
+	adresse  string
+	client   *http.Client
 	jetons   *fabriqueDeJetons
 	mu       sync.Mutex
 	echanges []echange
@@ -71,6 +72,7 @@ type articleRecu struct {
 	Categorie   *categorieRecue `json:"categorie"`
 	Prix        *montant        `json:"prix"`
 	FraisDePort *montant        `json:"fraisDePort"`
+	Motif       *string         `json:"motif"`
 	CreeLe      string          `json:"creeLe"`
 	ModifieLe   string          `json:"modifieLe"`
 }
@@ -103,25 +105,41 @@ func journalMuet() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func demarrer(t *testing.T, service api.ArticleService) *environnement {
+type emetteurDeJetons struct {
+	cle  cleDeSignature
+	jwks *httptest.Server
+}
+
+func nouvelEmetteurDeJetons(t *testing.T) emetteurDeJetons {
 	t.Helper()
 	cle := nouvelleCle(t, "cle-collector")
-	jwks := servirJWKS(t, cle)
+	return emetteurDeJetons{cle: cle, jwks: servirJWKS(t, cle)}
+}
+
+func (m emetteurDeJetons) environnementSur(t *testing.T, adresse string, client *http.Client) *environnement {
+	t.Helper()
+	return &environnement{
+		adresse: adresse,
+		client:  client,
+		jetons:  &fabriqueDeJetons{t: t, cle: m.cle, intrus: nouvelleCle(t, m.cle.kid)},
+	}
+}
+
+func demarrer(t *testing.T, service api.ArticleService) *environnement {
+	t.Helper()
+	emetteur := nouvelEmetteurDeJetons(t)
 	verificateur, err := token.NewVerifier(t.Context(), token.Config{
 		Issuer:          emetteurAttendu,
 		Audience:        audienceAttendue,
 		AuthorizedParty: clientAutorise,
-		KeySetURL:       jwks.URL,
+		KeySetURL:       emetteur.jwks.URL,
 	})
 	if err != nil {
 		t.Fatalf("vérificateur de jetons : %v", err)
 	}
 	serveur := httptest.NewServer(publicHandler(journalMuet(), service, verificateur))
 	t.Cleanup(serveur.Close)
-	return &environnement{
-		serveur: serveur,
-		jetons:  &fabriqueDeJetons{t: t, cle: cle, intrus: nouvelleCle(t, cle.kid)},
-	}
+	return emetteur.environnementSur(t, serveur.URL, serveur.Client())
 }
 
 func demarrerEnMemoire(t *testing.T) *environnement {
@@ -156,7 +174,7 @@ func (e *environnement) envoyer(t *testing.T, methode, chemin, jeton string, opt
 	for _, o := range options {
 		o(&parametres)
 	}
-	requete, err := http.NewRequestWithContext(t.Context(), methode, e.serveur.URL+chemin, bytes.NewReader(parametres.corps))
+	requete, err := http.NewRequestWithContext(t.Context(), methode, e.adresse+chemin, bytes.NewReader(parametres.corps))
 	if err != nil {
 		t.Fatalf("requête %s %s : %v", methode, chemin, err)
 	}
@@ -176,7 +194,7 @@ func (e *environnement) envoyer(t *testing.T, methode, chemin, jeton string, opt
 
 func (e *environnement) executer(t *testing.T, requete *http.Request) reponse {
 	t.Helper()
-	brute, err := e.serveur.Client().Do(requete)
+	brute, err := e.client.Do(requete)
 	if err != nil {
 		t.Fatalf("appel %s %s : %v", requete.Method, requete.URL.Path, err)
 	}

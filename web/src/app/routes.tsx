@@ -1,8 +1,14 @@
 import type { RouteObject } from 'react-router';
 import { signInCallbackPath } from '../auth/authPaths';
 import { CataloguePage } from '../features/catalogue/components/CataloguePage';
+import { ArticleEditorPage } from '../features/seller/components/ArticleEditorPage';
+import { NewArticlePage } from '../features/seller/components/NewArticlePage';
 import { SellerSpacePage } from '../features/seller/components/SellerSpacePage';
-import { sellerSpacePath } from '../features/seller/sellerPaths';
+import {
+  articleRoutePattern,
+  newArticlePath,
+  sellerSpacePath,
+} from '../features/seller/sellerPaths';
 import { AppLayout } from './layout/AppLayout';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RouteErrorPage } from './pages/RouteErrorPage';
@@ -18,7 +24,11 @@ export const appRoutes: RouteObject[] = [
       { path: signInCallbackPath, element: <SignInCallbackPage /> },
       {
         element: <RequireAuthentication requiredRole="vendeur" />,
-        children: [{ path: sellerSpacePath, element: <SellerSpacePage /> }],
+        children: [
+          { path: sellerSpacePath, element: <SellerSpacePage /> },
+          { path: newArticlePath, element: <NewArticlePage /> },
+          { path: articleRoutePattern, element: <ArticleEditorPage /> },
+        ],
       },
       { path: '*', element: <NotFoundPage /> },
     ],

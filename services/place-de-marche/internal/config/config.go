@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"collector/libs/platform/broker"
 	"collector/libs/platform/token"
 )
 
@@ -19,6 +20,8 @@ const (
 	envKeySetURL             = "OIDC_JEU_DE_CLES_URL"
 	envAudience              = "OIDC_AUDIENCE"
 	envAuthorizedParty       = "OIDC_CLIENT_AUTORISE"
+	envResultPublisher       = "CANAL_EMETTEUR_ATTENDU"
+	defaultResultPublisher   = "controle"
 	defaultAPIAddress        = ":8080"
 	defaultManagementAddress = ":9090"
 	defaultAudience          = "place-de-marche"
@@ -33,11 +36,17 @@ type Database struct {
 	URL string
 }
 
+type Channel struct {
+	Endpoint        broker.Endpoint
+	ResultPublisher string
+}
+
 type Server struct {
 	APIAddress        string
 	ManagementAddress string
 	Database          Database
 	Token             token.Config
+	Channel           Channel
 }
 
 func LoadDatabase(lookup Lookup) (Database, error) {
@@ -64,11 +73,19 @@ func LoadServer(lookup Lookup) (Server, error) {
 	if err != nil {
 		return Server{}, err
 	}
+	endpoint, err := broker.LoadEndpoint(lookup)
+	if err != nil {
+		return Server{}, err
+	}
 	return Server{
 		APIAddress:        valueOrDefault(lookup(envAPIAddress), defaultAPIAddress),
 		ManagementAddress: valueOrDefault(lookup(envManagementAddress), defaultManagementAddress),
 		Database:          database,
 		Token:             tokenConfig,
+		Channel: Channel{
+			Endpoint:        endpoint,
+			ResultPublisher: valueOrDefault(lookup(envResultPublisher), defaultResultPublisher),
+		},
 	}, nil
 }
 

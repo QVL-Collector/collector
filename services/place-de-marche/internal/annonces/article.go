@@ -3,15 +3,17 @@ package annonces
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 var (
-	ErrArticleNotFound    = errors.New("article introuvable")
-	ErrStaleRevision      = errors.New("révision périmée")
-	ErrArticleNotEditable = errors.New("article non modifiable dans son état")
+	ErrArticleNotFound       = errors.New("article introuvable")
+	ErrStaleRevision         = errors.New("révision périmée")
+	ErrArticleNotEditable    = errors.New("article non modifiable dans son état")
+	ErrArticleNotSubmittable = errors.New("article non soumettable dans son état")
 )
 
 type ArticleID uuid.UUID
@@ -38,16 +40,36 @@ func ParseSellerID(subject string) (SellerID, error) {
 	return SellerID(parsed), nil
 }
 
+func (id SellerID) String() string {
+	return uuid.UUID(id).String()
+}
+
 type Revision int
 
 const FirstRevision Revision = 1
 
 type Status string
 
-const StatusDraft Status = "brouillon"
+const (
+	StatusDraft       Status = "brouillon"
+	StatusUnderReview Status = "en_controle"
+	StatusPublished   Status = "publie"
+	StatusRefused     Status = "refuse"
+	StatusToVerify    Status = "a_verifier"
+)
+
+var sellerHeldStatuses = []Status{StatusDraft, StatusRefused}
+
+func SellerHeldStatuses() []Status {
+	return slices.Clone(sellerHeldStatuses)
+}
 
 func (s Status) Editable() bool {
-	return s == StatusDraft
+	return slices.Contains(sellerHeldStatuses, s)
+}
+
+func (s Status) Submittable() bool {
+	return slices.Contains(sellerHeldStatuses, s)
 }
 
 type Currency string
@@ -84,6 +106,7 @@ type Article struct {
 	Category    *Category
 	Price       *Money
 	ShippingFee *Money
+	Reason      *ReviewReason
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

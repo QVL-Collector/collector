@@ -89,13 +89,21 @@ type draftUpdatePayload struct {
 }
 
 func (p draftUpdatePayload) revision() (annonces.Revision, []problem.FieldError) {
-	if p.Revision == nil {
+	return revisionOf(p.Revision)
+}
+
+type submissionPayload struct {
+	Revision *int `json:"revision"`
+}
+
+func revisionOf(raw *int) (annonces.Revision, []problem.FieldError) {
+	if raw == nil {
 		return 0, []problem.FieldError{{Field: revisionField, Code: codeRequired}}
 	}
-	if *p.Revision < int(annonces.FirstRevision) {
+	if *raw < int(annonces.FirstRevision) {
 		return 0, []problem.FieldError{{Field: revisionField, Code: codeInvalid}}
 	}
-	return annonces.Revision(*p.Revision), nil
+	return annonces.Revision(*raw), nil
 }
 
 func violationErrors(violations []annonces.Violation) []problem.FieldError {
@@ -125,6 +133,7 @@ type articleResponse struct {
 	Category    *categoryResponse `json:"categorie"`
 	Price       *moneyResponse    `json:"prix"`
 	ShippingFee *moneyResponse    `json:"fraisDePort"`
+	Reason      *string           `json:"motif"`
 	CreatedAt   time.Time         `json:"creeLe"`
 	UpdatedAt   time.Time         `json:"modifieLe"`
 }
@@ -150,6 +159,7 @@ func toArticleResponse(article annonces.Article) articleResponse {
 		Category:    toCategoryResponse(article.Category),
 		Price:       toMoneyResponse(article.Price),
 		ShippingFee: toMoneyResponse(article.ShippingFee),
+		Reason:      toReasonResponse(article.Reason),
 		CreatedAt:   article.CreatedAt.UTC(),
 		UpdatedAt:   article.UpdatedAt.UTC(),
 	}
@@ -176,6 +186,14 @@ func toCategoryResponse(category *annonces.Category) *categoryResponse {
 		return nil
 	}
 	return &categoryResponse{ID: string(category.ID), Label: category.Label}
+}
+
+func toReasonResponse(reason *annonces.ReviewReason) *string {
+	if reason == nil {
+		return nil
+	}
+	value := string(*reason)
+	return &value
 }
 
 func toMoneyResponse(money *annonces.Money) *moneyResponse {

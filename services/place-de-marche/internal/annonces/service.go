@@ -30,6 +30,8 @@ type Articles interface {
 	UpdateDraft(ctx context.Context, seller SellerID, id ArticleID, expected Revision, content Content) (Article, error)
 	FindOwned(ctx context.Context, seller SellerID, id ArticleID) (Article, error)
 	ListOwned(ctx context.Context, seller SellerID, page PageRequest) (ArticlePage, error)
+	Submit(ctx context.Context, seller SellerID, id ArticleID, expected Revision) (Article, error)
+	ApplyReview(ctx context.Context, outcome ReviewOutcome) (bool, error)
 }
 
 type Categories interface {
@@ -66,6 +68,14 @@ func (s *Service) OwnArticle(ctx context.Context, seller SellerID, id ArticleID)
 
 func (s *Service) OwnArticles(ctx context.Context, seller SellerID, page PageRequest) (ArticlePage, error) {
 	return s.articles.ListOwned(ctx, seller, page)
+}
+
+func (s *Service) Submit(ctx context.Context, seller SellerID, id ArticleID, expected Revision) (Article, error) {
+	return s.articles.Submit(ctx, seller, id, expected)
+}
+
+func (s *Service) ApplyReview(ctx context.Context, outcome ReviewOutcome) (bool, error) {
+	return s.articles.ApplyReview(ctx, outcome)
 }
 
 func (s *Service) Categories(ctx context.Context) ([]Category, error) {

@@ -10,6 +10,7 @@ import type {
   CataloguePage,
   CatalogueQuery,
 } from '../../features/catalogue/domain/catalogue';
+import type { SellerClient } from '../../features/seller/domain/sellerArticle';
 import { initI18n } from '../../i18n/initI18n';
 import type { SupportedLanguage } from '../../i18n/languages';
 
@@ -114,8 +115,21 @@ export function renderApp(services: AppServices, url = '/'): RenderResult {
   return render(<App services={services} />);
 }
 
+function sellerOutOfScope(): Promise<never> {
+  return Promise.reject(new Error('Espace vendeur hors du périmètre du catalogue'));
+}
+
+const neutralSellerClient: SellerClient = {
+  listMyArticles: sellerOutOfScope,
+  listCategories: sellerOutOfScope,
+  getMyArticle: sellerOutOfScope,
+  createDraft: sellerOutOfScope,
+  updateDraft: sellerOutOfScope,
+  submitForControl: sellerOutOfScope,
+};
+
 export function renderCatalogue(catalogue: FakeCatalogue, url = '/'): RenderResult {
-  return renderApp({ catalogueClient: catalogue.client }, url);
+  return renderApp({ catalogueClient: catalogue.client, sellerClient: neutralSellerClient }, url);
 }
 
 export function formattedPrice(amountInCents: number, locale: string): string {
