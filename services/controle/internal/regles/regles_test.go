@@ -34,9 +34,9 @@ func exigerVerdict(t *testing.T, recu regles.Verdict, issue regles.Issue, motif 
 	}
 }
 
-func TestUS013AC5VersionDesReglesEgaleA1(t *testing.T) {
-	if regles.RulesVersion != 1 {
-		t.Fatalf("version des règles %d, attendue 1", regles.RulesVersion)
+func TestUS013AC5US018AC5VersionDesReglesEgaleA2(t *testing.T) {
+	if regles.RulesVersion != 2 {
+		t.Fatalf("version des règles %d, attendue 2", regles.RulesVersion)
 	}
 }
 
