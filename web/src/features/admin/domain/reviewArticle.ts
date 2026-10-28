@@ -1,18 +1,14 @@
 import type { RefusalReason } from '../../../shared/articleReason';
 import type { ControlReason } from '../../../shared/controlReason';
+import type { CategoryPayload } from '../../../shared/marketplacePayload';
 import type { Money } from '../../../shared/Money';
-
-export type ReviewCategory = {
-  readonly id: string;
-  readonly label: string;
-};
 
 export type ReviewArticle = {
   readonly id: string;
   readonly revision: number;
   readonly title: string;
   readonly description: string;
-  readonly category: ReviewCategory | null;
+  readonly category: CategoryPayload | null;
   readonly price: Money | null;
   readonly shippingCost: Money | null;
   readonly controlReason: ControlReason;

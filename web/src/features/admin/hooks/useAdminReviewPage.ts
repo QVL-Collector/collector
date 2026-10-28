@@ -1,7 +1,7 @@
 import { useCallback, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageIdentity } from '../../../navigation/usePageIdentity';
-import { toReviewQueueView, type ReviewQueueView } from './reviewQueueView';
+import { lastPageIfBeyond, toReviewQueueView, type ReviewQueueView } from './reviewQueueView';
 import { useArticlesToReview } from './useArticlesToReview';
 import { useDecisionAnnouncement } from './useDecisionAnnouncement';
 import type { DecisionListener } from './useReviewDecision';
@@ -23,6 +23,10 @@ export function useAdminReviewPage(): AdminReviewPageModel {
   const headingRef = usePageIdentity(t('admin.documentTitle'));
   const [page, setPage] = useState(1);
   const query = useArticlesToReview(page);
+  const lastPage = lastPageIfBeyond(query.data, page);
+  if (lastPage !== null) {
+    setPage(lastPage);
+  }
   const view = toReviewQueueView(query, page);
   const listAnnouncement = useReviewQueueAnnouncement(view);
   const { announcement, focusTargetRef, announceDecision } = useDecisionAnnouncement();

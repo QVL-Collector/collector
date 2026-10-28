@@ -318,6 +318,9 @@ export const wording = {
   conflict: 'L’article a changé, rechargez la liste',
   reload: 'Recharger la liste',
   empty: 'Aucun article à vérifier',
+  pagination: 'Pagination des articles à vérifier',
+  goToPage: (page: number) => `Aller à la page ${String(page)}`,
+  currentPage: (page: number) => `Page ${String(page)}, page actuelle`,
   forbidden: 'Accès réservé',
   controlReasons: {
     annonce_incomplete: 'Annonce incomplète',

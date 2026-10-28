@@ -86,7 +86,8 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, tag Administration, i
 - `/admin` (rôle `admin`) : « Articles à vérifier » (`GET /v1/admin/articles`), contenu de la révision examinée, motif du contrôle traduit et révision.
 - « Publier » ou « Refuser » (`POST /v1/admin/articles/{id}/decision`, révision examinée envoyée). Refuser ouvre une boîte de dialogue : motif choisi dans la liste fermée (`src/shared/articleReason.ts`), puis « Confirmer le refus ». L'article quitte la liste, la décision est annoncée en `role="status"` et le focus revient sur le titre de la liste.
 - 409 (ou 404) : décision non appliquée, « L'article a changé, rechargez la liste » et bouton « Recharger la liste » ; 403 : message dédié.
-- Les motifs de refus de l'admin (`prix_abusif`, `article_interdit`, `vendeur_non_fiable`) sont traduits côté vendeur avec ceux du contrôle (`useControlReasonLabel`).
+- Les motifs de refus de l'admin (`prix_abusif`, `article_interdit`, `vendeur_non_fiable`) sont traduits côté vendeur avec ceux du contrôle (`useArticleReasonLabel`).
+- Trancher le dernier article d'une page au-delà de la première ramène à la dernière page existante ; l'état « Aucun article à vérifier » ne s'affiche que si le total est nul.
 - Lien « Articles à vérifier » dans l'en-tête pour le seul rôle `admin` ; un autre rôle voit « Accès réservé ».
 - Démonstration : trois articles à vérifier, dont deux titres avec balisage (`<script>`, `<b>`) affichés en texte ; la « Pièce de 5 francs » répond 409 à la première décision pour rejouer le conflit.
 
@@ -119,7 +120,7 @@ Le rôle affiché n'est qu'un confort d'interface : aucune décision d'autorisat
 
 - Français par défaut (langue du navigateur sinon), anglais ; changement de langue sans rechargement, `lang` de `<html>` et textes internes MUI suivis.
 - Langue conservée pendant la session sans aucun stockage (D06) : elle voyage dans le `state` OIDC de la connexion et est réappliquée au retour sur `/rappel`, succès ou échec ; `ui_locales` est transmis au serveur d'autorisation. Un rechargement complet repart de la langue du navigateur (US-025).
-- Motifs du contrôle (`src/shared/controlReason.ts`, liste fermée du contrat) et motifs de refus de l'admin (`src/shared/articleReason.ts`) traduits par `useControlReasonLabel` ; montants par `useMoneyFormatter` (`Intl`, `fr-FR` ou `en-GB`).
+- Motifs du contrôle (`src/shared/controlReason.ts`, liste fermée du contrat) et motifs de refus de l'admin (`src/shared/articleReason.ts`) traduits par `useArticleReasonLabel` ; montants par `useMoneyFormatter` (`Intl`, `fr-FR` ou `en-GB`).
 - `src/i18n/locales/en.ts` est typé sur `fr.ts` : une clé manquante ou en trop casse la compilation. `npm run i18n:check` (Node 24, sans dépendance) bloque aussi les textes vides et les variables `{{…}}` différentes d'une langue à l'autre.
 - Texte en dur bloqué au lint : `i18next/no-literal-string` dans le JSX, `no-restricted-syntax` sur les attributs lus par les aides techniques (`aria-label`, `title`, `alt`, `label`…).
 - Lien d'évitement, titre de page et focus sur le `h1` à chaque navigation, annonces dans une zone `role="status"`, cibles tactiles de 2,75 rem, animations coupées sous `prefers-reduced-motion`.

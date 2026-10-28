@@ -46,6 +46,10 @@ function card(title: string): HTMLElement {
   return item;
 }
 
+function adminPagination(): HTMLElement {
+  return screen.getByRole('navigation', { name: wording.pagination });
+}
+
 function shownTitles(): string[] {
   return within(screen.getByRole('list', { name: 'Annonces à vérifier' }))
     .getAllByRole('heading', { level: 3 })
@@ -161,6 +165,29 @@ describe('US-022 AC2 publier ou refuser avec un motif de la liste fermée', () =
     });
     expect(administration().articles.get(second.id)?.etat).toBe('publie');
     expect(shownTitles()).toEqual([first.titre]);
+  });
+
+  it('Given 21 articles à vérifier, When l’admin tranche le seul article de la page 2, Then l’écran revient en page 1 avec les 20 restants sans afficher l’état vide', async () => {
+    const pending = Array.from({ length: 21 }, (_, index) => toReview(index + 1));
+    const lastOne = pending[20]?.titre ?? '';
+    givenToReview(...pending);
+    await openAdminScreenWith(20);
+    await userEvent.click(
+      within(adminPagination()).getByRole('button', { name: wording.goToPage(2) }),
+    );
+    await screen.findByRole('heading', { level: 3, name: lastOne });
+
+    await publish(lastOne);
+
+    await expectAnnounced(wording.published(lastOne));
+    await vi.waitFor(() => {
+      expect(shownTitles()).toEqual(pending.slice(0, 20).map((article) => article.titre));
+    });
+    expect(screen.queryByText(wording.empty)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Publier « / })).toHaveLength(20);
+    expect(administration().articles.get(pending[20]?.id ?? '')?.etat).toBe('publie');
+    expect(screen.queryByRole('button', { name: wording.goToPage(2) })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: wording.currentPage(2) })).not.toBeInTheDocument();
   });
 
   it('Given le dialogue de refus, When il s’ouvre, Then il propose exactement les cinq motifs de la liste fermée', async () => {
