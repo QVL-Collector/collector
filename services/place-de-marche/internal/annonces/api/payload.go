@@ -176,7 +176,7 @@ func toArticlePageResponse(page annonces.ArticlePage, request annonces.PageReque
 func toCategoryListResponse(categories []annonces.Category) categoryListResponse {
 	responses := make([]categoryResponse, 0, len(categories))
 	for _, category := range categories {
-		responses = append(responses, categoryResponse{ID: string(category.ID), Label: category.Label})
+		responses = append(responses, categoryResponseOf(category))
 	}
 	return categoryListResponse{Categories: responses}
 }
@@ -185,7 +185,8 @@ func toCategoryResponse(category *annonces.Category) *categoryResponse {
 	if category == nil {
 		return nil
 	}
-	return &categoryResponse{ID: string(category.ID), Label: category.Label}
+	response := categoryResponseOf(*category)
+	return &response
 }
 
 func toReasonResponse(reason *annonces.ReviewReason) *string {
@@ -200,5 +201,14 @@ func toMoneyResponse(money *annonces.Money) *moneyResponse {
 	if money == nil {
 		return nil
 	}
-	return &moneyResponse{AmountInCents: money.Cents, Currency: string(money.Currency)}
+	response := moneyResponseOf(*money)
+	return &response
+}
+
+func moneyResponseOf(money annonces.Money) moneyResponse {
+	return moneyResponse{AmountInCents: money.Cents, Currency: string(money.Currency)}
+}
+
+func categoryResponseOf(category annonces.Category) categoryResponse {
+	return categoryResponse{ID: string(category.ID), Label: category.Label}
 }

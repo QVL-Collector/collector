@@ -18,6 +18,8 @@ import (
 const (
 	basePath          = "/marche/v1"
 	sellerArticles    = basePath + "/vendeur/articles"
+	publishedArticles = basePath + "/articles"
+	categoryParameter = "categorie"
 	sellerRole        = "vendeur"
 	maxBodyBytes      = 32 << 10
 	pageParameter     = "page"
@@ -40,6 +42,8 @@ type ArticleService interface {
 	OwnArticle(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID) (annonces.Article, error)
 	OwnArticles(ctx context.Context, seller annonces.SellerID, page annonces.PageRequest) (annonces.ArticlePage, error)
 	Categories(ctx context.Context) ([]annonces.Category, error)
+	Catalogue(ctx context.Context, filter annonces.CatalogueFilter, page annonces.PageRequest) (annonces.CataloguePage, error)
+	PublishedArticle(ctx context.Context, id annonces.ArticleID) (annonces.PublishedArticle, error)
 }
 
 type Authenticator interface {
@@ -57,6 +61,8 @@ func Register(mux *http.ServeMux, service ArticleService, authenticator Authenti
 		return authenticator.Authenticate(logger, token.RequireRole(sellerRole, handler))
 	}
 	mux.HandleFunc("GET "+basePath+"/categories", h.listCategories)
+	mux.HandleFunc("GET "+publishedArticles, h.listCatalogue)
+	mux.HandleFunc("GET "+publishedArticles+"/{id}", h.publishedArticle)
 	mux.Handle("POST "+sellerArticles, sellerOnly(h.createDraft))
 	mux.Handle("GET "+sellerArticles, sellerOnly(h.listOwnArticles))
 	mux.Handle("GET "+sellerArticles+"/{id}", sellerOnly(h.ownArticle))
@@ -221,14 +227,11 @@ func pageRequestOf(query url.Values) (annonces.PageRequest, []problem.FieldError
 }
 
 func boundedParameter(query url.Values, name string, fallback, maximum int) (int, []problem.FieldError) {
-	values, present := query[name]
-	if !present {
-		return fallback, nil
+	raw, present, fieldErrors := singleParameter(query, name)
+	if !present || len(fieldErrors) > 0 {
+		return fallback, fieldErrors
 	}
-	if len(values) != 1 {
-		return 0, []problem.FieldError{{Field: name, Code: codeInvalid}}
-	}
-	value, err := strconv.Atoi(values[0])
+	value, err := strconv.Atoi(raw)
 	if err != nil {
 		return 0, []problem.FieldError{{Field: name, Code: codeInvalid}}
 	}
@@ -236,6 +239,17 @@ func boundedParameter(query url.Values, name string, fallback, maximum int) (int
 		return 0, []problem.FieldError{{Field: name, Code: codeOutOfBounds}}
 	}
 	return value, nil
+}
+
+func singleParameter(query url.Values, name string) (string, bool, []problem.FieldError) {
+	values, present := query[name]
+	if !present {
+		return "", false, nil
+	}
+	if len(values) != 1 || values[0] == "" {
+		return "", true, []problem.FieldError{{Field: name, Code: codeInvalid}}
+	}
+	return values[0], true, nil
 }
 
 func (h handlers) writeError(w http.ResponseWriter, r *http.Request, err error) {

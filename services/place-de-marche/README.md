@@ -1,6 +1,6 @@
 # Service Place de marché
 
-Module Annonces : brouillons du vendeur, catégories, soumission au contrôle de publication et application de son résultat. Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), messages [`controle.demande` et `controle.resultat` v1](../../contracts/README.md).
+Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication et application de son résultat. Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), messages [`controle.demande` et `controle.resultat` v1](../../contracts/README.md).
 
 ## Sous-commandes et ports
 
@@ -13,6 +13,10 @@ Module Annonces : brouillons du vendeur, catégories, soumission au contrôle de
 |---|---|---|
 | 8080 | `/marche/v1/...` | Routé par l'ALB |
 | 9090 | `GET /sante` (vivant), `GET /disponibilite` (base joignable ; ni Keycloak ni le broker interrogés) | Jamais routé ; sondes Kubernetes |
+
+## Catalogue public (US-010, US-023)
+
+Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment publié au plus ancien) et `GET /marche/v1/articles/{id}`. Seuls les articles `publie` sont lus ; un article inexistant ou non publié répond le même 404. Aucune donnée du vendeur n'est exposée. Paramètre répété, vide ou hors bornes : 400 ; catégorie inconnue : 400 `categorie_inconnue`. Lectures en transaction `READ ONLY`, index partiels `etat = 'publie'` (migration 00004).
 
 ## Cycle de soumission (US-013)
 
