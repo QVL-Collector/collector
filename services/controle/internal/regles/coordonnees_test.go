@@ -31,7 +31,7 @@ func TestUS018AC1CoordonneesDansLeTitreRefusees(t *testing.T) {
 		t.Run(nom, func(t *testing.T) {
 			annonce := annonceComplete()
 			annonce.Title = texte
-			exigerVerdict(t, regles.Reference().Evaluate(annonce), regles.IssueRefused, regles.ReasonContactDetected)
+			exigerVerdict(t, evaluer(annonce), regles.IssueRefused, regles.ReasonContactDetected)
 		})
 	}
 }
@@ -41,7 +41,7 @@ func TestUS018AC1CoordonneesDansLaDescriptionRefusees(t *testing.T) {
 		t.Run(nom, func(t *testing.T) {
 			annonce := annonceComplete()
 			annonce.Description = "Belle pièce en bon état.\n" + texte + "\nEnvoi soigné."
-			exigerVerdict(t, regles.Reference().Evaluate(annonce), regles.IssueRefused, regles.ReasonContactDetected)
+			exigerVerdict(t, evaluer(annonce), regles.IssueRefused, regles.ReasonContactDetected)
 		})
 	}
 }
@@ -58,7 +58,7 @@ func TestUS018AC3TexteSansCoordonneesPublie(t *testing.T) {
 			annonce := annonceComplete()
 			annonce.Title = texte
 			annonce.Description = texte
-			exigerVerdict(t, regles.Reference().Evaluate(annonce), regles.IssuePublished, "")
+			exigerVerdict(t, evaluer(annonce), regles.IssuePublished, "")
 		})
 	}
 }
@@ -66,21 +66,21 @@ func TestUS018AC3TexteSansCoordonneesPublie(t *testing.T) {
 func TestUS018AC4CoordonneesRetireesPuisResoumisPublie(t *testing.T) {
 	annonce := annonceComplete()
 	annonce.Description = "Contact : 06 39 98 12 34"
-	exigerVerdict(t, regles.Reference().Evaluate(annonce), regles.IssueRefused, regles.ReasonContactDetected)
+	exigerVerdict(t, evaluer(annonce), regles.IssueRefused, regles.ReasonContactDetected)
 	annonce.Description = "Belle pièce en bon état"
-	exigerVerdict(t, regles.Reference().Evaluate(annonce), regles.IssuePublished, "")
+	exigerVerdict(t, evaluer(annonce), regles.IssuePublished, "")
 }
 
 func TestUS018AnnonceIncompletePrimeSurCoordonnees(t *testing.T) {
 	annonce := annonceComplete()
 	annonce.Title = "jean.dupont@example.com"
 	annonce.Description = ""
-	exigerVerdict(t, regles.Reference().Evaluate(annonce), regles.IssueRefused, regles.ReasonIncompleteListing)
+	exigerVerdict(t, evaluer(annonce), regles.IssueRefused, regles.ReasonIncompleteListing)
 }
 
 func TestUS018CoordonneesPrimentSurCategorieInconnue(t *testing.T) {
 	annonce := annonceComplete()
 	annonce.Description = "Appelez le 01 99 00 12 34"
 	annonce.CategoryCode = code("timbres")
-	exigerVerdict(t, regles.Reference().Evaluate(annonce), regles.IssueRefused, regles.ReasonContactDetected)
+	exigerVerdict(t, evaluer(annonce), regles.IssueRefused, regles.ReasonContactDetected)
 }
