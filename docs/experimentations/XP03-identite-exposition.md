@@ -4,6 +4,7 @@
 |---|---|
 | Décisions testées | [D06](../decisions/D06-authentification-autorisation.md) et [D08](../decisions/D08-exposition-tls-domaine.md) (statut `Candidate (XP03)`) |
 | Dates prévues | XE1, XE2 pendant XP00 (2026-10-27) ; local 2026-10-29 ; EKS session 2 2026-10-31 |
+| Date d'exécution | 2026-10-28, locale : docker compose de 09 h 07 à 09 h 22 UTC, k3d (cluster jetable `xp02-essai`) de 09 h 44 à 10 h 04 UTC ; XE1, XE2 et EKS non exécutés |
 | Exécutée par | Martin |
 | Scripts | `sandbox/XP03-identite-exposition/` (realm de test, règles d'ALB, service de test vérifiant l'audience, proxy local) |
 | Dépend de | [XP00](XP00-sonde-compte.md) (S6, S7), [XP01](XP01-orchestrateur.md) (cluster, ALB, RDS) |
@@ -26,19 +27,19 @@ Repli D2 (Route 53 refusé en XP00) : les deux noms en `CNAME` vers le nom DNS d
 
 ### Critères
 
-| # | Mesure | Seuil | Bloquant | Si échec |
-|---|---|---|---|---|
-| XE1 | Délégation `NS` de `collector.qvl-project.com` (XP00 S6), puis résolution des deux alias depuis 1.1.1.1 et 8.8.8.8 | Nom DNS de l'ALB résolu | **Oui** | Repli D2 (Cloudflare) |
-| XE2 | Certificat ACM `ISSUED` (XP00 S7), attaché à l'écouteur 443, politique `ELBSecurityPolicy-TLS13-1-2-Res-2021-06` | `openssl s_client` montre le certificat ACM pour les deux noms | **Oui** | Chaîne 2 de D08 |
-| XE4 + ME8 | Liste blanche vue de l'adresse de Martin, avec `curl --path-as-is` : « réserver », `/admin/`, `/realms/master/`, `/realms/collector/account`, port 9000, broker ; traversées et encodages (`..`, `%2e%2e`, `%2f`, `%2F`, casse `/ADMIN/`, `/Realms/Master/`) | 404 (ou délai expiré pour les ports) sur 100 % des chemins interdits ; 200 sur le document de découverte et la page de connexion | **Oui** | Règles d'ALB corrigées et rejouées avant verdict ; non corrigeable : chaîne revue (D08) |
-| K1 | Mémoire de Keycloak au repos (15 min) et au pic, avec RabbitMQ et la charge de test, sur deux t3.medium | Aucun `OOMKilled`, aucun pod `Pending` | **Oui** | Troisième nœud au repos (D06, D09) ; à défaut repli Cognito si S13 le permet |
-| K2 | Démarrage sur base neuve avec import du realm : de la création du pod à `/health/ready` 200 (port 9000), 2 mesures | ≤ 3 min | **Oui** | Réglage JVM ; sinon repli de D06 |
-| K3 | « Réserver » (port interne du service de test, depuis le namespace `transactions-test`) | Refusé (401) sans jeton, avec un jeton d'utilisateur, avec le jeton d'un autre client, avec un jeton expiré, avec un jeton d'une autre audience ; accepté (200) avec le jeton de `transactions` (portée `reserver`, `aud` `place-de-marche`, `azp` `transactions`) | **Oui** | Configuration du realm ou de la vérification corrigée ; défaut structurel : repli de D06 |
-| G7-4 (X19) | Pod quelconque vers la console Keycloak (8080 `/admin/`, 9000) ; flux témoin : ALB → page de connexion | Refus ; témoin 200 | **Oui** | Voir G7 de XP01 |
-| XE3 | Analyse TLS de `collector.qvl-project.com` et `auth.collector.qvl-project.com` | TLS 1.2 minimum ; 80 redirigé en 301 ; HSTS présent ; 404 sur hôte inconnu | Non | IaC corrigée (recette du sprint 1) |
-| MA12 | MFA : OTP demandé à l'admin de test, pas au vendeur de test | Constat | Non | Realm corrigé |
-| Densité D09 | Mémoire de la pile d'observabilité allégée ajoutée au relevé de K1, si le temps le permet | Relevé | Non | Estimation de D09 conservée |
-| MX2 | Depuis CloudShell (autre adresse) : `curl https://collector.qvl-project.com/` | Délai expiré | Non (contrôle) | Groupe de sécurité de l'ALB corrigé |
+| # | Mesure | Seuil | Bloquant | Si échec | Mesure obtenue (local, 2026-10-28) | Atteint |
+|---|---|---|---|---|---|---|
+| XE1 | Délégation `NS` de `collector.qvl-project.com` (XP00 S6), puis résolution des deux alias depuis 1.1.1.1 et 8.8.8.8 | Nom DNS de l'ALB résolu | **Oui** | Repli D2 (Cloudflare) | Non exécuté (DNS public, EKS) | Reporté à la session EKS |
+| XE2 | Certificat ACM `ISSUED` (XP00 S7), attaché à l'écouteur 443, politique `ELBSecurityPolicy-TLS13-1-2-Res-2021-06` | `openssl s_client` montre le certificat ACM pour les deux noms | **Oui** | Chaîne 2 de D08 | Non exécuté (ACM, ALB) | Reporté à la session EKS |
+| XE4 + ME8 | Liste blanche vue de l'adresse de Martin, avec `curl --path-as-is` : « réserver », `/admin/`, `/realms/master/`, `/realms/collector/account`, port 9000, broker ; traversées et encodages (`..`, `%2e%2e`, `%2f`, `%2F`, casse `/ADMIN/`, `/Realms/Master/`) | 404 (ou délai expiré pour les ports) sur 100 % des chemins interdits ; 200 sur le document de découverte et la page de connexion | **Oui** | Règles d'ALB corrigées et rejouées avant verdict ; non corrigeable : chaîne revue (D08) | compose (Caddy) : découverte, `certs`, page de connexion 200 ; 26/26 chemins interdits 404 ; `/reserver` 404 ; 9000 sans réponse | Oui en local ; ALB reporté à la session EKS |
+| K1 | Mémoire de Keycloak au repos (15 min) et au pic, avec RabbitMQ et la charge de test, sur deux t3.medium | Aucun `OOMKilled`, aucun pod `Pending` | **Oui** | Troisième nœud au repos (D06, D09) ; à défaut repli Cognito si S13 le permet | Indicatif : Keycloak 651 Mio (compose) et 671 Mio (k3d) après les tests, aucun `OOMKilled` | Reporté à la session EKS |
+| K2 | Démarrage sur base neuve avec import du realm : de la création du pod à `/health/ready` 200 (port 9000), 2 mesures | ≤ 3 min | **Oui** | Réglage JVM ; sinon repli de D06 | compose 29 s et 30 s ; k3d 110 s (tirage de PostgreSQL compris) et 41 s | Oui en local ; EKS reporté à la session EKS |
+| K3 | « Réserver » (port interne du service de test, depuis le namespace `transactions-test`) | Refusé (401) sans jeton, avec un jeton d'utilisateur, avec le jeton d'un autre client, avec un jeton expiré, avec un jeton d'une autre audience ; accepté (200) avec le jeton de `transactions` (portée `reserver`, `aud` `place-de-marche`, `azp` `transactions`) | **Oui** | Configuration du realm ou de la vérification corrigée ; défaut structurel : repli de D06 | compose et k3d : 5 × 401, 1 × 200 (9/9 avec MA3 et MA5) | Oui en local ; EKS reporté à la session EKS |
+| G7-4 (X19) | Pod quelconque vers la console Keycloak (8080 `/admin/`, 9000) ; flux témoin : ALB → page de connexion | Refus ; témoin 200 | **Oui** | Voir G7 de XP01 | k3d : `ns-intrus` → 8080, 9000, 8081, 5432 fermés ; témoins depuis `transactions-test` ouverts, page de connexion 200 | Oui (débogage) ; EKS reporté à la session EKS |
+| XE3 | Analyse TLS de `collector.qvl-project.com` et `auth.collector.qvl-project.com` | TLS 1.2 minimum ; 80 redirigé en 301 ; HSTS présent ; 404 sur hôte inconnu | Non | IaC corrigée (recette du sprint 1) | Indicatif compose : 80 → 301 ; pas de HSTS en local | Reporté à la session EKS |
+| MA12 | MFA : OTP demandé à l'admin de test, pas au vendeur de test | Constat | Non | Realm corrigé | compose et k3d : OTP demandé à l'admin, pas au vendeur (5/5) | Oui en local |
+| Densité D09 | Mémoire de la pile d'observabilité allégée ajoutée au relevé de K1, si le temps le permet | Relevé | Non | Estimation de D09 conservée | Non exécuté | Reporté à la session EKS |
+| MX2 | Depuis CloudShell (autre adresse) : `curl https://collector.qvl-project.com/` | Délai expiré | Non (contrôle) | Groupe de sécurité de l'ALB corrigé | Non exécuté (CloudShell) | Reporté à la session EKS |
 
 XE5 (limitation de débit) est reportée en AC du sprint 1 (option B de D14), bloquante avant toute ouverture de l'ALB à Internet (ME4).
 
@@ -143,20 +144,27 @@ curl -s --max-time 5 -o /dev/null -w '%{http_code}\n' https://auth.collector.qvl
 
 | # | Local | EKS | Atteint |
 |---|---|---|---|
-| XE1 | — | | |
-| XE2 | — | | |
-| XE4 + ME8 | | | |
-| K1 | — | | |
-| K2 | | | |
-| K3 | | | |
-| G7-4 | | | |
-| XE3 | — | | |
-| MA12 | | | |
-| MX2 | — | | |
+| XE1 | — | Reporté à la session EKS | Reporté |
+| XE2 | — | Reporté à la session EKS | Reporté |
+| XE4 + ME8 | Caddy : 200 sur découverte, `certs` et page de connexion ; 26/26 chemins interdits en 404 (traversées, encodages, casse, barre oblique inverse) ; `/reserver` 404 ; 9000 sans réponse | Reporté à la session EKS | Oui en local |
+| K1 | — (indicatif : Keycloak 651 Mio compose, 671 Mio k3d, 20m CPU au repos) | Reporté à la session EKS | Reporté |
+| K2 | compose 29 s, 30 s ; k3d 110 s (tirage de l'image PostgreSQL sur un nouvel agent compris), 41 s | Reporté à la session EKS | Oui en local |
+| K3 | compose et k3d : 5 × 401, 1 × 200 ; MA3 et MA5 conformes (9/9 chaque fois) | Reporté à la session EKS | Oui en local |
+| G7-4 | k3d : `ns-intrus` → 8080, 9000, 8081, 5432 fermés ; témoins `transactions-test` ouverts, page de connexion 200 (9/9) | Reporté à la session EKS | Oui (débogage) |
+| XE3 | — (indicatif : 80 → 301 par Caddy) | Reporté à la session EKS | Reporté |
+| MA12 | compose et k3d : OTP demandé à l'admin, pas au vendeur (5/5 chaque fois) | Reporté à la session EKS | Oui en local |
+| MX2 | — | Reporté à la session EKS | Reporté |
+
+Contrôles complémentaires du realm (`verifier.sh ma`, compose) : 18/18 (MA1, MA2, MA3, MA5, MA9, MA11, MA13). MA14 (Trivy) non rejoué. Relevés : [`docs/mesures/XP03-identite-exposition.csv`](../mesures/XP03-identite-exposition.csv) (format du CSV d'XP00, et non les colonnes annoncées dans « Données collectées » ; les scripts écrivent encore l'ancien format) et sorties dans [`docs/mesures/XP03-identite-exposition/`](../mesures/XP03-identite-exposition/) (seules les charges utiles décodées des jetons y figurent).
 
 ## Difficultés
 
 À compléter par Martin pendant l'exécution, sans réécriture.
+
+- **Import du realm refusé au premier lancement compose** : Keycloak s'est arrêté sur `invalidPasswordBlacklistedMessage` ; un des mots de passe aléatoires des comptes de test a été refusé par `passwordBlacklist` (filtre de Bloom, probabilité de faux positif 1e-4 par mot de passe). Relancé avec des secrets régénérés : pile prête en 31 s. Rare, mais une session EKS peut tomber dessus : `identifiants.sh` pourrait vérifier les mots de passe contre la liste, ou l'import être rejoué automatiquement avec de nouveaux secrets.
+- **`scripts/compose.sh down` sans `.env` chargé** : l'interpolation de `docker-compose.yml` échoue (`MDP_POSTGRES` requis), l'arrêt ne se fait pas et `.env` n'est pas supprimé ; contourné en chargeant `.env` avant `down`. À corriger dans le script (charger `.env` dans `down`).
+- **K2 k3d** : la première mesure (110 s) inclut le tirage de `postgres:18.3` (162 Mo, 3 min 20 s sur le premier agent) quand le pod change de nœud ; l'image n'est pas importée dans le cluster par `k3d.sh up`, ce qui a aussi fait expirer `up` (attente PostgreSQL de 180 s). Sur EKS, prévoir le tirage de l'image Keycloak optimisée dans la mesure.
+- **G7-4 local** : le témoin « ALB → page de connexion » n'existe pas en local ; remplacé par `transactions-test` → page de connexion (200).
 
 ## Limites
 

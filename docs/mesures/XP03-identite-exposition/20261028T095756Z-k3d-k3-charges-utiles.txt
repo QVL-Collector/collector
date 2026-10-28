@@ -1,0 +1,4 @@
+acheteur     {"aud":["transactions","interactions","place-de-marche"],"azp":"collector-web","scope":"openid profile","typ":"Bearer","exp":1793181774,"roles":["acheteur"]}
+autre-pdm    {"aud":"place-de-marche","azp":"xp03-autre","scope":"aud-place-de-marche","typ":"Bearer","exp":1793181774,"roles":[]}
+autre-inter  {"aud":"interactions","azp":"xp03-autre","scope":"aud-interactions","typ":"Bearer","exp":1793181775,"roles":[]}
+transactions {"aud":"place-de-marche","azp":"transactions","scope":"reserver","typ":"Bearer","exp":1793181776,"roles":[]}

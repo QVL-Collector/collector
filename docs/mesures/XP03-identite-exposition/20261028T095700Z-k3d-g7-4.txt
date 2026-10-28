@@ -1,0 +1,9 @@
+ns-intrus keycloak.identite-test.svc:8080 ferme
+ns-intrus keycloak.identite-test.svc:9000 ferme
+ns-intrus verificateur.pdm-test.svc:8081 ferme
+ns-intrus postgres.identite-test.svc:5432 ferme
+transactions-test keycloak.identite-test.svc:8080 ouvert
+transactions-test keycloak.identite-test.svc:9000 ferme
+transactions-test verificateur.pdm-test.svc:8081 ouvert
+transactions-test postgres.identite-test.svc:5432 ferme
+transactions-test page-de-connexion 200
