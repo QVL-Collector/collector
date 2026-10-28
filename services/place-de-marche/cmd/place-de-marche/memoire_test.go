@@ -231,6 +231,38 @@ func (s *stockageEnMemoire) FindPublished(_ context.Context, id annonces.Article
 	}, nil
 }
 
+func (s *stockageEnMemoire) ListToVerify(_ context.Context, page annonces.PageRequest) (annonces.ArticlePage, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var aVerifier []annonces.Article
+	for _, a := range s.articles {
+		if a.Status == annonces.StatusToVerify {
+			aVerifier = append(aVerifier, a)
+		}
+	}
+	slices.SortFunc(aVerifier, func(a, b annonces.Article) int { return a.UpdatedAt.Compare(b.UpdatedAt) })
+	debut := min(page.Offset(), len(aVerifier))
+	fin := min(debut+page.Size, len(aVerifier))
+	return annonces.ArticlePage{Articles: aVerifier[debut:fin], Total: len(aVerifier)}, nil
+}
+
+func (s *stockageEnMemoire) Decide(_ context.Context, decision annonces.Decision) (annonces.Article, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	article, ok := s.articles[decision.Article]
+	if !ok {
+		return annonces.Article{}, annonces.ErrArticleNotFound
+	}
+	if article.Status != annonces.StatusToVerify || article.Revision != decision.Revision {
+		return annonces.Article{}, annonces.DecisionConflict(article.Status, article.Revision, decision.Revision)
+	}
+	article.Status = decision.Verdict.Outcome()
+	article.Reason = decision.Reason
+	article.UpdatedAt = s.maintenant()
+	s.articles[decision.Article] = article
+	return article, nil
+}
+
 func (s *stockageEnMemoire) retirerDemandes() []annonces.ReviewRequest {
 	s.mu.Lock()
 	defer s.mu.Unlock()
