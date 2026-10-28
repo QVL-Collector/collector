@@ -262,6 +262,77 @@ export const fr = {
       prix_a_confirmer: 'Prix à confirmer',
       vendeur_a_verifier: 'Vendeur à vérifier',
       categorie_inconnue: 'Catégorie inconnue',
+      prix_abusif: 'Prix abusif',
+      article_interdit: 'Article interdit à la vente',
+      vendeur_non_fiable: 'Vendeur non fiable',
+    },
+  },
+  admin: {
+    documentTitle: 'Articles à vérifier · Collector',
+    navigation: 'Articles à vérifier',
+    review: {
+      title: 'Articles à vérifier',
+      subtitle:
+        'Annonces que le contrôle automatique n’a pas pu trancher. Publiez-les ou refusez-les avec un motif.',
+      listTitle: 'Annonces en attente de décision',
+      listLabel: 'Annonces à vérifier',
+      paginationLabel: 'Pagination des articles à vérifier',
+      loading: 'Chargement des articles à vérifier en cours',
+      loaded_one: '{{count}} article à vérifier',
+      loaded_other: '{{count}} articles à vérifier',
+      untitled: 'Article sans titre',
+      notProvided: 'Non renseigné',
+      controlReason: 'Motif du contrôle : {{reason}}',
+      revision: 'Révision examinée : {{revision}}',
+      facts: {
+        description: 'Description',
+        category: 'Catégorie',
+        price: 'Prix',
+        shippingCost: 'Frais de port',
+        seller: 'Identifiant du vendeur',
+        updatedAt: 'Modifié le',
+      },
+      actions: {
+        publish: 'Publier',
+        publishLabel: 'Publier « {{title}} »',
+        refuse: 'Refuser',
+        refuseLabel: 'Refuser « {{title}} »',
+      },
+      refusal: {
+        title: 'Refuser l’annonce',
+        description:
+          '« {{title}} » ne sera pas publiée. Le vendeur verra l’état « Refusé » et le motif choisi.',
+        reasonLabel: 'Motif du refus',
+        missingReason: 'Choisissez un motif de refus.',
+        cancel: 'Annuler',
+        confirm: 'Confirmer le refus',
+      },
+      decided: {
+        publie: '« {{title}} » a été publié.',
+        refuse: '« {{title}} » a été refusé.',
+      },
+      conflict: {
+        title: 'L’article a changé, rechargez la liste',
+        description:
+          'Il a été modifié ou déjà traité depuis son affichage : votre décision n’a pas été appliquée. Rechargez la liste, puis décidez de nouveau.',
+        reload: 'Recharger la liste',
+      },
+      forbiddenDecision:
+        'Votre compte n’a pas le rôle administrateur : la décision n’a pas été appliquée.',
+      failure: 'La décision n’a pas pu être enregistrée. Vérifiez votre connexion, puis réessayez.',
+      empty: {
+        title: 'Aucun article à vérifier',
+        description: 'Toutes les annonces ont été tranchées. Revenez plus tard.',
+      },
+      error: {
+        title: 'Les articles à vérifier sont momentanément indisponibles',
+        description: 'Vérifiez votre connexion, puis réessayez.',
+        retry: 'Réessayer',
+      },
+      forbidden: {
+        title: 'Accès réservé',
+        description: 'Votre compte n’a pas le rôle requis pour ouvrir cet espace.',
+      },
     },
   },
   notFound: {

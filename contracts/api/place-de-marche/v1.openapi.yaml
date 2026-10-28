@@ -8,14 +8,17 @@ info:
     articles publiés, sans aucune donnée du vendeur, et un article non publié y répond 404 comme un article
     inexistant. Les routes du vendeur exigent un jeton d'accès Keycloak valide (signature RS256,
     émetteur, audience place-de-marche, client autorisé collector-web, type Bearer, expiration) portant le rôle
-    de realm vendeur. Un article d'un autre vendeur répond 404, sans révéler son existence. Corps JSON refusés :
-    clé dupliquée (casse ignorée), champ inconnu, type inattendu, valeur racine autre qu'un objet, plus de 32 Kio.
+    de realm vendeur. Un article d'un autre vendeur répond 404, sans révéler son existence. Les routes
+    d'administration exigent le même jeton portant le rôle de realm admin ; tout autre rôle répond 403. Corps JSON
+    refusés : clé dupliquée (casse ignorée), champ inconnu, type inattendu, valeur racine autre qu'un objet, plus de
+    32 Kio.
 servers:
   - url: /marche/v1
 tags:
   - name: Catégories
   - name: Catalogue
   - name: Vendeur
+  - name: Administration
 paths:
   /articles:
     get:
@@ -252,6 +255,81 @@ paths:
           $ref: "#/components/responses/TypeNonPrisEnCharge"
         "500":
           $ref: "#/components/responses/ErreurInterne"
+  /admin/articles:
+    get:
+      tags: [Administration]
+      operationId: listerArticlesAVerifier
+      summary: >-
+        Articles à l'état a_verifier, du plus anciennement modifié au plus récent, avec le contenu de la révision
+        examinée et le motif du contrôle
+      security:
+        - jetonKeycloak: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Taille"
+      responses:
+        "200":
+          description: Page d'articles à vérifier ; une page au-delà du total est vide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageArticlesAVerifier"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+  /admin/articles/{id}/decision:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Administration]
+      operationId: deciderArticleAVerifier
+      summary: >-
+        Publier ou refuser un article a_verifier ; la révision examinée est exigée. Publier le fait apparaître au
+        catalogue ; refuser exige un motif de la liste fermée, que le vendeur lit ensuite dans motif. La décision est
+        journalisée (admin, article, révision, décision, motif).
+      security:
+        - jetonKeycloak: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Decision"
+      responses:
+        "200":
+          description: Décision appliquée, article à l'état publie ou refuse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "409":
+          $ref: "#/components/responses/ConflitDecision"
+        "413":
+          $ref: "#/components/responses/CorpsTropVolumineux"
+        "415":
+          $ref: "#/components/responses/TypeNonPrisEnCharge"
+        "422":
+          $ref: "#/components/responses/MotifInvalide"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
 components:
   securitySchemes:
     jetonKeycloak:
@@ -394,8 +472,8 @@ components:
       type: string
       nullable: true
       description: >-
-        Catégorie du motif de la dernière issue de contrôle ; présente pour les états refuse et a_verifier, null sinon.
-        Ne cite jamais la règle ni le seuil appliqués.
+        Catégorie du motif de la dernière issue, contrôle automatique ou décision d'un administrateur ; présente pour
+        les états refuse et a_verifier, null sinon. Ne cite jamais la règle ni le seuil appliqués.
       enum:
         - annonce_incomplete
         - coordonnees_detectees
@@ -403,7 +481,100 @@ components:
         - prix_a_confirmer
         - vendeur_a_verifier
         - categorie_inconnue
+        - prix_abusif
+        - article_interdit
+        - vendeur_non_fiable
         - null
+    MotifDuControle:
+      type: string
+      description: Motif de l'issue a_verifier du contrôle automatique (catégories du contrat controle.resultat v1)
+      enum:
+        - annonce_incomplete
+        - coordonnees_detectees
+        - compte_non_autorise
+        - prix_a_confirmer
+        - vendeur_a_verifier
+        - categorie_inconnue
+    MotifDeRefus:
+      type: string
+      description: Liste fermée des motifs qu'un administrateur peut opposer à un article à vérifier
+      enum:
+        - annonce_incomplete
+        - coordonnees_detectees
+        - prix_abusif
+        - article_interdit
+        - vendeur_non_fiable
+    Decision:
+      description: >-
+        Décision sur la révision examinée ; une révision périmée, ou un article qui n'est plus a_verifier, répond 409.
+        motif est obligatoire pour refuser et interdit pour publier (sinon 422).
+      type: object
+      additionalProperties: false
+      required: [revision, decision]
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum: [publier, refuser]
+        motif:
+          $ref: "#/components/schemas/MotifDeRefus"
+    ArticleAVerifier:
+      type: object
+      additionalProperties: false
+      required: [id, revision, titre, description, categorie, prix, fraisDePort, motif, vendeurId, modifieLe]
+      properties:
+        id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 1
+          description: Révision examinée, à renvoyer dans la décision
+        titre:
+          type: string
+          description: Texte brut, à afficher sans l'interpréter comme du HTML
+        description:
+          type: string
+        categorie:
+          allOf:
+            - $ref: "#/components/schemas/Categorie"
+          nullable: true
+        prix:
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+          nullable: true
+        fraisDePort:
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+          nullable: true
+        motif:
+          $ref: "#/components/schemas/MotifDuControle"
+        vendeurId:
+          type: string
+          description: Identifiant opaque du vendeur, sans autre donnée personnelle
+        modifieLe:
+          type: string
+          format: date-time
+    PageArticlesAVerifier:
+      type: object
+      additionalProperties: false
+      required: [elements, page, taille, total]
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArticleAVerifier"
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
     Categorie:
       type: object
       additionalProperties: false
@@ -565,7 +736,8 @@ components:
           description: >-
             about:blank pour les erreurs génériques ; sinon urn:collector:probleme:saisie-invalide,
             urn:collector:probleme:corps-invalide, urn:collector:probleme:revision-perimee,
-            urn:collector:probleme:article-non-modifiable ou urn:collector:probleme:article-non-soumettable
+            urn:collector:probleme:article-non-modifiable, urn:collector:probleme:article-non-soumettable ou
+            urn:collector:probleme:article-non-a-verifier
         title:
           type: string
         status:
@@ -594,7 +766,7 @@ components:
           schema:
             $ref: "#/components/schemas/Probleme"
     NonAutorise:
-      description: Jeton valide sans le rôle vendeur
+      description: Jeton valide sans le rôle exigé par la route (vendeur ou admin)
       content:
         application/problem+json:
           schema:
@@ -609,6 +781,22 @@ components:
             $ref: "#/components/schemas/Probleme"
     Conflit:
       description: Révision périmée, ou article non modifiable ou non soumettable dans son état
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    ConflitDecision:
+      description: >-
+        Révision périmée (urn:collector:probleme:revision-perimee) ou article qui n'est plus a_verifier
+        (urn:collector:probleme:article-non-a-verifier) ; la décision n'est pas appliquée
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    MotifInvalide:
+      description: >-
+        Motif absent pour refuser, présent pour publier, ou hors de la liste fermée
+        (urn:collector:probleme:saisie-invalide, erreur de champ motif avec le code obligatoire ou invalide)
       content:
         application/problem+json:
           schema:

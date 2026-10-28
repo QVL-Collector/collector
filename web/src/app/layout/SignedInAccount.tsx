@@ -3,6 +3,7 @@ import Stack from '@mui/material/Stack';
 import type { UserIdentity } from '../../auth/useUserIdentity';
 import { AccountBadge } from '../../ui/components/AccountBadge';
 import { ResponsiveActionButton } from '../../ui/components/ResponsiveActionButton';
+import { AdminSpaceLink } from './AdminSpaceLink';
 import { SellerSpaceLink } from './SellerSpaceLink';
 import type { AccountControlLabels } from './useAccountControl';
 
@@ -10,6 +11,7 @@ type SignedInAccountProps = {
   readonly identity: UserIdentity;
   readonly labels: AccountControlLabels;
   readonly canOpenSellerSpace: boolean;
+  readonly canOpenAdminSpace: boolean;
   readonly compact: boolean;
   readonly busy: boolean;
   readonly onSignOut: () => void;
@@ -19,6 +21,7 @@ export function SignedInAccount({
   identity,
   labels,
   canOpenSellerSpace,
+  canOpenAdminSpace,
   compact,
   busy,
   onSignOut,
@@ -32,6 +35,7 @@ export function SignedInAccount({
       spacing={{ xs: 0.5, sm: 1.5 }}
       minWidth={0}
     >
+      {canOpenAdminSpace && <AdminSpaceLink label={labels.adminSpace} compact={compact} />}
       {canOpenSellerSpace && <SellerSpaceLink label={labels.sellerSpace} compact={compact} />}
       <AccountBadge
         name={identity.name}
