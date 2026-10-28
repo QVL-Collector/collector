@@ -5,13 +5,17 @@ import (
 	"strings"
 )
 
-const maxPhoneDigits = 13
+const (
+	maxPhoneDigits = 13
+	dateMarker     = "|"
+)
 
 var (
-	separatorWord = regexp.MustCompile(`\b(?:point|tiret|dot)\b`)
-	digitRun      = regexp.MustCompile(`\d+(?:[ .\-_()]{1,4}\d+)*`)
-	digitGroup    = regexp.MustCompile(`\d+`)
-	yearGroup     = regexp.MustCompile(`^(?:19|20)\d{2}$`)
+	separatorWord      = regexp.MustCompile(`\b(?:point|tiret|dot)\b`)
+	slashedPhoneNumber = regexp.MustCompile(`\b0[1-9](?:\s?/\s?\d{2}){4}\b`)
+	fullDate           = regexp.MustCompile(`\b(?:\d{1,2}[./-]\d{1,2}[./-](?:19|20)\d{2}|(?:19|20)\d{2}[./-]\d{1,2}[./-]\d{1,2})\b`)
+	digitRun           = regexp.MustCompile(`\d+(?:[ .\-_()]{1,4}\d+)*`)
+	digitGroup         = regexp.MustCompile(`\d+`)
 )
 
 var dialPrefixByLength = map[int]string{
@@ -23,7 +27,10 @@ var dialPrefixByLength = map[int]string{
 
 func containsPhoneNumber(normalized string) bool {
 	digits := separatorWord.ReplaceAllString(spellOutNumbers(normalized), ".")
-	for _, run := range digitRun.FindAllString(digits, -1) {
+	if slashedPhoneNumber.MatchString(digits) {
+		return true
+	}
+	for _, run := range digitRun.FindAllString(fullDate.ReplaceAllString(digits, dateMarker), -1) {
 		if containsPhoneSequence(digitGroup.FindAllString(run, -1)) {
 			return true
 		}
@@ -43,9 +50,6 @@ func containsPhoneSequence(groups []string) bool {
 func startsWithPhoneNumber(groups []string) bool {
 	var digits strings.Builder
 	for _, group := range groups {
-		if yearGroup.MatchString(group) {
-			return false
-		}
 		digits.WriteString(group)
 		if digits.Len() > maxPhoneDigits {
 			return false

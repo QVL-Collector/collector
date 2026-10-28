@@ -11,7 +11,7 @@ const (
 	closing       = `\s*[\)\]\}]\s*`
 	writtenDot    = `(?:` + opening + `(?:point|dot|\.)` + closing + `|\s+(?:point|dot)\s+)`
 	looseDot      = `(?:\s*\.\s*|` + writtenDot + `)`
-	spacedDot     = `(?:\s?\.\s?|` + writtenDot + `)`
+	spacedDot     = `(?:\s\.\s?|` + writtenDot + `)`
 	atSign        = `(?:\s*@\s*|` + opening + `(?:at|arobase?)` + closing + `|\s*\barobase?\b\s*)`
 	mailTLD       = `(?:com|fr|net|org|io|eu|be|ch|uk|de|it|es|ca|me|co|info|biz)`
 	webTLD        = `(?:com|fr|net|org|io|eu|be|ch|uk|tv|app|dev|ly|gg|biz|shop|store|xyz|online)`

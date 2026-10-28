@@ -79,6 +79,9 @@ var telephonesEnClair = []cas{
 	{"indicatif 0033 collé", "0033199001234"},
 	{"numéro en fin de phrase", "Mon numéro : 0639981234."},
 	{"numéro entre parenthèses", "(01) 99 00 12 34"},
+	{"numéro avec barres obliques", "06/39/98/12/34"},
+	{"numéro avec barres obliques espacées", "06 / 39 / 98 / 12 / 34"},
+	{"numéro avec un groupe ressemblant à une année", "06 2015 3456"},
 }
 
 var telephonesMasques = []cas{
@@ -112,6 +115,11 @@ var textesSansCoordonnees = []cas{
 	{"date en lettres", "Acheté le douze mai mille neuf cent quatre-vingt-sept"},
 	{"plage de dates", "Exposée du 01.01.1990 au 31.12.1999"},
 	{"date et heure", "Mis en vente le 01/02/2003 à 14:30"},
+	{"date et heure seules", "01/02/2003 à 14:30"},
+	{"tirage puis date", "Edition 01/50, 12/05/2003"},
+	{"date au format iso", "Sortie le 1987-05-12"},
+	{"date pointée seule", "12.05.1987"},
+	{"point suivi d'une abréviation de langue", "English. FR : description"},
 	{"référence isbn 13", "ISBN 978-2-203-00101-8"},
 	{"référence isbn 10", "ISBN 2-203-00101-6"},
 	{"édition originale et tirage", "Édition originale 1954, tirage de tête n° 125/300"},
