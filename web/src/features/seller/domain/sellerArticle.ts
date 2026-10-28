@@ -76,8 +76,16 @@ export const sellerArticlesPageSize = 20;
 
 export const articleCurrency = 'EUR';
 
-export function acceptsChanges(state: ArticleState): boolean {
+export function acceptsSubmission(state: ArticleState): boolean {
   return state === 'brouillon' || state === 'refuse';
+}
+
+export function triggersRecontrol(state: ArticleState): boolean {
+  return state === 'publie' || state === 'en_controle' || state === 'a_verifier';
+}
+
+export function acceptsChanges(state: ArticleState): boolean {
+  return acceptsSubmission(state) || triggersRecontrol(state);
 }
 
 export function isUnderControl(state: ArticleState): boolean {

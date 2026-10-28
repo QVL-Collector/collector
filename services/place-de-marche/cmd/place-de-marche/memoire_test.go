@@ -17,6 +17,11 @@ var jeuDeCategoriesFictif = []annonces.Category{
 	{ID: "timbres", Label: "Timbres"},
 }
 
+var (
+	etatsModifiablesSansControle    = []annonces.Status{annonces.StatusDraft, annonces.StatusRefused}
+	etatsRecontrolesALaModification = []annonces.Status{annonces.StatusPublished, annonces.StatusUnderReview, annonces.StatusToVerify}
+)
+
 type stockageEnMemoire struct {
 	mu         sync.Mutex
 	articles   map[annonces.ArticleID]annonces.Article
@@ -82,7 +87,8 @@ func (s *stockageEnMemoire) UpdateDraft(_ context.Context, vendeur annonces.Sell
 	if !ok || article.Seller != vendeur {
 		return annonces.Article{}, annonces.ErrArticleNotFound
 	}
-	if !article.Status.Editable() {
+	recontrole := slices.Contains(etatsRecontrolesALaModification, article.Status)
+	if !recontrole && !slices.Contains(etatsModifiablesSansControle, article.Status) {
 		return annonces.Article{}, annonces.ErrArticleNotEditable
 	}
 	if article.Revision != attendue {
@@ -90,8 +96,21 @@ func (s *stockageEnMemoire) UpdateDraft(_ context.Context, vendeur annonces.Sell
 	}
 	s.appliquer(&article, contenu)
 	article.Revision++
+	if recontrole {
+		article.Status = annonces.StatusUnderReview
+		article.Reason = nil
+		s.demander(article)
+	}
 	s.articles[id] = article
 	return article, nil
+}
+
+func (s *stockageEnMemoire) demander(article annonces.Article) {
+	s.demandes = append(s.demandes, annonces.ReviewRequest{
+		Article:     article,
+		Seller:      annonces.SellerStatus{MemberSince: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
+		SubmittedAt: article.UpdatedAt,
+	})
 }
 
 func (s *stockageEnMemoire) FindOwned(_ context.Context, vendeur annonces.SellerID, id annonces.ArticleID) (annonces.Article, error) {
@@ -145,11 +164,7 @@ func (s *stockageEnMemoire) Submit(_ context.Context, vendeur annonces.SellerID,
 	article.Reason = nil
 	article.UpdatedAt = s.maintenant()
 	s.articles[id] = article
-	s.demandes = append(s.demandes, annonces.ReviewRequest{
-		Article:     article,
-		Seller:      annonces.SellerStatus{MemberSince: time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)},
-		SubmittedAt: article.UpdatedAt,
-	})
+	s.demander(article)
 	return article, nil
 }
 

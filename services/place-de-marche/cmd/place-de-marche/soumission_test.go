@@ -159,14 +159,6 @@ func TestUS013AC1ArticleEnControleOuPublieNonSoumettable(t *testing.T) {
 	}
 }
 
-func TestUS013AC1ArticleEnControleNonModifiable(t *testing.T) {
-	b := demarrerBancEnMemoire(t)
-	jeton := b.vendeur()
-	article := b.soumettreAvecSucces(t, jeton, b.creer(t, jeton, corpsComplet("Figurine", categorieSure, 100, 0)))
-	b.modifier(t, jeton, article.ID, corpsRevision(article.Revision, corpsComplet("Autre", categorieSure, 1, 0))).probleme(t, http.StatusConflict)
-	exigerEtat(t, b.relire(t, jeton, article.ID), etatEnControle, "")
-}
-
 func TestUS013AC2BrouillonIncompletRefuseAvecMotif(t *testing.T) {
 	cas := map[string]string{
 		"sans description":       corpsSansDescription(categorieSure),
