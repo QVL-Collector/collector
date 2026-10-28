@@ -14,7 +14,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/rabbitmq/amqp091-go v1.16.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )
 
 replace collector/libs/platform => ../../libs/platform
