@@ -83,7 +83,33 @@ WHERE a.vendeur_id = $1
 ORDER BY a.modifie_le DESC, a.id DESC
 LIMIT $2 OFFSET $3`
 
+const articlesToVerify = `
+FROM article AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id
+WHERE a.etat = 'a_verifier'`
+
 const (
+	countToVerifyQuery = `SELECT count(*)` + articlesToVerify
+	listToVerifyQuery  = `SELECT ` + articleColumns + articlesToVerify + `
+ORDER BY a.modifie_le ASC, a.id ASC
+LIMIT $1 OFFSET $2`
+)
+
+const decideQuery = `
+WITH tranche AS (
+	UPDATE article
+	SET etat = $4, motif = $5, modifie_le = now()
+	WHERE id = $1 AND revision = $2 AND etat = $3
+	RETURNING *
+)
+SELECT ` + articleColumns + `
+FROM tranche AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const recordDecisionQuery = `
+INSERT INTO decision_admin (article_id, revision, decision, motif, admin_id)
+VALUES ($1, $2, $3, $4, $5)`
+
+const (
+	articleStateQuery   = `SELECT etat, revision FROM article WHERE id = $1`
 	countOwnedQuery     = `SELECT count(*) FROM article WHERE vendeur_id = $1`
 	ownedStateQuery     = `SELECT etat, revision FROM article WHERE id = $1 AND vendeur_id = $2`
 	lockedStateQuery    = ownedStateQuery + ` FOR UPDATE`
@@ -297,6 +323,77 @@ func (s *Store) ListOwned(ctx context.Context, seller annonces.SellerID, page an
 		return annonces.ArticlePage{}, fmt.Errorf("lecture des articles : %w", err)
 	}
 	return annonces.ArticlePage{Articles: articles, Total: total}, nil
+}
+
+func (s *Store) ListToVerify(ctx context.Context, page annonces.PageRequest) (annonces.ArticlePage, error) {
+	var toVerify annonces.ArticlePage
+	err := pgx.BeginTxFunc(ctx, s.pool, readOnlySnapshot, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, countToVerifyQuery).Scan(&toVerify.Total); err != nil {
+			return fmt.Errorf("décompte des articles à vérifier : %w", err)
+		}
+		rows, err := tx.Query(ctx, listToVerifyQuery, page.Size, page.Offset())
+		if err != nil {
+			return fmt.Errorf("liste des articles à vérifier : %w", err)
+		}
+		toVerify.Articles, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (annonces.Article, error) {
+			return scanArticle(row)
+		})
+		return err
+	})
+	if err != nil {
+		return annonces.ArticlePage{}, fmt.Errorf("lecture des articles à vérifier : %w", err)
+	}
+	return toVerify, nil
+}
+
+func (s *Store) Decide(ctx context.Context, decision annonces.Decision) (annonces.Article, error) {
+	var decided annonces.Article
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		var err error
+		decided, err = decideInTransaction(ctx, tx, decision)
+		if err != nil {
+			return err
+		}
+		return recordDecision(ctx, tx, decision)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.Article{}, s.explainDecisionConflict(ctx, decision)
+	}
+	if err != nil {
+		return annonces.Article{}, fmt.Errorf("décision sur l'article : %w", err)
+	}
+	return decided, nil
+}
+
+func decideInTransaction(ctx context.Context, tx pgx.Tx, decision annonces.Decision) (annonces.Article, error) {
+	row := tx.QueryRow(ctx, decideQuery,
+		uuid.UUID(decision.Article), int(decision.Revision), string(annonces.StatusToVerify),
+		string(decision.Verdict.Outcome()), reasonColumn(decision.Reason),
+	)
+	return scanArticle(row)
+}
+
+func recordDecision(ctx context.Context, tx pgx.Tx, decision annonces.Decision) error {
+	_, err := tx.Exec(ctx, recordDecisionQuery,
+		uuid.UUID(decision.Article), int(decision.Revision), string(decision.Verdict),
+		reasonColumn(decision.Reason), uuid.UUID(decision.Admin),
+	)
+	return err
+}
+
+func (s *Store) explainDecisionConflict(ctx context.Context, decision annonces.Decision) error {
+	var (
+		status   string
+		revision int
+	)
+	err := s.pool.QueryRow(ctx, articleStateQuery, uuid.UUID(decision.Article)).Scan(&status, &revision)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return annonces.ErrArticleNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lecture de l'état de l'article : %w", err)
+	}
+	return annonces.DecisionConflict(annonces.Status(status), annonces.Revision(revision), decision.Revision)
 }
 
 func (s *Store) ListCategories(ctx context.Context) ([]annonces.Category, error) {

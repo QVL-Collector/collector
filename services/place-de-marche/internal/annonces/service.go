@@ -34,6 +34,8 @@ type Articles interface {
 	ApplyReview(ctx context.Context, outcome ReviewOutcome) (bool, error)
 	ListPublished(ctx context.Context, filter CatalogueFilter, page PageRequest) (CataloguePage, error)
 	FindPublished(ctx context.Context, id ArticleID) (PublishedArticle, error)
+	ListToVerify(ctx context.Context, page PageRequest) (ArticlePage, error)
+	Decide(ctx context.Context, decision Decision) (Article, error)
 }
 
 type Categories interface {
