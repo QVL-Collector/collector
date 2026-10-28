@@ -4,6 +4,7 @@ import {
   expectInteger,
   expectNonEmptyString,
   expectRecord,
+  expectString,
   InvalidPayloadError,
 } from './payload';
 
@@ -12,8 +13,26 @@ export type CategoryPayload = {
   readonly label: string;
 };
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function parseNullable<T>(value: unknown, parse: (present: unknown) => T): T | null {
   return value === null ? null : parse(value);
+}
+
+export function parseDate(value: unknown, path: string): Date {
+  const date = new Date(expectNonEmptyString(value, path));
+  if (Number.isNaN(date.getTime())) {
+    throw new InvalidPayloadError(path);
+  }
+  return date;
+}
+
+export function parseUuid(value: unknown, path: string): string {
+  const id = expectString(value, path);
+  if (!uuidPattern.test(id)) {
+    throw new InvalidPayloadError(path);
+  }
+  return id;
 }
 
 export function parseMoney(value: unknown, path: string): Money {

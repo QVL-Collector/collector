@@ -1,5 +1,7 @@
 import type { RouteObject } from 'react-router';
 import { signInCallbackPath } from '../auth/authPaths';
+import { adminReviewPath } from '../features/admin/adminPaths';
+import { AdminReviewPage } from '../features/admin/components/AdminReviewPage';
 import { publishedArticleRoutePattern } from '../features/catalogue/cataloguePaths';
 import { ArticlePage } from '../features/catalogue/components/ArticlePage';
 import { CataloguePage } from '../features/catalogue/components/CataloguePage';
@@ -32,6 +34,10 @@ export const appRoutes: RouteObject[] = [
           { path: newArticlePath, element: <NewArticlePage /> },
           { path: articleRoutePattern, element: <ArticleEditorPage /> },
         ],
+      },
+      {
+        element: <RequireAuthentication requiredRole="admin" />,
+        children: [{ path: adminReviewPath, element: <AdminReviewPage /> }],
       },
       { path: '*', element: <NotFoundPage /> },
     ],

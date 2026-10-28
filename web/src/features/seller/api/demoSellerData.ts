@@ -1,4 +1,4 @@
-import type { ControlReason } from '../../../shared/controlReason';
+import type { ArticleReason } from '../../../shared/articleReason';
 import type { ArticleState } from '../domain/sellerArticle';
 import { toAmountPayload, type AmountPayload } from './draftPayload';
 
@@ -18,7 +18,7 @@ export type DemoArticle = {
   readonly categorie: DemoCategory | null;
   readonly prix: DemoAmount;
   readonly fraisDePort: DemoAmount;
-  readonly motif: ControlReason | null;
+  readonly motif: ArticleReason | null;
   readonly creeLe: string;
   readonly modifieLe: string;
 };

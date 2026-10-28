@@ -2,6 +2,7 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { anonymousSession } from '../auth/AuthSession';
 import { AuthSessionProvider } from '../auth/AuthSessionContext';
+import { AdminClientProvider } from '../features/admin/api/AdminClientContext';
 import { CatalogueClientProvider } from '../features/catalogue/api/CatalogueClientContext';
 import { SellerClientProvider } from '../features/seller/api/SellerClientContext';
 import { AppThemeRoot } from './AppThemeRoot';
@@ -19,7 +20,11 @@ export function AppProviders({ services, queryClient, children }: AppProvidersPr
       <AuthSessionProvider session={services.authSession ?? anonymousSession}>
         <QueryClientProvider client={queryClient}>
           <CatalogueClientProvider client={services.catalogueClient}>
-            <SellerClientProvider client={services.sellerClient}>{children}</SellerClientProvider>
+            <SellerClientProvider client={services.sellerClient}>
+              <AdminClientProvider client={services.adminClient ?? null}>
+                {children}
+              </AdminClientProvider>
+            </SellerClientProvider>
           </CatalogueClientProvider>
         </QueryClientProvider>
       </AuthSessionProvider>

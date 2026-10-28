@@ -22,6 +22,7 @@ export function AccountControl() {
           identity={model.identity}
           labels={model.labels}
           canOpenSellerSpace={model.canOpenSellerSpace}
+          canOpenAdminSpace={model.canOpenAdminSpace}
           compact={model.compact}
           busy={model.busy}
           onSignOut={model.signOut}
