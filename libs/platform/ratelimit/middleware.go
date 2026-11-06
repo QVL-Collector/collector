@@ -40,36 +40,37 @@ func NewGuard(policy Policy, logger *slog.Logger, clock Clock) *Guard {
 
 func (g *Guard) Limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		address := clientKeyOf(r)
-		refused, admitted := g.store.admit(g.demandsOf(r.Context(), address))
+		client := clientOf(r)
+		refused, admitted := g.store.admit(g.demandsOf(r.Context(), client.key))
 		if !admitted {
-			g.reject(w, r, address, refused)
+			g.reject(w, r, client, refused)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-func (g *Guard) demandsOf(ctx context.Context, address string) []demand {
-	limit := g.limitFor(address)
-	demands := []demand{{scope: scopeAddress, key: scopeAddress + ":" + address, limit: limit}}
+func (g *Guard) demandsOf(ctx context.Context, clientKey string) []demand {
+	limit := g.limitFor(clientKey)
+	demands := []demand{{scope: scopeAddress, key: scopeAddress + ":" + clientKey, limit: limit}}
 	if claims, found := token.ClaimsFrom(ctx); found && claims.Subject != "" {
 		demands = append(demands, demand{scope: scopeAccount, key: scopeAccount + ":" + claims.Subject, limit: limit})
 	}
 	return demands
 }
 
-func (g *Guard) limitFor(address string) Limit {
-	if g.loadTestKey != "" && address == g.loadTestKey {
+func (g *Guard) limitFor(clientKey string) Limit {
+	if g.loadTestKey != "" && clientKey == g.loadTestKey {
 		return g.loadTest
 	}
 	return g.nominal
 }
 
-func (g *Guard) reject(w http.ResponseWriter, r *http.Request, address string, refused refusal) {
+func (g *Guard) reject(w http.ResponseWriter, r *http.Request, client clientIdentity, refused refusal) {
 	g.logger.InfoContext(r.Context(), "débit dépassé",
 		slog.String("event", "http.debit_depasse"),
-		slog.String("adresse_client", address),
+		slog.String("adresse_client", client.address),
+		slog.String("cle", client.key),
 		slog.String("limite", refused.scope),
 		slog.Int("reessayer_dans", refused.retryAfterSeconds),
 	)
@@ -77,12 +78,17 @@ func (g *Guard) reject(w http.ResponseWriter, r *http.Request, address string, r
 	problem.Write(w, problem.TooManyRequests())
 }
 
-func clientKeyOf(r *http.Request) string {
+type clientIdentity struct {
+	address string
+	key     string
+}
+
+func clientOf(r *http.Request) clientIdentity {
 	address, found := httpserver.ClientAddress(r)
 	if !found {
-		return unknownAddress
+		return clientIdentity{address: unknownAddress, key: unknownAddress}
 	}
-	return addressKey(address)
+	return clientIdentity{address: address.String(), key: addressKey(address)}
 }
 
 func loadTestKeyOf(address netip.Addr) string {
@@ -93,9 +99,8 @@ func loadTestKeyOf(address netip.Addr) string {
 }
 
 func addressKey(address netip.Addr) string {
-	normalized := address.Unmap().WithZone("")
-	if normalized.Is6() {
-		return netip.PrefixFrom(normalized, ipv6PrefixBits).Masked().String()
+	if address.Is6() {
+		return netip.PrefixFrom(address, ipv6PrefixBits).Masked().String()
 	}
-	return normalized.String()
+	return address.String()
 }

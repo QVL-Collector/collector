@@ -97,5 +97,5 @@ func optionalAddress(raw string) (netip.Addr, error) {
 	if err != nil {
 		return netip.Addr{}, errors.New("adresse IP attendue")
 	}
-	return address, nil
+	return address.Unmap().WithZone(""), nil
 }

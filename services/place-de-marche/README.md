@@ -55,7 +55,7 @@ Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006)
 
 Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après l'authentification et le rôle, sur les deux routes qui déclenchent un contrôle : `POST /marche/v1/vendeur/articles/{id}/soumission` et `PUT /marche/v1/vendeur/articles/{id}` (recontrôle, US-021). Le dépôt de photo (US-020) s'y branchera de la même façon. Le catalogue et les autres routes vendeur ne sont pas limités.
 
-- Deux seaux par requête, débités ensemble : l'adresse du client et le compte (sujet du jeton). Le premier vide refuse : 429 Problem Details, `Retry-After` en secondes arrondies au supérieur, journal Info `event=http.debit_depasse` avec `adresse_client` et `limite` (`adresse` ou `compte`).
+- Deux seaux par requête, débités ensemble : l'adresse du client et le compte (sujet du jeton). Le premier vide refuse : 429 Problem Details, `Retry-After` en secondes arrondies au supérieur, journal Info `event=http.debit_depasse` avec `adresse_client` (adresse lue), `cle` (clé du seau d'adresse, /64 en IPv6) et `limite` (`adresse` ou `compte`).
 - Adresse du client : dernière valeur du dernier `X-Forwarded-For`, celle ajoutée par l'ALB en mode `append` ; à défaut, adresse source de la connexion. Une adresse IPv6 compte pour son /64. La confiance dans l'en-tête repose sur les NodePorts joignables depuis l'ALB seul (MS2, MS4).
 - Adresse de tir : `LIMITE_DEBIT_TIR_ADRESSE`, injectée à chaque session par `up.sh`, jamais versionnée ; ses requêtes (adresse et compte) suivent la limite de tir, toutes les autres la limite nominale. Aucune route ni en-tête de contournement (ME4, MT6).
 - Mémoire bornée : seaux pleins purgés chaque minute, 50 000 clés au plus (éviction d'une clé quelconque au-delà).

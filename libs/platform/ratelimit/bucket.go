@@ -66,12 +66,12 @@ func (s *store) admit(demands []demand) (refusal, bool) {
 	defer s.mu.Unlock()
 	now := s.clock()
 	s.sweepIfDue(now)
-	granted := make([]*bucket, 0, len(demands))
+	consulted := make([]*bucket, 0, len(demands))
 	var refused refusal
 	for _, d := range demands {
 		b := s.bucketFor(d.key, d.limit, now)
 		b.refill(now, d.limit)
-		granted = append(granted, b)
+		consulted = append(consulted, b)
 		if b.tokens >= 1 {
 			continue
 		}
@@ -82,7 +82,7 @@ func (s *store) admit(demands []demand) (refusal, bool) {
 	if refused.retryAfterSeconds > 0 {
 		return refused, false
 	}
-	for _, b := range granted {
+	for _, b := range consulted {
 		b.tokens--
 	}
 	return refusal{}, true
