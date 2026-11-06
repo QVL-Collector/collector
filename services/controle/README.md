@@ -5,9 +5,10 @@ Applique les règles de publication à chaque demande de contrôle et publie le 
 ## Fonctionnement
 
 1. Consomme la file `controle.demandes` (acquittement manuel, préchargement 10).
-2. Écarte sans remise en file (vers `.ecartes`) et journalise tout message dont le `user-id` n'est pas `CANAL_EMETTEUR_ATTENDU`, ou non conforme au contrat (taille, clé dupliquée, schéma).
+2. Écarte sans remise en file ni nouvel essai, vers `controle.demandes.ecartes`, tout message dont le `user-id` n'est pas `CANAL_EMETTEUR_ATTENDU`, ou non conforme au contrat (taille, JSON illisible, clé dupliquée, champ manquant, type ou version inconnus) ; les messages suivants sont traités normalement. Journal Warn `event=canal.message_ecarte` (`file`, `file_ecartes`, `message_id`, `emetteur`, `motif` : `emetteur_inattendu` ou `refuse_par_le_traitement`, `relivre`), précédé pour un contrat non respecté de `controle.demande_ecartee` avec sa `raison`. Un message relivré sans fin (plantage pendant son traitement) est mis à l'écart par le broker après 5 livraisons (`delivery-limit` 4, [infra/canal](../../infra/canal/README.md)).
 3. Évalue les règles, publie `controle.resultat` v1 sur l'échange `controle.resultats`, clé `v1`, avec `user-id` = `CANAL_UTILISATEUR` et l'identifiant de corrélation de la demande, attend la confirmation du broker, puis seulement acquitte la demande. Une panne entre les deux produit un doublon, jamais une perte ; la Place de marché l'absorbe par sa garde de révision.
 4. Une publication refusée ou non confirmée n'acquitte pas la demande : nouvel essai avec une attente croissante.
+5. Arrêté, le Contrôle ne perd rien : les demandes attendent dans la file durable (24 h au plus) et sont traitées à la reprise (US-024).
 
 Le service ne déclare aucune file ni aucun échange : la topologie est posée par l'IaC. Une file ou un échange absent, ou un droit refusé, arrête le service en erreur.
 

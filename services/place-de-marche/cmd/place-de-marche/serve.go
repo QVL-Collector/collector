@@ -65,6 +65,12 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	group.Go(func() error {
 		return consumeResults(groupCtx, logger, cfg.Channel, controle.NewResultHandler(validator, service, logger))
 	})
+	group.Go(func() error {
+		return controle.NewSafeguard(store, logger).Run(groupCtx)
+	})
+	group.Go(func() error {
+		return outbox.NewPurger(pool, logger).Run(groupCtx)
+	})
 	return group.Wait()
 }
 

@@ -9,6 +9,7 @@ Module Annonces : catalogue public, brouillons du vendeur, catégories, soumissi
 | `place-de-marche serve` (par défaut) | API publique sur `ADRESSE_API`, santé sur `ADRESSE_GESTION`, relais de l'outbox et consommateur des résultats de contrôle | `marche_execution` |
 | `place-de-marche migrate` | Applique les migrations embarquées, puis s'arrête (Job Helm `pre-install`, `pre-upgrade`) | `marche_migration` |
 | `place-de-marche suspendre <compte-id>`, `place-de-marche retablir <compte-id>` | Suspend ou rétablit un compte vendeur, puis s'arrête (voir « Comptes ») | `marche_migration` |
+| `place-de-marche rejouer --depuis <RFC3339> [--jusqu-a <RFC3339>]` | Rejoue l'outbox sur une fenêtre, puis s'arrête (voir « Contrôle fermé par défaut ») | `marche_migration` |
 
 | Port | Contenu | Exposition |
 |---|---|---|
@@ -22,10 +23,43 @@ Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment
 ## Cycle de soumission (US-013)
 
 1. `POST /marche/v1/vendeur/articles/{id}/soumission` avec `{"revision": n}` : article brouillon ou refusé du vendeur, révision lue exigée (409 si périmée, 404 si l'article est à un autre vendeur). Dans une transaction : état `en_controle`, révision + 1, motif effacé, demande `controle.demande` v1 écrite dans la table `outbox`. Réponse 202.
-2. Relais de l'outbox (une goroutine par réplica, `FOR UPDATE SKIP LOCKED`, lots de 50 toutes les 500 ms) : publie sur l'échange `controle.demandes`, clé `v1`, propriété `user-id` = `CANAL_UTILISATEUR`, attend la confirmation du broker, puis renseigne `publie_le`. Dans un lot, les messages routés sont marqués publiés ; un message sans file de destination ou un lot refusé par le broker reste en attente, avec un journal `outbox.essai_differe` et une attente croissante entre essais (jusqu'à 10 s). Le rejeu de l'outbox par Job (MC9) est reporté à US-024.
+2. Relais de l'outbox (une goroutine par réplica, `FOR UPDATE SKIP LOCKED`, lots de 50 toutes les 500 ms) : publie sur l'échange `controle.demandes`, clé `v1`, propriété `user-id` = `CANAL_UTILISATEUR`, attend la confirmation du broker, puis renseigne `publie_le`. Dans un lot, les messages routés sont marqués publiés ; un message sans file de destination ou un lot refusé par le broker reste en attente, avec un journal `outbox.essai_differe` et une attente croissante entre essais (jusqu'à 10 s). Rejeu, purge et filet de relance : voir « Contrôle fermé par défaut ».
    La demande porte `seller.account_id` (sujet du jeton), `seller.member_since` (date UTC d'inscription) et `seller.suspended`, lus dans la même transaction par l'interface interne du module Comptes (voir « Comptes »), sans email ni nom. Même lecture pour la revalidation (US-021).
-3. Consommateur de la file `pdm.resultats-controle` (acquittement manuel, préchargement 10) : un message dont le `user-id` n'est pas `CANAL_EMETTEUR_ATTENDU`, ou non conforme au contrat, est rejeté sans remise en file (vers `.ecartes`) et journalisé. Un résultat n'est appliqué que si l'article est `en_controle` à la révision du résultat ; sinon (doublon, révision périmée) il est acquitté sans effet. L'application écrit l'état, le motif, et une ligne dans `resultat_controle` (journal des résultats, une issue par révision).
+3. Consommateur de la file `pdm.resultats-controle` (acquittement manuel, préchargement 10) : un message dont le `user-id` n'est pas `CANAL_EMETTEUR_ATTENDU`, ou non conforme au contrat, est rejeté sans remise en file (vers `pdm.resultats-controle.ecartes`) et journalisé (`canal.message_ecarte`, voir « Contrôle fermé par défaut »). Un résultat n'est appliqué que si l'article est `en_controle` à la révision du résultat ; sinon (doublon, révision périmée) il est acquitté sans effet. L'application écrit l'état, le motif, et une ligne dans `resultat_controle` (journal des résultats, une issue par révision).
 4. Une erreur transitoire (base indisponible) ne rejette jamais le message : le consommateur réessaie avec une attente croissante, sans acquitter.
+
+## Contrôle fermé par défaut (US-024)
+
+- **Jamais publié sans contrôle** : seuls deux chemins mènent à `publie`, l'application d'un résultat `publie` du Contrôle sur un article `en_controle` à la même révision, et la décision d'un admin sur un article `a_verifier` (lui-même issu d'un résultat). La soumission n'attend pas le broker : l'article reste `en_controle`, hors du catalogue, tant qu'aucun résultat n'est appliqué, Contrôle arrêté ou non.
+- **Reprise sans perte ni doublon** : la demande attend dans l'outbox ou dans la file durable `controle.demandes` ; au retour du Contrôle, le résultat est appliqué une fois. Un doublon, ou un résultat pour une révision dépassée, touche zéro ligne : acquitté sans effet, journal `controle.resultat_ignore`.
+- **Mise à l'écart** : un message refusé par le consommateur (émetteur inattendu, JSON illisible, champ manquant, type ou version inconnus) part vers `<file>.ecartes` sans nouvel essai, sans bloquer les suivants ; un message relivré sans fin (plantage pendant son traitement) y part après 5 livraisons (`delivery-limit` 4, [infra/canal](../../infra/canal/README.md)). Chaque mise à l'écart par le consommateur produit un journal Warn `event=canal.message_ecarte` (`file`, `file_ecartes`, `message_id`, `emetteur`, `motif`, `relivre`), base de l'alerte d'US-015 ; les mises à l'écart faites par le broker se lisent sur la longueur des files `.ecartes`.
+- **Filet de relance** ([D05](../../docs/decisions/D05-communication-interservice.md), [D02](../../docs/decisions/D02-decoupage-applicatif.md)) : `article.demande_controle_le` date le dernier envoi au contrôle (posée par la soumission et le recontrôle, migration 00007). Toutes les 30 s, chaque réplica relance les articles `en_controle` dont le dernier envoi date de plus de 2 min (lots de 50, `FOR UPDATE SKIP LOCKED`) : dans une transaction, date d'envoi remise à maintenant et nouvelle `controle.demande` v1 dans l'outbox, reconstruite à partir de l'article, pour la **même révision**. Journal Warn `event=controle.demande_relancee` (`article_id`, `revision`) ; échec : `controle.relance_en_echec`, nouvel essai au balayage suivant. Pas de plafond de relances (non prévu par D05) : tant que le Contrôle est arrêté, une demande par article toutes les 2 min environ. Les doublons de résultat sont absorbés par la garde de révision et `resultat_controle_une_issue_par_revision`.
+- **Rejeu de l'outbox (MC9)** : `place-de-marche rejouer --depuis <RFC3339> [--jusqu-a <RFC3339>]`, lancé en Job par l'exploitation, même configuration que `suspendre`. Remet `publie_le` à `NULL` pour les seules lignes publiées dans `[depuis, jusqu-a[` (`jusqu-a` vaut maintenant par défaut) ; aucune autre colonne ni ligne n'est touchée, le relais les republie avec leur identifiant d'origine. Fenêtre refusée si le début ne précède pas la fin, si la fin est dans le futur, ou si le début remonte au-delà de la conservation (7 jours). Trace : journal Info `event=outbox.rejeu` (`correlation_id`, `depuis`, `jusqu_a`, `lignes`), plus la création du Job dans le journal du plan de contrôle. Sans risque de double effet : les consommateurs sont idempotents (garde de révision).
+- **Purge de l'outbox (MC8)** : chaque réplica appelle, au démarrage puis toutes les heures, la fonction `purger_outbox_publiee()` (migration 00007), qui supprime les lignes publiées depuis plus de 7 jours. `marche_execution` n'a pas `DELETE` sur `outbox` : seulement `EXECUTE` sur cette fonction `SECURITY DEFINER`, qui ne peut jamais supprimer une ligne non publiée. Journaux `outbox.purge` (`lignes`) et `outbox.purge_en_echec`.
+- **Comptage I3** ([D12](../../docs/decisions/D12-indicateurs-qualite.md)), sur la base `marche`, après le tir :
+
+```sql
+WITH demande AS (
+    SELECT (convert_from(o.corps, 'UTF8')::jsonb #>> '{data,article_id}')::uuid AS article_id,
+           (convert_from(o.corps, 'UTF8')::jsonb #>> '{data,revision}')::integer AS revision,
+           count(*) AS envois,
+           bool_and(o.publie_le IS NULL) AS jamais_publiee
+    FROM outbox AS o
+    WHERE o.type_message = 'controle.demande'
+    GROUP BY 1, 2
+)
+SELECT count(*)                                                                 AS demandes_emises,
+       coalesce(sum(d.envois), 0) - count(*)                                    AS envois_relances,
+       count(*) FILTER (WHERE d.jamais_publiee)                                 AS demandes_non_publiees,
+       count(r.message_id)                                                      AS resultats_appliques,
+       count(*) FILTER (WHERE r.message_id IS NULL AND a.revision > d.revision) AS demandes_depassees,
+       count(*) FILTER (WHERE r.message_id IS NULL AND a.revision = d.revision) AS demandes_sans_resultat
+FROM demande AS d
+JOIN article AS a ON a.id = d.article_id
+LEFT JOIN resultat_controle AS r ON r.article_id = d.article_id AND r.revision = d.revision;
+```
+
+  Une demande est comptée une fois par article et révision, quels que soient ses envois (relances du filet dans `envois_relances`). I3 tenu si `demandes_sans_resultat = 0` et `demandes_emises = resultats_appliques + demandes_depassees` (une demande dépassée est celle d'une révision remplacée par une modification avant son résultat, US-021). Sans modification pendant le tir, `demandes_emises = resultats_appliques`. Lisible par `marche_execution` comme par `marche_migration`. Le comptage ne vaut que dans la fenêtre conservée par la purge (7 jours) : une demande purgée n'est plus comptée, son résultat non plus.
 
 ## Recontrôle après modification (US-021)
 

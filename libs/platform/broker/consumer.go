@@ -9,7 +9,18 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const DefaultPrefetch = 10
+const (
+	DefaultPrefetch    = 10
+	discardQueueSuffix = ".ecartes"
+	discardedEvent     = "canal.message_ecarte"
+)
+
+type discardCause string
+
+const (
+	causeUnexpectedPublisher discardCause = "emetteur_inattendu"
+	causeRejectedByHandler   discardCause = "refuse_par_le_traitement"
+)
 
 type Disposition int
 
@@ -96,19 +107,13 @@ func (c Consumer) loop(ctx context.Context, handle Handler, deliveries <-chan am
 
 func (c Consumer) process(ctx context.Context, handle Handler, delivery amqp.Delivery, closed closures) error {
 	if delivery.UserId != c.ExpectedPublisher {
-		c.Logger.WarnContext(ctx, "émetteur inattendu, message écarté",
-			slog.String("event", "canal.emetteur_refuse"),
-			slog.String("file", c.Queue),
-			slog.String("message_id", delivery.MessageId),
-			slog.String("emetteur", delivery.UserId),
-		)
-		return settle(delivery, Reject)
+		return c.discard(ctx, delivery, causeUnexpectedPublisher)
 	}
 	received := Delivery{MessageID: delivery.MessageId, UserID: delivery.UserId, Redelivered: delivery.Redelivered, Body: delivery.Body}
 	for attempt := 0; ; attempt++ {
 		disposition, err := handle(ctx, received)
 		if err == nil {
-			return settle(delivery, disposition)
+			return c.settle(ctx, delivery, disposition)
 		}
 		if IsFault(err) {
 			return err
@@ -144,16 +149,32 @@ func publisherCloseReason(reason *amqp.Error) error {
 	return fmt.Errorf("canal de publication fermé : %w", CloseReason(reason))
 }
 
-func settle(delivery amqp.Delivery, disposition Disposition) error {
-	var err error
-	switch disposition {
-	case Ack:
-		err = delivery.Ack(false)
-	case Reject:
-		err = delivery.Nack(false, false)
+func (c Consumer) settle(ctx context.Context, delivery amqp.Delivery, disposition Disposition) error {
+	if disposition == Reject {
+		return c.discard(ctx, delivery, causeRejectedByHandler)
 	}
-	if err != nil {
+	if err := delivery.Ack(false); err != nil {
 		return fmt.Errorf("acquittement de %s : %w", delivery.MessageId, err)
 	}
 	return nil
+}
+
+func (c Consumer) discard(ctx context.Context, delivery amqp.Delivery, cause discardCause) error {
+	if err := delivery.Nack(false, false); err != nil {
+		return fmt.Errorf("mise à l'écart de %s : %w", delivery.MessageId, err)
+	}
+	c.Logger.WarnContext(ctx, "message écarté",
+		slog.String("event", discardedEvent),
+		slog.String("file", c.Queue),
+		slog.String("file_ecartes", c.discardQueue()),
+		slog.String("message_id", delivery.MessageId),
+		slog.String("emetteur", delivery.UserId),
+		slog.String("motif", string(cause)),
+		slog.Bool("relivre", delivery.Redelivered),
+	)
+	return nil
+}
+
+func (c Consumer) discardQueue() string {
+	return c.Queue + discardQueueSuffix
 }

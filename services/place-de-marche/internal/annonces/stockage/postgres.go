@@ -42,7 +42,7 @@ FROM modifie AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 const reviseQuery = `
 WITH revise AS (
 	UPDATE article
-	SET ` + contentAssignments + `, etat = $10, motif = NULL, revision = revision + 1, modifie_le = now()
+	SET ` + contentAssignments + `, etat = $10, motif = NULL, revision = revision + 1, modifie_le = now(), demande_controle_le = now()
 	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
 	RETURNING *
 )
@@ -52,12 +52,31 @@ FROM revise AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 const submitQuery = `
 WITH soumis AS (
 	UPDATE article
-	SET etat = $5, motif = NULL, revision = revision + 1, modifie_le = now()
+	SET etat = $5, motif = NULL, revision = revision + 1, modifie_le = now(), demande_controle_le = now()
 	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
 	RETURNING *
 )
 SELECT ` + articleColumns + `
 FROM soumis AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const resendOverdueQuery = `
+WITH en_retard AS (
+	SELECT id
+	FROM article
+	WHERE etat = $1 AND demande_controle_le < now() - make_interval(secs => $2)
+	ORDER BY demande_controle_le, id
+	LIMIT $3
+	FOR UPDATE SKIP LOCKED
+),
+relance AS (
+	UPDATE article AS a
+	SET demande_controle_le = now()
+	FROM en_retard
+	WHERE a.id = en_retard.id
+	RETURNING a.*
+)
+SELECT ` + articleColumns + `
+FROM relance AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 
 const applyReviewQuery = `
 UPDATE article
@@ -287,6 +306,37 @@ func (s *Store) ApplyReview(ctx context.Context, outcome annonces.ReviewOutcome)
 		return false, fmt.Errorf("application du résultat de contrôle : %w", err)
 	}
 	return applied, nil
+}
+
+func (s *Store) ResendOverdueReviews(ctx context.Context, overdue time.Duration, limit int) ([]annonces.Article, error) {
+	var resent []annonces.Article
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		var err error
+		resent, err = overdueReviewsInTransaction(ctx, tx, overdue, limit)
+		if err != nil {
+			return err
+		}
+		for _, article := range resent {
+			if err = s.requestReview(ctx, tx, article); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("relance des contrôles en retard : %w", err)
+	}
+	return resent, nil
+}
+
+func overdueReviewsInTransaction(ctx context.Context, tx pgx.Tx, overdue time.Duration, limit int) ([]annonces.Article, error) {
+	rows, err := tx.Query(ctx, resendOverdueQuery, string(annonces.StatusUnderReview), overdue.Seconds(), limit)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (annonces.Article, error) {
+		return scanArticle(row)
+	})
 }
 
 func (s *Store) explainRefusal(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, allowed func(annonces.Status) bool, notAllowed error) error {
