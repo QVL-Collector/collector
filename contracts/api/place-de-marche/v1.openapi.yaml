@@ -207,6 +207,8 @@ paths:
           $ref: "#/components/responses/CorpsTropVolumineux"
         "415":
           $ref: "#/components/responses/TypeNonPrisEnCharge"
+        "429":
+          $ref: "#/components/responses/TropDeRequetes"
         "500":
           $ref: "#/components/responses/ErreurInterne"
   /vendeur/articles/{id}/soumission:
@@ -253,6 +255,8 @@ paths:
           $ref: "#/components/responses/CorpsTropVolumineux"
         "415":
           $ref: "#/components/responses/TypeNonPrisEnCharge"
+        "429":
+          $ref: "#/components/responses/TropDeRequetes"
         "500":
           $ref: "#/components/responses/ErreurInterne"
   /admin/articles:
@@ -809,6 +813,19 @@ components:
             $ref: "#/components/schemas/Probleme"
     TypeNonPrisEnCharge:
       description: Corps qui n'est pas application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    TropDeRequetes:
+      description: >-
+        Limite de débit dépassée pour l'adresse du client ou pour le compte authentifié ; Retry-After donne
+        l'attente en secondes, arrondie au supérieur
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
       content:
         application/problem+json:
           schema:

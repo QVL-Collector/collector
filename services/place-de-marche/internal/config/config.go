@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"collector/libs/platform/broker"
+	"collector/libs/platform/ratelimit"
 	"collector/libs/platform/token"
 )
 
@@ -47,6 +48,7 @@ type Server struct {
 	Database          Database
 	Token             token.Config
 	Channel           Channel
+	RateLimit         ratelimit.Policy
 }
 
 func LoadDatabase(lookup Lookup) (Database, error) {
@@ -77,6 +79,10 @@ func LoadServer(lookup Lookup) (Server, error) {
 	if err != nil {
 		return Server{}, err
 	}
+	rateLimit, err := ratelimit.LoadPolicy(lookup)
+	if err != nil {
+		return Server{}, err
+	}
 	return Server{
 		APIAddress:        valueOrDefault(lookup(envAPIAddress), defaultAPIAddress),
 		ManagementAddress: valueOrDefault(lookup(envManagementAddress), defaultManagementAddress),
@@ -86,6 +92,7 @@ func LoadServer(lookup Lookup) (Server, error) {
 			Endpoint:        endpoint,
 			ResultPublisher: valueOrDefault(lookup(envResultPublisher), defaultResultPublisher),
 		},
+		RateLimit: rateLimit,
 	}, nil
 }
 
