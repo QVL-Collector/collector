@@ -162,10 +162,13 @@ describe('US-010 catalogue bilingue FR/EN', () => {
     renderCatalogue(catalogue);
     await screen.findByRole('list', { name: 'Articles publiés' });
 
-    await user.click(screen.getByRole('button', { name: 'English' }));
+    await user.click(screen.getByRole('button', { name: 'EN, English' }));
 
     expect(await screen.findByRole('list', { name: 'Published items' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'EN, English' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(document.documentElement).toHaveAttribute('lang', 'en');
     expect(screen.getByText(publishedArticle(1).title)).toBeInTheDocument();
   });

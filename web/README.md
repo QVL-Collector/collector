@@ -16,6 +16,8 @@ Node 24 et npm 11. Dépendances en versions exactes.
 | `npm run i18n:check`              | Parité des traductions FR/EN (clés, textes vides, variables)         |
 | `npm test`                        | Vitest (jsdom), rapport JUnit dans `test-results/`                   |
 | `npm run test:coverage`           | Couverture v8 (`text`, `json-summary`, `lcov`)                       |
+| `npm run e2e:install`             | Télécharge Chromium pour Playwright (une fois par poste)             |
+| `npm run e2e`                     | Build puis parcours Playwright et axe-core (voir plus bas)           |
 | `npm run build`                   | Types puis build de production dans `dist/`                          |
 | `docker build -t collector-web .` | Image nginx non root, port 8080                                      |
 
@@ -119,6 +121,7 @@ Le rôle affiché n'est qu'un confort d'interface : aucune décision d'autorisat
 ## Internationalisation et accessibilité
 
 - Français par défaut (langue du navigateur sinon), anglais ; changement de langue sans rechargement, `lang` de `<html>` et textes internes MUI suivis.
+- Sélecteur de langue : boutons « FR » et « EN » dont le nom accessible commence par le libellé visible (« FR, Français », « EN, English ») : WCAG 2.5.3, règle axe `label-content-name-mismatch`. Un code entre parenthèses ne suffit pas, axe l'ignore.
 - Langue conservée pendant la session sans aucun stockage (D06) : elle voyage dans le `state` OIDC de la connexion et est réappliquée au retour sur `/rappel`, succès ou échec ; `ui_locales` est transmis au serveur d'autorisation. Un rechargement complet repart de la langue du navigateur (US-025).
 - Motifs du contrôle (`src/shared/controlReason.ts`, liste fermée du contrat) et motifs de refus de l'admin (`src/shared/articleReason.ts`) traduits par `useArticleReasonLabel` ; montants par `useMoneyFormatter` (`Intl`, `fr-FR` ou `en-GB`).
 - `src/i18n/locales/en.ts` est typé sur `fr.ts` : une clé manquante ou en trop casse la compilation. `npm run i18n:check` (Node 24, sans dépendance) bloque aussi les textes vides et les variables `{{…}}` différentes d'une langue à l'autre.
@@ -126,3 +129,19 @@ Le rôle affiché n'est qu'un confort d'interface : aucune décision d'autorisat
 - Lien d'évitement, titre de page et focus sur le `h1` à chaque navigation, annonces dans une zone `role="status"`, cibles tactiles de 2,75 rem, animations coupées sous `prefers-reduced-motion`.
 - Focus visible partout, ondulation coupée comprise : anneau de 0,1875 rem sur `:focus-visible` et sur `.Mui-focusVisible` des `ButtonBase`.
 - Contrastes : `src/ui/theme/themeContrastPairs.ts` déclare les couples de jetons utilisés (texte 4,5:1, non-texte 3:1) et `contrast.ts` calcule le rapport WCAG ; jsdom ne calculant pas les contrastes, c'est la preuve automatisée hors navigateur. Le gris par défaut des `ToggleButton` (4,4:1) est remplacé par `textSecondary`.
+
+## Tests de bout en bout (US-025)
+
+Playwright (Chromium seul) et `@axe-core/playwright` dans `e2e/`, contre le build de production servi par `vite preview` (`webServer` de `playwright.config.ts` : `npm run build` puis `vite preview` sur `127.0.0.1:4173`).
+
+- Mode démonstration : `/config.json` est remplacé par une configuration `source: demo` ; le fournisseur d'identité est simulé par interception réseau (`e2e/support/fournisseurIdentite.ts` : découverte, redirection d'autorisation vers `/rappel`, jetons non signés portant le rôle `vendeur` ou `acheteur`). Aucun code de production ne simule la connexion.
+- Langues : `E2E_LANGUES=fr` par défaut, `E2E_LANGUES=fr,en` pour jouer chaque parcours dans les deux langues (un projet Playwright par langue). Le projet `bascule-fr-en` joue toujours le passage du français à l'anglais par le sélecteur.
+- Écrans analysés par axe-core (WCAG 2.1 A et AA, échec sur toute violation `serious` ou `critical`, contraste compris) : liste `e2e/support/ecrans.ts`. Un nouvel écran (ex. l'écran admin d'US-022) s'ajoute par une entrée `{ nom, ouvrir }` dans cette liste.
+- Textes attendus : `e2e/support/textes.ts`, écrits en dur (oracle indépendant des fichiers de traduction).
+- Rapport HTML dans `playwright-report/`, traces et captures des échecs dans `test-results/e2e/`.
+
+```bash
+npm run e2e:install
+npm run e2e
+E2E_LANGUES=fr,en npm run e2e
+```

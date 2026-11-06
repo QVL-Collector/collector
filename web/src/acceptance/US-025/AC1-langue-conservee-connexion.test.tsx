@@ -11,7 +11,7 @@ import {
 } from '../US-008/identityProviderHarness';
 
 async function chooseEnglish(): Promise<void> {
-  await press(await screen.findByRole('button', { name: 'English' }));
+  await press(await screen.findByRole('button', { name: 'EN, English' }));
   await screen.findByRole('button', { name: 'Sign in' });
 }
 
@@ -44,7 +44,7 @@ describe('US-025-AC1 langue transmise au serveur d’autorisation', () => {
   it('Given un visiteur passé à l’anglais puis revenu au français, When il se connecte, Then ui_locales vaut fr', async () => {
     await openCollector('/', 'fr');
     await chooseEnglish();
-    await press(screen.getByRole('button', { name: 'Français' }));
+    await press(screen.getByRole('button', { name: 'FR, Français' }));
     await press(await screen.findByRole('button', { name: 'Se connecter' }));
 
     const authorize = await waitForNavigationTo(authorizationEndpoint());
@@ -67,7 +67,10 @@ describe('US-025-AC1 langue conservée au retour de connexion', () => {
     expect(
       within(screen.getByRole('banner')).getByRole('button', { name: 'Sign out' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'EN, English' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute('lang', 'en');
     });
@@ -131,7 +134,7 @@ describe('US-025-AC1 langue conservée au retour de connexion', () => {
   it('Given un navigateur en anglais et le français choisi, When la connexion réussit, Then l’interface reste en français', async () => {
     identityProvider().account = sellerA;
     await openCollector('/', 'en');
-    await press(await screen.findByRole('button', { name: 'Français' }));
+    await press(await screen.findByRole('button', { name: 'FR, Français' }));
     await press(await screen.findByRole('button', { name: 'Se connecter' }));
     const authorize = await waitForNavigationTo(authorizationEndpoint());
     const state = authorize.searchParams.get('state') ?? '';
