@@ -170,10 +170,12 @@ func verifierDroitsMinimaux(t *testing.T, base basePostgreSQL, pool *pgxpool.Poo
 	exigerRefusDeDroit(t, pool, "TRUNCATE article")
 	exigerRefusDeDroit(t, pool, "DELETE FROM outbox")
 	exigerRefusDeDroit(t, pool, "DELETE FROM resultat_controle")
+	exigerRefusDeDroit(t, pool, "DELETE FROM decision_admin")
+	exigerRefusDeDroit(t, pool, "UPDATE decision_admin SET motif = NULL")
 	var hors, possedes int
 	err := base.maitre.QueryRow(t.Context(), `
 		SELECT
-			count(*) FILTER (WHERE c.relname NOT IN ('article', 'categorie', 'outbox', 'resultat_controle') AND has_table_privilege($1, c.oid, 'SELECT,INSERT,UPDATE,DELETE')),
+			count(*) FILTER (WHERE c.relname NOT IN ('article', 'categorie', 'outbox', 'resultat_controle', 'decision_admin') AND has_table_privilege($1, c.oid, 'SELECT,INSERT,UPDATE,DELETE')),
 			count(*) FILTER (WHERE pg_get_userbyid(c.relowner) = $1)
 		FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')`, roleExecution).Scan(&hors, &possedes)

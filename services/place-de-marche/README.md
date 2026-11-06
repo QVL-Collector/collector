@@ -32,6 +32,15 @@ Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment
 
 Le service ne déclare aucune file ni aucun échange : la topologie est posée par l'IaC ([D05](../../docs/decisions/D05-communication-interservice.md)). Une file ou un échange absent, ou un droit refusé, arrête le service en erreur.
 
+## Articles à vérifier (US-022)
+
+Routes réservées au rôle `admin` (403 pour tout autre rôle, 401 sans jeton valide) :
+
+- `GET /marche/v1/admin/articles?page&taille` : articles `a_verifier`, du plus ancien au plus récent (index partiel `article_a_verifier_idx`), avec le contenu de la révision examinée, le motif du contrôle et `vendeurId`.
+- `POST /marche/v1/admin/articles/{id}/decision` avec `{"revision": n, "decision": "publier" | "refuser", "motif"?}` : `publier` donne `publie`, `refuser` donne `refuse` avec un motif de la liste fermée (`annonce_incomplete`, `coordonnees_detectees`, `prix_abusif`, `article_interdit`, `vendeur_non_fiable`). La révision ne change pas. 409 `revision-perimee` si l'article est passé à une autre révision, 409 `article-non-a-verifier` s'il n'est plus à vérifier, 422 `saisie-invalide` sur le motif (absent pour refuser, présent pour publier, hors liste).
+
+Dans la même transaction que la décision, une ligne est ajoutée à `decision_admin` (admin, article, révision, décision, motif, date ; une seule décision par révision). Le rôle d'exécution peut seulement y insérer et lire : ni `UPDATE` ni `DELETE`. Après le commit, un journal Info `event=annonces.decision_admin` reprend les mêmes champs.
+
 ## Variables d'environnement
 
 | Variable | Commande | Défaut | Contenu |

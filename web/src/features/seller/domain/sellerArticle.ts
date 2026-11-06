@@ -1,4 +1,4 @@
-import type { ControlReason } from '../../../shared/controlReason';
+import type { ArticleReason } from '../../../shared/articleReason';
 import type { Money } from '../../../shared/Money';
 
 export const articleStates = [
@@ -25,7 +25,7 @@ export type SellerArticle = {
   readonly category: SellerCategory | null;
   readonly price: Money | null;
   readonly shippingCost: Money | null;
-  readonly reason: ControlReason | null;
+  readonly reason: ArticleReason | null;
   readonly updatedAt: Date;
 };
 

@@ -1,4 +1,4 @@
-# Configuration commune à tous les modules Go (services/*, libs/*) ; appelée par la CI avec --config (D04, D10, D12).
+# Configuration commune à tous les modules Go (services/*, libs/*, infra/*) ; appelée par la CI avec --config (D04, D10, D12).
 version: "2"
 
 run:
@@ -19,6 +19,11 @@ linters:
       default-signifies-exhaustive: false
   exclusions:
     generated: strict
+    rules:
+      # TOTP (RFC 6238) : HMAC-SHA1 imposé par la politique OTP du realm (applications d'authentification) ; test seulement.
+      - path: infra/identite/totp_test\.go$
+        linters: [gosec]
+        text: "G505"
 
 formatters:
   enable:

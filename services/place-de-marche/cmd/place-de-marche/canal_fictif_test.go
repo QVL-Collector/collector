@@ -84,11 +84,12 @@ type livraison struct {
 
 type bancEnMemoire struct {
 	*environnement
-	stockage   *stockageEnMemoire
-	validateur *message.Validator
-	encodeur   *controle.RequestEncoder
-	resultats  *controle.ResultHandler
-	journal    *journalPartage
+	stockage    *stockageEnMemoire
+	validateur  *message.Validator
+	encodeur    *controle.RequestEncoder
+	resultats   *controle.ResultHandler
+	journal     *journalPartage
+	journalHTTP *journalPartage
 }
 
 func demarrerBancEnMemoire(t *testing.T) *bancEnMemoire {
@@ -100,14 +101,15 @@ func demarrerBancEnMemoire(t *testing.T) *bancEnMemoire {
 func monterBanc(t *testing.T, service *annonces.Service, stockage *stockageEnMemoire) *bancEnMemoire {
 	t.Helper()
 	validateur := validateurDeContrats(t)
-	journal := &journalPartage{}
+	journal, journalHTTP := &journalPartage{}, &journalPartage{}
 	return &bancEnMemoire{
-		environnement: demarrer(t, service),
+		environnement: demarrerJournalise(t, service, slog.New(slog.NewJSONHandler(journalHTTP, nil))),
 		stockage:      stockage,
 		validateur:    validateur,
 		encodeur:      controle.NewRequestEncoder(validateur),
 		resultats:     controle.NewResultHandler(validateur, service, slog.New(slog.NewJSONHandler(journal, nil))),
 		journal:       journal,
+		journalHTTP:   journalHTTP,
 	}
 }
 

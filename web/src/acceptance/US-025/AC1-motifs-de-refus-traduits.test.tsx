@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import contractSource from '../../../../contracts/messages/controle.resultat/v1.schema.json?raw';
-import { useControlReasonLabel } from '../../i18n/useControlReasonLabel';
+import { useArticleReasonLabel } from '../../i18n/useArticleReasonLabel';
 import type { SupportedLanguage } from '../../i18n/languages';
 import { controlReasons, type ControlReason } from '../../shared/controlReason';
 import { switchLanguage } from '../US-010/catalogueHarness';
@@ -12,7 +12,7 @@ const contractReasons = (JSON.parse(contractSource) as ResultContract).$defs.mot
 
 async function labelsIn(language: SupportedLanguage): Promise<Map<string, string>> {
   await act(() => switchLanguage(language));
-  const { result } = renderHook(() => useControlReasonLabel());
+  const { result } = renderHook(() => useArticleReasonLabel());
   return new Map(
     contractReasons.map((reason) => [reason, result.current(reason as ControlReason)] as const),
   );
@@ -52,7 +52,7 @@ describe('US-025-AC1 motifs de refus du contrat controle.resultat v1', () => {
 
   it('Given des libellés en français, When l’utilisateur passe à l’anglais, Then le libellé affiché suit sans recréer le composant', async () => {
     await act(() => switchLanguage('fr'));
-    const { result } = renderHook(() => useControlReasonLabel());
+    const { result } = renderHook(() => useArticleReasonLabel());
     const french = result.current('annonce_incomplete');
 
     await act(() => switchLanguage('en'));

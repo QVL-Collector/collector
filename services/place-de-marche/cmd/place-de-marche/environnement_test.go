@@ -127,6 +127,11 @@ func (m emetteurDeJetons) environnementSur(t *testing.T, adresse string, client 
 
 func demarrer(t *testing.T, service api.ArticleService) *environnement {
 	t.Helper()
+	return demarrerJournalise(t, service, journalMuet())
+}
+
+func demarrerJournalise(t *testing.T, service api.ArticleService, journal *slog.Logger) *environnement {
+	t.Helper()
 	emetteur := nouvelEmetteurDeJetons(t)
 	verificateur, err := token.NewVerifier(t.Context(), token.Config{
 		Issuer:          emetteurAttendu,
@@ -137,7 +142,7 @@ func demarrer(t *testing.T, service api.ArticleService) *environnement {
 	if err != nil {
 		t.Fatalf("vérificateur de jetons : %v", err)
 	}
-	serveur := httptest.NewServer(publicHandler(journalMuet(), service, verificateur))
+	serveur := httptest.NewServer(publicHandler(journal, service, verificateur))
 	t.Cleanup(serveur.Close)
 	return emetteur.environnementSur(t, serveur.URL, serveur.Client())
 }

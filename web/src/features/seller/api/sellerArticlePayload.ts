@@ -1,36 +1,22 @@
-import { controlReasons, type ControlReason } from '../../../shared/controlReason';
-import { parseCategory, parseMoney, parseNullable } from '../../../shared/marketplacePayload';
+import { articleReasons, type ArticleReason } from '../../../shared/articleReason';
+import {
+  parseCategory,
+  parseDate,
+  parseMoney,
+  parseNullable,
+  parseUuid,
+} from '../../../shared/marketplacePayload';
 import {
   expectArray,
   expectInteger,
-  expectNonEmptyString,
   expectOneOf,
   expectRecord,
   expectString,
-  InvalidPayloadError,
 } from '../../../shared/payload';
 import { articleStates, type SellerArticle, type SellerArticlePage } from '../domain/sellerArticle';
 
-function parseReason(value: unknown, path: string): ControlReason | null {
-  return parseNullable(value, (reason) => expectOneOf(reason, controlReasons, path));
-}
-
-function parseDate(value: unknown, path: string): Date {
-  const date = new Date(expectNonEmptyString(value, path));
-  if (Number.isNaN(date.getTime())) {
-    throw new InvalidPayloadError(path);
-  }
-  return date;
-}
-
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function parseUuid(value: unknown, path: string): string {
-  const id = expectString(value, path);
-  if (!uuidPattern.test(id)) {
-    throw new InvalidPayloadError(path);
-  }
-  return id;
+function parseReason(value: unknown, path: string): ArticleReason | null {
+  return parseNullable(value, (reason) => expectOneOf(reason, articleReasons, path));
 }
 
 export function parseSellerArticle(value: unknown, path = 'article'): SellerArticle {
