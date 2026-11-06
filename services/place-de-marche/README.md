@@ -51,6 +51,16 @@ Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006)
 - **Pas d'API** : conformément à [D02](../../docs/decisions/D02-decoupage-applicatif.md) (module Comptes minimal, fictif, en lecture seule), aucune route HTTP ne lit ni ne modifie un compte.
 - **Suspension, par l'exploitation** : `place-de-marche suspendre <compte-id>` et `place-de-marche retablir <compte-id>`, avec la même configuration de base que `migrate` (`BASE_DE_DONNEES_URL`, rôle `marche_migration`). Idempotent (la date d'une suspension déjà posée est conservée) ; identifiant invalide ou compte inconnu : arrêt en erreur. Journal Info `event=comptes.suspension` avec `compte_id`, `suspendu`. Un vendeur suspendu garde l'accès à ses brouillons ; le Contrôle refuse ses soumissions (`compte_non_autorise`).
 
+## Limitation de débit (US-027)
+
+Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après l'authentification et le rôle, sur les deux routes qui déclenchent un contrôle : `POST /marche/v1/vendeur/articles/{id}/soumission` et `PUT /marche/v1/vendeur/articles/{id}` (recontrôle, US-021). Le dépôt de photo (US-020) s'y branchera de la même façon. Le catalogue et les autres routes vendeur ne sont pas limités.
+
+- Deux seaux par requête, débités ensemble : l'adresse du client et le compte (sujet du jeton). Le premier vide refuse : 429 Problem Details, `Retry-After` en secondes arrondies au supérieur, journal Info `event=http.debit_depasse` avec `adresse_client` et `limite` (`adresse` ou `compte`).
+- Adresse du client : dernière valeur du dernier `X-Forwarded-For`, celle ajoutée par l'ALB en mode `append` ; à défaut, adresse source de la connexion. Une adresse IPv6 compte pour son /64. La confiance dans l'en-tête repose sur les NodePorts joignables depuis l'ALB seul (MS2, MS4).
+- Adresse de tir : `LIMITE_DEBIT_TIR_ADRESSE`, injectée à chaque session par `up.sh`, jamais versionnée ; ses requêtes (adresse et compte) suivent la limite de tir, toutes les autres la limite nominale. Aucune route ni en-tête de contournement (ME4, MT6).
+- Mémoire bornée : seaux pleins purgés chaque minute, 50 000 clés au plus (éviction d'une clé quelconque au-delà).
+- Écart V1 : limite par réplica, non partagée ; la limite effective est multipliée par le nombre de réplicas (architecture § 9.8).
+
 ## Variables d'environnement
 
 | Variable | Commande | Défaut | Contenu |
@@ -67,6 +77,11 @@ Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006)
 | `CANAL_UTILISATEUR` | `serve` | obligatoire | Identité de la Place de marché sur le canal, aussi posée en `user-id` des messages publiés |
 | `CANAL_MOT_DE_PASSE` | `serve` | obligatoire | Secret de cette identité, généré à chaque `up` (MC5) |
 | `CANAL_EMETTEUR_ATTENDU` | `serve` | `controle` | Seul `user-id` accepté sur la file des résultats (MC2) |
+| `LIMITE_DEBIT_PAR_MINUTE` | `serve` | `30` | Débit nominal par adresse et par compte, en requêtes par minute (entier ≥ 1) |
+| `LIMITE_DEBIT_RAFALE` | `serve` | `10` | Rafale nominale (taille du seau, entier ≥ 1) |
+| `LIMITE_DEBIT_TIR_ADRESSE` | `serve` | aucune | Adresse IP du poste de tir, injectée à l'exécution ; vide : aucune limite relevée |
+| `LIMITE_DEBIT_TIR_PAR_MINUTE` | `serve` | `6000` | Débit relevé pour l'adresse de tir, en requêtes par minute |
+| `LIMITE_DEBIT_TIR_RAFALE` | `serve` | `200` | Rafale relevée pour l'adresse de tir |
 | `ADRESSE_API` | `serve` | `:8080` | Écoute de l'API |
 | `ADRESSE_GESTION` | `serve` | `:9090` | Écoute de la santé |
 | `JOURNAL_NIVEAU` | toutes | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |

@@ -51,6 +51,10 @@ func NotFound() Problem {
 	return New(http.StatusNotFound, "Ressource introuvable.")
 }
 
+func TooManyRequests() Problem {
+	return New(http.StatusTooManyRequests, "Trop de requêtes, réessayez plus tard.")
+}
+
 func Internal() Problem {
 	return New(http.StatusInternalServerError, "Erreur interne.")
 }

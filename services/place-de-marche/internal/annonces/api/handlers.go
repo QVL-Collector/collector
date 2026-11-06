@@ -57,12 +57,16 @@ type Authenticator interface {
 	Authenticate(logger *slog.Logger, next http.Handler) http.Handler
 }
 
+type RateLimiter interface {
+	Limit(next http.Handler) http.Handler
+}
+
 type handlers struct {
 	service ArticleService
 	logger  *slog.Logger
 }
 
-func Register(mux *http.ServeMux, service ArticleService, authenticator Authenticator, logger *slog.Logger) {
+func Register(mux *http.ServeMux, service ArticleService, authenticator Authenticator, limiter RateLimiter, logger *slog.Logger) {
 	h := handlers{service: service, logger: logger}
 	restrictedTo := func(role string) func(http.HandlerFunc) http.Handler {
 		return func(handler http.HandlerFunc) http.Handler {
@@ -71,14 +75,17 @@ func Register(mux *http.ServeMux, service ArticleService, authenticator Authenti
 	}
 	sellerOnly := restrictedTo(sellerRole)
 	adminOnly := restrictedTo(adminRole)
+	throttledSellerOnly := func(handler http.HandlerFunc) http.Handler {
+		return sellerOnly(limiter.Limit(handler).ServeHTTP)
+	}
 	mux.HandleFunc("GET "+basePath+"/categories", h.listCategories)
 	mux.HandleFunc("GET "+publishedArticles, h.listCatalogue)
 	mux.HandleFunc("GET "+publishedArticles+"/{id}", h.publishedArticle)
 	mux.Handle("POST "+sellerArticles, sellerOnly(h.createDraft))
 	mux.Handle("GET "+sellerArticles, sellerOnly(h.listOwnArticles))
 	mux.Handle("GET "+sellerArticles+"/{id}", sellerOnly(h.ownArticle))
-	mux.Handle("PUT "+sellerArticles+"/{id}", sellerOnly(h.updateDraft))
-	mux.Handle("POST "+sellerArticles+"/{id}/soumission", sellerOnly(h.submit))
+	mux.Handle("PUT "+sellerArticles+"/{id}", throttledSellerOnly(h.updateDraft))
+	mux.Handle("POST "+sellerArticles+"/{id}/soumission", throttledSellerOnly(h.submit))
 	mux.Handle("GET "+adminArticles, adminOnly(h.listArticlesToVerify))
 	mux.Handle("POST "+adminArticles+"/{id}/decision", adminOnly(h.decide))
 	mux.HandleFunc("/", httpserver.NotFound)

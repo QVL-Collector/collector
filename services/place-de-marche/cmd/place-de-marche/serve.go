@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
@@ -15,6 +16,7 @@ import (
 	"collector/libs/platform/logging"
 	"collector/libs/platform/message"
 	"collector/libs/platform/outbox"
+	"collector/libs/platform/ratelimit"
 	"collector/libs/platform/token"
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/annonces/api"
@@ -49,10 +51,11 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	}
 	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator), comptesstockage.NewStore(pool))
 	service := annonces.NewService(store, store)
+	guard := ratelimit.NewGuard(cfg.RateLimit, logger, time.Now)
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		return httpserver.Run(groupCtx, logger,
-			httpserver.New(cfg.APIAddress, publicHandler(logger, service, verifier)),
+			httpserver.New(cfg.APIAddress, publicHandler(logger, service, verifier, guard)),
 			httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, pool.Ping)),
 		)
 	})
@@ -65,9 +68,9 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	return group.Wait()
 }
 
-func publicHandler(logger *slog.Logger, service api.ArticleService, authenticator api.Authenticator) http.Handler {
+func publicHandler(logger *slog.Logger, service api.ArticleService, authenticator api.Authenticator, limiter api.RateLimiter) http.Handler {
 	mux := http.NewServeMux()
-	api.Register(mux, service, authenticator, logger)
+	api.Register(mux, service, authenticator, limiter, logger)
 	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
 }
 
