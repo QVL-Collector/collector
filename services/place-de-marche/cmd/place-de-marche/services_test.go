@@ -93,12 +93,17 @@ func lancerPlaceDeMarche(t *testing.T, canal *canalDeTest, adresseBase string, e
 
 func construireControle(t *testing.T) string {
 	t.Helper()
-	source, err := filepath.Abs(filepath.Join("..", "..", "..", "controle", "cmd", "controle"))
+	return construireBinaire(t, filepath.Join("..", "..", "..", "controle", "cmd", "controle"), "controle")
+}
+
+func construireBinaire(t *testing.T, relatif, nom string) string {
+	t.Helper()
+	source, err := filepath.Abs(relatif)
 	if err != nil {
-		t.Fatalf("sources du Contrôle : %v", err)
+		t.Fatalf("sources de %s : %v", nom, err)
 	}
 	repertoire := t.TempDir()
-	binaire := filepath.Join(repertoire, "controle")
+	binaire := filepath.Join(repertoire, nom)
 	if runtime.GOOS == "windows" {
 		binaire += ".exe"
 	}
@@ -106,7 +111,7 @@ func construireControle(t *testing.T) string {
 	construction.Dir = source
 	construction.Env = append(os.Environ(), "GOBIN="+repertoire)
 	if sortie, err := construction.CombinedOutput(); err != nil {
-		t.Fatalf("construction du Contrôle : %v\n%s", err, sortie)
+		t.Fatalf("construction de %s : %v\n%s", nom, err, sortie)
 	}
 	return binaire
 }
@@ -154,6 +159,11 @@ func (p *processusControle) disponible(client *http.Client) bool {
 
 func lancerControle(t *testing.T, binaire string, canal *canalDeTest) *journalPartage {
 	t.Helper()
+	return controleDisponible(t, binaire, canal).journal
+}
+
+func controleDisponible(t *testing.T, binaire string, canal *canalDeTest) *processusControle {
+	t.Helper()
 	p := demarrerProcessusControle(t, binaire, canal)
 	client := &http.Client{Timeout: 2 * time.Second}
 	attendre(t, 30*time.Second, "démarrage du Contrôle", func() bool {
@@ -164,5 +174,5 @@ func lancerControle(t *testing.T, binaire string, canal *canalDeTest) *journalPa
 		}
 		return p.disponible(client)
 	})
-	return p.journal
+	return p
 }
