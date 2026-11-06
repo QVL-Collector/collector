@@ -86,7 +86,7 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, isolé dans `src/feat
 
 Contrat : `GET {interactionsApiUrl}/v1/notifications?page=1&taille=20` (jeton du vendeur, audience `interactions`), réponse `{ elements, page, taille, total }`, élément `{ id, articleId, revision, issue, motif, decideLe }`. Isolé dans `src/features/notifications/api/` (`notificationPayload.ts` valide chaque réponse).
 
-- `/vendeur/notifications` (rôle `vendeur`, lien « Notifications » dans l'en-tête) : les 20 décisions les plus récentes, sans pagination (POC), dans une liste `ul`. Chaque carte mène à `/vendeur/articles/:id`.
+- `/vendeur/notifications` (rôle `vendeur`, lien « Notifications » dans l'en-tête) : première page de 20 décisions dans l'ordre renvoyé par l'API, sans pagination (POC), dans une liste `ul`. Un élément sans `motif`, ou dont le motif ne correspond pas à l'issue (non nul si `publie`, `null` sinon), rend la réponse invalide. Chaque carte mène à `/vendeur/articles/:id`.
 - Texte construit uniquement à partir de l'issue (`publie`, `refuse`, `a_verifier`) et du code de motif (`null` si publié ; contrôle ou refus admin, traduits par `useArticleReasonLabel`), jamais du titre de l'article. Issue rendue par une puce icône + libellé ; « Décision du » `decideLe` par `useDateTimeFormatter` (`<time datetime>`).
 - Relecture toutes les 5 s, suspendue onglet masqué et relancée au retour (AC2 : moins de 10 s) ; arrêtée sur 401 (« Votre session a expiré », bouton « Se reconnecter ») ou 403. Nombre de notifications annoncé en `role="status"`.
 - Démonstration : trois notifications liées aux articles de démonstration du vendeur.

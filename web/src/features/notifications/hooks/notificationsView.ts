@@ -9,10 +9,6 @@ export type NotificationsView =
   | { readonly status: 'empty' }
   | { readonly status: 'ready'; readonly notifications: readonly SellerNotification[] };
 
-function byMostRecent(left: SellerNotification, right: SellerNotification): number {
-  return right.decidedAt.getTime() - left.decidedAt.getTime();
-}
-
 export function toNotificationsView(
   query: UseQueryResult<readonly SellerNotification[]>,
 ): NotificationsView {
@@ -26,5 +22,5 @@ export function toNotificationsView(
   if (query.data.length === 0) {
     return { status: 'empty' };
   }
-  return { status: 'ready', notifications: [...query.data].sort(byMostRecent) };
+  return { status: 'ready', notifications: query.data };
 }

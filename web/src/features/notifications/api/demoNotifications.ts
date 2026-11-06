@@ -1,7 +1,7 @@
 import type { ArticleReason } from '../../../shared/articleReason';
 import type { NotificationIssue } from '../domain/sellerNotification';
 
-export type DemoNotification = {
+type DemoNotification = {
   readonly id: string;
   readonly articleId: string;
   readonly revision: number;

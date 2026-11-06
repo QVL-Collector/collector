@@ -1,6 +1,6 @@
 import { createHttpClient } from '../api/httpClient';
 import { anonymousSession, type AuthSession } from '../auth/AuthSession';
-import { defaultInteractionsApiUrl, type RuntimeConfig } from '../config/runtimeConfig';
+import type { RuntimeConfig } from '../config/runtimeConfig';
 import { createAdminClient } from '../features/admin/api/createAdminClient';
 import type { AdminClient } from '../features/admin/domain/reviewArticle';
 import { createCatalogueClient } from '../features/catalogue/api/createCatalogueClient';
@@ -18,8 +18,10 @@ export type AppServices = {
   readonly authSession?: AuthSession;
 };
 
-export type AppServicesConfig = Pick<RuntimeConfig, 'marketplaceApiUrl' | 'catalogue'> &
-  Partial<Pick<RuntimeConfig, 'interactionsApiUrl'>>;
+export type AppServicesConfig = Pick<
+  RuntimeConfig,
+  'marketplaceApiUrl' | 'interactionsApiUrl' | 'catalogue'
+>;
 
 export async function createAppServices(
   config: AppServicesConfig,
@@ -30,7 +32,7 @@ export async function createAppServices(
     getAccessToken: session.getAccessToken,
   });
   const interactionsHttp = createHttpClient({
-    baseUrl: config.interactionsApiUrl ?? defaultInteractionsApiUrl,
+    baseUrl: config.interactionsApiUrl,
     getAccessToken: session.getAccessToken,
   });
   const [catalogueClient, sellerClient, adminClient, notificationsClient] = await Promise.all([
