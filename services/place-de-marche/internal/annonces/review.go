@@ -65,6 +65,17 @@ type ReviewRequest struct {
 	PhotoCount  int
 }
 
+type ResendBackoff struct {
+	First time.Duration
+	Max   time.Duration
+}
+
+type ResentReview struct {
+	Article Article
+	Resends int
+	NextIn  time.Duration
+}
+
 type ReviewOutcome struct {
 	MessageID    string
 	Article      ArticleID

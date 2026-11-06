@@ -18,10 +18,11 @@ const (
 	migrateCommand   = "migrate"
 	suspendCommand   = "suspendre"
 	reinstateCommand = "retablir"
+	replayCommand    = "rejouer"
 	envLogLevel      = "JOURNAL_NIVEAU"
 )
 
-var errUnknownCommand = errors.New("commande inconnue (serve, migrate, suspendre <compte-id> ou retablir <compte-id> attendue)")
+var errUnknownCommand = errors.New("commande inconnue (serve, migrate, suspendre <compte-id>, retablir <compte-id> ou rejouer --depuis <RFC3339> attendue)")
 
 func main() {
 	os.Exit(run(os.Args[1:]))
@@ -60,6 +61,8 @@ func dispatch(ctx context.Context, logger *slog.Logger, command string, operands
 		return setSuspension(ctx, logger, operands, true)
 	case reinstateCommand:
 		return setSuspension(ctx, logger, operands, false)
+	case replayCommand:
+		return replayOutbox(ctx, logger, operands)
 	}
 	return fmt.Errorf("%w : %q", errUnknownCommand, command)
 }

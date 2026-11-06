@@ -31,6 +31,12 @@ const (
 	resultsConnection = serviceName + "/resultats-controle"
 )
 
+var productionSafeguardTiming = controle.SafeguardTiming{
+	FirstDelay: 2 * time.Minute,
+	MaxDelay:   time.Hour,
+	SweepEvery: 30 * time.Second,
+}
+
 func serve(ctx context.Context, logger *slog.Logger) error {
 	cfg, err := config.LoadServer(os.Getenv)
 	if err != nil {
@@ -52,6 +58,10 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator), comptesstockage.NewStore(pool))
 	service := annonces.NewService(store, store)
 	guard := ratelimit.NewGuard(cfg.RateLimit, logger, time.Now)
+	safeguard, err := controle.NewSafeguard(store, productionSafeguardTiming, logger)
+	if err != nil {
+		return err
+	}
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		return httpserver.Run(groupCtx, logger,
@@ -64,6 +74,12 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	})
 	group.Go(func() error {
 		return consumeResults(groupCtx, logger, cfg.Channel, controle.NewResultHandler(validator, service, logger))
+	})
+	group.Go(func() error {
+		return safeguard.Run(groupCtx)
+	})
+	group.Go(func() error {
+		return outbox.NewPurger(pool, logger).Run(groupCtx)
 	})
 	return group.Wait()
 }

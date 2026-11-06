@@ -44,10 +44,11 @@ type utilisateurDuCanal struct {
 }
 
 type canalDeTest struct {
-	hote    string
-	port    string
-	secrets map[string]string
-	admin   *amqp.Channel
+	hote      string
+	port      string
+	secrets   map[string]string
+	admin     *amqp.Channel
+	conteneur testcontainers.Container
 }
 
 type publication struct {
@@ -177,7 +178,7 @@ func demarrerRabbitMQ(t *testing.T, alterations ...alteration) *canalDeTest {
 	if err != nil {
 		t.Fatalf("port de RabbitMQ : %v", err)
 	}
-	canal := &canalDeTest{hote: hote, port: port.Port(), secrets: secrets}
+	canal := &canalDeTest{hote: hote, port: port.Port(), secrets: secrets, conteneur: conteneur}
 	canal.admin = canal.ouvrir(t, identiteAdmin)
 	return canal
 }
