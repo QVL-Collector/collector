@@ -12,6 +12,7 @@ import (
 
 	"collector/libs/platform/outbox"
 	"collector/services/place-de-marche/internal/annonces"
+	"collector/services/place-de-marche/internal/comptes"
 )
 
 const articleColumns = `a.id, a.vendeur_id, a.etat, a.revision, a.titre, a.description,
@@ -25,8 +26,6 @@ WITH cree AS (
 )
 SELECT ` + articleColumns + `
 FROM cree AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
-
-const memberSinceColumn = `(SELECT (min(premier.cree_le) AT TIME ZONE 'UTC')::date FROM article AS premier WHERE premier.vendeur_id = a.vendeur_id)`
 
 const contentAssignments = `titre = $5, description = $6, categorie_id = $7, prix_centimes = $8, frais_port_centimes = $9`
 
@@ -47,8 +46,7 @@ WITH revise AS (
 	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
 	RETURNING *
 )
-SELECT ` + articleColumns + `,
-	` + memberSinceColumn + `
+SELECT ` + articleColumns + `
 FROM revise AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 
 const submitQuery = `
@@ -58,8 +56,7 @@ WITH soumis AS (
 	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
 	RETURNING *
 )
-SELECT ` + articleColumns + `,
-	` + memberSinceColumn + `
+SELECT ` + articleColumns + `
 FROM soumis AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 
 const applyReviewQuery = `
@@ -121,26 +118,48 @@ type ReviewRequestEncoder interface {
 	Encode(ctx context.Context, request annonces.ReviewRequest) (outbox.Event, error)
 }
 
+type SellerAccounts interface {
+	Enroll(ctx context.Context, tx pgx.Tx, id comptes.AccountID) error
+	Status(ctx context.Context, tx pgx.Tx, id comptes.AccountID) (comptes.Status, error)
+}
+
 type Store struct {
 	pool     *pgxpool.Pool
 	requests ReviewRequestEncoder
+	accounts SellerAccounts
 }
 
-func NewStore(pool *pgxpool.Pool, requests ReviewRequestEncoder) *Store {
-	return &Store{pool: pool, requests: requests}
+func NewStore(pool *pgxpool.Pool, requests ReviewRequestEncoder, accounts SellerAccounts) *Store {
+	return &Store{pool: pool, requests: requests, accounts: accounts}
 }
 
 func (s *Store) CreateDraft(ctx context.Context, seller annonces.SellerID, content annonces.Content) (annonces.Article, error) {
-	columns := contentColumns(content)
-	row := s.pool.QueryRow(ctx, insertDraftQuery,
-		uuid.UUID(seller), string(annonces.StatusDraft), int(annonces.FirstRevision),
-		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
-	)
-	article, err := scanArticle(row)
+	var created annonces.Article
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := s.accounts.Enroll(ctx, tx, accountOf(seller)); err != nil {
+			return err
+		}
+		var err error
+		created, err = insertDraftInTransaction(ctx, tx, seller, content)
+		return err
+	})
 	if err != nil {
 		return annonces.Article{}, fmt.Errorf("création du brouillon : %w", err)
 	}
-	return article, nil
+	return created, nil
+}
+
+func insertDraftInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, content annonces.Content) (annonces.Article, error) {
+	columns := contentColumns(content)
+	row := tx.QueryRow(ctx, insertDraftQuery,
+		uuid.UUID(seller), string(annonces.StatusDraft), int(annonces.FirstRevision),
+		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
+	)
+	return scanArticle(row)
+}
+
+func accountOf(seller annonces.SellerID) comptes.AccountID {
+	return comptes.AccountID(seller)
 }
 
 func (s *Store) UpdateDraft(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
@@ -187,22 +206,22 @@ func (s *Store) reviseInTransaction(ctx context.Context, tx pgx.Tx, seller annon
 		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
 		string(annonces.StatusUnderReview),
 	)
-	request, err := scanReviewRequest(row)
+	revised, err := scanArticle(row)
 	if err != nil {
 		return annonces.Article{}, err
 	}
-	return request.Article, s.enqueueReview(ctx, tx, request)
+	return revised, s.requestReview(ctx, tx, revised)
 }
 
 func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Article, error) {
 	var submitted annonces.Article
 	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		request, err := submitInTransaction(ctx, tx, seller, id, expected)
+		var err error
+		submitted, err = submitInTransaction(ctx, tx, seller, id, expected)
 		if err != nil {
 			return err
 		}
-		submitted = request.Article
-		return s.enqueueReview(ctx, tx, request)
+		return s.requestReview(ctx, tx, submitted)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return annonces.Article{}, s.explainRefusal(ctx, seller, id, annonces.Status.Submittable, annonces.ErrArticleNotSubmittable)
@@ -213,35 +232,39 @@ func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonce
 	return submitted, nil
 }
 
-func submitInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.ReviewRequest, error) {
+func submitInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Article, error) {
 	row := tx.QueryRow(ctx, submitQuery,
 		uuid.UUID(id), uuid.UUID(seller), int(expected), statusColumns(annonces.SellerHeldStatuses()), string(annonces.StatusUnderReview),
 	)
-	return scanReviewRequest(row)
+	return scanArticle(row)
 }
 
-func scanReviewRequest(row pgx.Row) (annonces.ReviewRequest, error) {
-	var (
-		r           articleRow
-		memberSince time.Time
-	)
-	if err := row.Scan(append(r.targets(), &memberSince)...); err != nil {
-		return annonces.ReviewRequest{}, err
+func (s *Store) requestReview(ctx context.Context, tx pgx.Tx, article annonces.Article) error {
+	seller, err := s.sellerStatus(ctx, tx, article.Seller)
+	if err != nil {
+		return err
 	}
-	article := r.article()
-	return annonces.ReviewRequest{
+	event, err := s.requests.Encode(ctx, annonces.ReviewRequest{
 		Article:     article,
-		Seller:      annonces.SellerStatus{MemberSince: memberSince},
+		Seller:      seller,
 		SubmittedAt: article.UpdatedAt,
-	}, nil
-}
-
-func (s *Store) enqueueReview(ctx context.Context, tx pgx.Tx, request annonces.ReviewRequest) error {
-	event, err := s.requests.Encode(ctx, request)
+	})
 	if err != nil {
 		return err
 	}
 	return outbox.Enqueue(ctx, tx, event)
+}
+
+func (s *Store) sellerStatus(ctx context.Context, tx pgx.Tx, seller annonces.SellerID) (annonces.SellerStatus, error) {
+	account := accountOf(seller)
+	if err := s.accounts.Enroll(ctx, tx, account); err != nil {
+		return annonces.SellerStatus{}, err
+	}
+	status, err := s.accounts.Status(ctx, tx, account)
+	if err != nil {
+		return annonces.SellerStatus{}, err
+	}
+	return annonces.SellerStatus{MemberSince: status.RegisteredAt, Suspended: status.Suspended}, nil
 }
 
 func (s *Store) ApplyReview(ctx context.Context, outcome annonces.ReviewOutcome) (bool, error) {

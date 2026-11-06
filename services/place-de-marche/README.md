@@ -1,6 +1,6 @@
 # Service Place de marché
 
-Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication et application de son résultat. Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), messages [`controle.demande` et `controle.resultat` v1](../../contracts/README.md).
+Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication et application de son résultat. Module Comptes minimal : statut des vendeurs (inscription, suspension). Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), messages [`controle.demande` et `controle.resultat` v1](../../contracts/README.md).
 
 ## Sous-commandes et ports
 
@@ -8,6 +8,7 @@ Module Annonces : catalogue public, brouillons du vendeur, catégories, soumissi
 |---|---|---|
 | `place-de-marche serve` (par défaut) | API publique sur `ADRESSE_API`, santé sur `ADRESSE_GESTION`, relais de l'outbox et consommateur des résultats de contrôle | `marche_execution` |
 | `place-de-marche migrate` | Applique les migrations embarquées, puis s'arrête (Job Helm `pre-install`, `pre-upgrade`) | `marche_migration` |
+| `place-de-marche suspendre <compte-id>`, `place-de-marche retablir <compte-id>` | Suspend ou rétablit un compte vendeur, puis s'arrête (voir « Comptes ») | `marche_migration` |
 
 | Port | Contenu | Exposition |
 |---|---|---|
@@ -22,7 +23,7 @@ Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment
 
 1. `POST /marche/v1/vendeur/articles/{id}/soumission` avec `{"revision": n}` : article brouillon ou refusé du vendeur, révision lue exigée (409 si périmée, 404 si l'article est à un autre vendeur). Dans une transaction : état `en_controle`, révision + 1, motif effacé, demande `controle.demande` v1 écrite dans la table `outbox`. Réponse 202.
 2. Relais de l'outbox (une goroutine par réplica, `FOR UPDATE SKIP LOCKED`, lots de 50 toutes les 500 ms) : publie sur l'échange `controle.demandes`, clé `v1`, propriété `user-id` = `CANAL_UTILISATEUR`, attend la confirmation du broker, puis renseigne `publie_le`. Dans un lot, les messages routés sont marqués publiés ; un message sans file de destination ou un lot refusé par le broker reste en attente, avec un journal `outbox.essai_differe` et une attente croissante entre essais (jusqu'à 10 s). Le rejeu de l'outbox par Job (MC9) est reporté à US-024.
-   La demande porte `seller.member_since` = date du premier article du vendeur et `seller.suspended` = `false` : valeurs provisoires, remplacées par le statut du compte avec US-019 (module Comptes minimal).
+   La demande porte `seller.account_id` (sujet du jeton), `seller.member_since` (date UTC d'inscription) et `seller.suspended`, lus dans la même transaction par l'interface interne du module Comptes (voir « Comptes »), sans email ni nom. Même lecture pour la revalidation (US-021).
 3. Consommateur de la file `pdm.resultats-controle` (acquittement manuel, préchargement 10) : un message dont le `user-id` n'est pas `CANAL_EMETTEUR_ATTENDU`, ou non conforme au contrat, est rejeté sans remise en file (vers `.ecartes`) et journalisé. Un résultat n'est appliqué que si l'article est `en_controle` à la révision du résultat ; sinon (doublon, révision périmée) il est acquitté sans effet. L'application écrit l'état, le motif, et une ligne dans `resultat_controle` (journal des résultats, une issue par révision).
 4. Une erreur transitoire (base indisponible) ne rejette jamais le message : le consommateur réessaie avec une attente croissante, sans acquitter.
 
@@ -41,11 +42,20 @@ Routes réservées au rôle `admin` (403 pour tout autre rôle, 401 sans jeton v
 
 Dans la même transaction que la décision, une ligne est ajoutée à `decision_admin` (admin, article, révision, décision, motif, date ; une seule décision par révision). Le rôle d'exécution peut seulement y insérer et lire : ni `UPDATE` ni `DELETE`. Après le commit, un journal Info `event=annonces.decision_admin` reprend les mêmes champs.
 
+## Comptes (US-019)
+
+Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006) : `id` (sujet du jeton), `inscrit_le`, `suspendu`, `suspendu_le` (renseigné si et seulement si suspendu). Aucune jointure ni clé étrangère avec `article`.
+
+- **Inscription** : la création d'un brouillon et toute demande de contrôle (soumission, revalidation) inscrivent le vendeur dans leur transaction (`INSERT … ON CONFLICT DO NOTHING`, `inscrit_le = now()`). La migration inscrit les vendeurs existants avec la date de leur premier article.
+- **Interface interne** lue par Annonces (`stockage.SellerAccounts`) : inscription et statut (date d'inscription, suspension), dans la transaction de l'appelant ; rien d'autre.
+- **Pas d'API** : conformément à [D02](../../docs/decisions/D02-decoupage-applicatif.md) (module Comptes minimal, fictif, en lecture seule), aucune route HTTP ne lit ni ne modifie un compte.
+- **Suspension, par l'exploitation** : `place-de-marche suspendre <compte-id>` et `place-de-marche retablir <compte-id>`, avec la même configuration de base que `migrate` (`BASE_DE_DONNEES_URL`, rôle `marche_migration`). Idempotent (la date d'une suspension déjà posée est conservée) ; identifiant invalide ou compte inconnu : arrêt en erreur. Journal Info `event=comptes.suspension` avec `compte_id`, `suspendu`. Un vendeur suspendu garde l'accès à ses brouillons ; le Contrôle refuse ses soumissions (`compte_non_autorise`).
+
 ## Variables d'environnement
 
 | Variable | Commande | Défaut | Contenu |
 |---|---|---|---|
-| `BASE_DE_DONNEES_URL` | les deux | obligatoire | `postgres://<rôle>:<mot de passe>@<hôte>:5432/marche?sslmode=verify-full&sslrootcert=<paquet RDS>` ; secret du rôle d'exécution pour `serve`, du rôle de migration pour `migrate` |
+| `BASE_DE_DONNEES_URL` | les deux | obligatoire | `postgres://<rôle>:<mot de passe>@<hôte>:5432/marche?sslmode=verify-full&sslrootcert=<paquet RDS>` ; secret du rôle d'exécution pour `serve`, du rôle de migration pour `migrate`, `suspendre` et `retablir` |
 | `BASE_DE_DONNEES_TLS_EXIGE` | les deux | `true` | `false` seulement en local : autorise un autre `sslmode` que `verify-full` |
 | `OIDC_EMETTEUR` | `serve` | obligatoire | Émetteur exact, ex. `https://auth.<domaine>/realms/collector` |
 | `OIDC_JEU_DE_CLES_URL` | `serve` | `<émetteur>/protocol/openid-connect/certs` | Adresse interne du jeu de clés si l'émetteur public n'est pas joignable depuis le cluster |

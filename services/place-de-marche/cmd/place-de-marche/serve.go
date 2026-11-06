@@ -20,6 +20,7 @@ import (
 	"collector/services/place-de-marche/internal/annonces/api"
 	"collector/services/place-de-marche/internal/annonces/controle"
 	"collector/services/place-de-marche/internal/annonces/stockage"
+	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/config"
 )
 
@@ -46,7 +47,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator))
+	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator), comptesstockage.NewStore(pool))
 	service := annonces.NewService(store, store)
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.Go(func() error {
