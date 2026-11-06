@@ -1,0 +1,6 @@
+apiVersion: v2
+name: xp01-test
+description: Service HTTP de test de XP01 (charge CPU, montée en charge, perte d'instance)
+type: application
+version: 0.1.0
+appVersion: "hpa-example"
