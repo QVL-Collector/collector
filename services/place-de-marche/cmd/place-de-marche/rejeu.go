@@ -7,14 +7,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"collector/libs/platform/outbox"
-	"collector/services/place-de-marche/internal/annonces/stockage"
-	"collector/services/place-de-marche/internal/config"
 )
 
 const (
@@ -29,27 +27,20 @@ func replayOutbox(ctx context.Context, logger *slog.Logger, operands []string) e
 	if err != nil {
 		return err
 	}
-	database, err := config.LoadDatabase(os.Getenv)
-	if err != nil {
-		return err
-	}
-	pool, err := stockage.Connect(ctx, database.URL)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-	replayed, err := outbox.Replay(ctx, pool, window)
-	if err != nil {
-		return err
-	}
-	logger.InfoContext(ctx, "outbox rejouée",
-		slog.String("event", "outbox.rejeu"),
-		slog.String("correlation_id", uuid.NewString()),
-		slog.Time("depuis", window.From),
-		slog.Time("jusqu_a", window.To),
-		slog.Int64("lignes", replayed),
-	)
-	return nil
+	return withDatabase(ctx, func(pool *pgxpool.Pool) error {
+		replayed, err := outbox.Replay(ctx, pool, window)
+		if err != nil {
+			return err
+		}
+		logger.InfoContext(ctx, "outbox rejouée",
+			slog.String("event", "outbox.rejeu"),
+			slog.String("correlation_id", uuid.NewString()),
+			slog.Time("depuis", window.From),
+			slog.Time("jusqu_a", window.To),
+			slog.Int64("lignes", replayed),
+		)
+		return nil
+	})
 }
 
 func replayWindowOf(operands []string, now time.Time) (outbox.Window, error) {

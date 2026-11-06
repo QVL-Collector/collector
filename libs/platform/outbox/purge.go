@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	Retention     = 7 * 24 * time.Hour
 	purgeInterval = time.Hour
 	purgeQuery    = `SELECT purger_outbox_publiee()`
 )
@@ -51,7 +50,6 @@ func (p *Purger) purge(ctx context.Context) {
 		p.logger.InfoContext(ctx, "lignes publiées de l'outbox purgées",
 			slog.String("event", "outbox.purge"),
 			slog.Int64("lignes", purged),
-			slog.Duration("conservation", Retention),
 		)
 	}
 }
