@@ -39,6 +39,17 @@ export type Textes = {
   readonly pageIntrouvable: string;
   readonly articleIntrouvable: string;
   readonly categorieInconnue: string;
+  readonly articlesAVerifier: string;
+  readonly publier: string;
+  readonly refuser: string;
+  readonly motifDuRefus: string;
+  readonly motifManquant: string;
+  readonly confirmerRefus: string;
+  readonly motifPrixAbusif: string;
+  readonly motifControlePrix: string;
+  readonly articlePublie: RegExp;
+  readonly articleRefuse: RegExp;
+  readonly conflitAdmin: string;
 };
 
 const fr: Textes = {
@@ -80,6 +91,17 @@ const fr: Textes = {
   pageIntrouvable: 'Page introuvable',
   articleIntrouvable: 'Article introuvable',
   categorieInconnue: 'Cette catégorie n’existe pas',
+  articlesAVerifier: 'Articles à vérifier',
+  publier: 'Publier',
+  refuser: 'Refuser',
+  motifDuRefus: 'Motif du refus',
+  motifManquant: 'Choisissez un motif de refus.',
+  confirmerRefus: 'Confirmer le refus',
+  motifPrixAbusif: 'Prix abusif',
+  motifControlePrix: 'Motif du contrôle : Prix à confirmer',
+  articlePublie: /a été publié\./,
+  articleRefuse: /a été refusé\./,
+  conflitAdmin: 'L’article a changé, rechargez la liste',
 };
 
 const en: Textes = {
@@ -121,6 +143,17 @@ const en: Textes = {
   pageIntrouvable: 'Page not found',
   articleIntrouvable: 'Item not found',
   categorieInconnue: 'This category does not exist',
+  articlesAVerifier: 'Items to review',
+  publier: 'Publish',
+  refuser: 'Reject',
+  motifDuRefus: 'Rejection reason',
+  motifManquant: 'Choose a rejection reason.',
+  confirmerRefus: 'Confirm the rejection',
+  motifPrixAbusif: 'Excessive price',
+  motifControlePrix: 'Review reason: Price to be confirmed',
+  articlePublie: /has been published\./,
+  articleRefuse: /has been rejected\./,
+  conflitAdmin: 'The item has changed, reload the list',
 };
 
 export const textes: Readonly<Record<Langue, Textes>> = { fr, en };

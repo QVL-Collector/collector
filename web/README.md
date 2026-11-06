@@ -134,9 +134,9 @@ Le rôle affiché n'est qu'un confort d'interface : aucune décision d'autorisat
 
 Playwright (Chromium seul) et `@axe-core/playwright` dans `e2e/`, contre le build de production servi par `vite preview` (`webServer` de `playwright.config.ts` : `npm run build` puis `vite preview` sur `127.0.0.1:4173`).
 
-- Mode démonstration : `/config.json` est remplacé par une configuration `source: demo` ; le fournisseur d'identité est simulé par interception réseau (`e2e/support/fournisseurIdentite.ts` : découverte, redirection d'autorisation vers `/rappel`, jetons non signés portant le rôle `vendeur` ou `acheteur`). Aucun code de production ne simule la connexion.
+- Mode démonstration : `/config.json` est remplacé par une configuration `source: demo` ; le fournisseur d'identité est simulé par interception réseau (`e2e/support/fournisseurIdentite.ts` : découverte, redirection d'autorisation vers `/rappel`, jetons non signés portant le rôle `vendeur`, `admin` ou `acheteur` ; l'OTP de l'administrateur reste côté Keycloak). Aucun code de production ne simule la connexion.
 - Langues : `E2E_LANGUES=fr` par défaut, `E2E_LANGUES=fr,en` pour jouer chaque parcours dans les deux langues (un projet Playwright par langue). Le projet `bascule-fr-en` joue toujours le passage du français à l'anglais par le sélecteur.
-- Écrans analysés par axe-core (WCAG 2.1 A et AA, échec sur toute violation `serious` ou `critical`, contraste compris) : liste `e2e/support/ecrans.ts`. Un nouvel écran (ex. l'écran admin d'US-022) s'ajoute par une entrée `{ nom, ouvrir }` dans cette liste.
+- Écrans analysés par axe-core (WCAG 2.1 A et AA, échec sur toute violation `serious` ou `critical`, contraste compris) : liste `e2e/support/ecrans.ts`. Écran admin compris (liste, dialogue de refus, conflit 409) ; un nouvel écran s'ajoute par une entrée `{ nom, ouvrir }` dans cette liste.
 - Textes attendus : `e2e/support/textes.ts`, écrits en dur (oracle indépendant des fichiers de traduction).
 - Rapport HTML dans `playwright-report/`, traces et captures des échecs dans `test-results/e2e/`.
 

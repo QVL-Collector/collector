@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
-import { articlesDemo, type Collector } from './collector';
-import { acheteur } from './fournisseurIdentite';
+import { articlesAVerifierDemo, articlesDemo, type Collector } from './collector';
+import { acheteur, administrateur } from './fournisseurIdentite';
 
 export type Ecran = {
   readonly nom: string;
@@ -9,6 +9,12 @@ export type Ecran = {
 
 async function catalogueCharge(collector: Collector): Promise<void> {
   await expect(collector.page.getByRole('article').first()).toBeVisible();
+}
+
+async function ouvrirArticlesAVerifier(collector: Collector): Promise<void> {
+  collector.seConnecterEn(administrateur);
+  await collector.ouvrirEspaceProtege('/admin');
+  await expect(collector.carteAVerifier(articlesAVerifierDemo.aRefuser)).toBeVisible();
 }
 
 async function titreAffiche(collector: Collector, titre: string | RegExp): Promise<void> {
@@ -107,6 +113,31 @@ export const ecrans: readonly Ecran[] = [
     ouvrir: async (collector) => {
       await collector.ouvrirEspaceProtege(`/vendeur/articles/${articlesDemo.refuse}`);
       await expect(collector.etatDeLAnnonce()).toContainText(collector.textes.motifIncomplet);
+    },
+  },
+  {
+    nom: 'admin, articles à vérifier',
+    ouvrir: ouvrirArticlesAVerifier,
+  },
+  {
+    nom: 'admin, dialogue de refus ouvert',
+    ouvrir: async (collector) => {
+      await ouvrirArticlesAVerifier(collector);
+      const carte = collector.carteAVerifier(articlesAVerifierDemo.aRefuser);
+      await collector.boutonDeDecision(carte, collector.textes.refuser).click();
+      await expect(collector.page.getByRole('dialog')).toBeVisible();
+      await expect(
+        collector.page.getByRole('radio', { name: collector.textes.motifPrixAbusif }),
+      ).toBeVisible();
+    },
+  },
+  {
+    nom: 'admin, décision en conflit (409)',
+    ouvrir: async (collector) => {
+      await ouvrirArticlesAVerifier(collector);
+      const carte = collector.carteAVerifier(articlesAVerifierDemo.modifieParLeVendeur);
+      await collector.boutonDeDecision(carte, collector.textes.publier).click();
+      await expect(carte.getByText(collector.textes.conflitAdmin)).toBeVisible();
     },
   },
   {

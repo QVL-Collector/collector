@@ -1,4 +1,5 @@
-import { articlesDemo, contenant, expect, test } from '../support/collector';
+import { articlesAVerifierDemo, articlesDemo, contenant, expect, test } from '../support/collector';
+import { acheteur, administrateur, vendeur } from '../support/fournisseurIdentite';
 
 test.describe('US-025-AC3 parcours de mise en vente', () => {
   test('catalogue, filtre, fiche, connexion vendeur, brouillon, soumission, état publié', async ({
@@ -85,4 +86,51 @@ test.describe('US-025-AC3 parcours de mise en vente', () => {
       timeout: 15_000,
     });
   });
+
+  test('administrateur : publier un article, refuser un autre avec motif (US-022)', async ({
+    collector,
+    langue,
+  }) => {
+    const { page, textes } = collector;
+    collector.seConnecterEn(administrateur);
+    await collector.ouvrir('/');
+    await collector.choisirLangue(langue);
+    await collector.seConnecter();
+    await page.getByRole('banner').getByRole('link', { name: textes.articlesAVerifier }).click();
+    await expect(collector.titrePrincipal()).toHaveText(textes.articlesAVerifier);
+
+    const aPublier = collector.carteAVerifier(articlesAVerifierDemo.aPublier);
+    await collector.boutonDeDecision(aPublier, textes.publier).click();
+    await expect(collector.annonce(textes.articlePublie)).toBeAttached();
+    await expect(aPublier).toHaveCount(0);
+
+    const aRefuser = collector.carteAVerifier(articlesAVerifierDemo.aRefuser);
+    await collector.boutonDeDecision(aRefuser, textes.refuser).click();
+    const dialogue = page.getByRole('dialog');
+    await dialogue.getByRole('button', { name: textes.confirmerRefus }).click();
+    await expect(dialogue.getByText(textes.motifManquant)).toBeVisible();
+    await dialogue.getByRole('radio', { name: textes.motifPrixAbusif }).check();
+    await dialogue.getByRole('button', { name: textes.confirmerRefus }).click();
+    await expect(dialogue).toBeHidden();
+    await expect(collector.annonce(textes.articleRefuse)).toBeAttached();
+    await expect(aRefuser).toHaveCount(0);
+
+    await expect(collector.carteAVerifier(articlesAVerifierDemo.modifieParLeVendeur)).toContainText(
+      textes.motifControlePrix,
+    );
+  });
+
+  for (const compte of [vendeur, acheteur]) {
+    test(`compte ${compte.roles.join(', ')} : accès réservé sur /admin`, async ({ collector }) => {
+      collector.seConnecterEn(compte);
+      await collector.navigateurEn(collector.langue);
+      await collector.ouvrirEspaceProtege('/admin');
+      await expect(collector.titrePrincipal()).toHaveText(collector.textes.accesReserve);
+      await expect(
+        collector.page.getByRole('banner').getByRole('link', {
+          name: collector.textes.articlesAVerifier,
+        }),
+      ).toHaveCount(0);
+    });
+  }
 });

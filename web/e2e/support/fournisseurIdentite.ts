@@ -24,6 +24,13 @@ export const acheteur: CompteFictif = {
   roles: ['acheteur'],
 };
 
+export const administrateur: CompteFictif = {
+  sujet: 'admin-e2e',
+  nom: 'Claire Admin',
+  identifiant: 'admin.e2e',
+  roles: ['admin'],
+};
+
 const dureeJetonSecondes = 900;
 const enTetesCors = { 'Access-Control-Allow-Origin': '*' };
 const suffixeDecouverte = '/.well-known/openid-configuration';

@@ -21,6 +21,12 @@ export const articlesDemo = {
   refuse: '7f4a1d2e-9c8b-4e57-b3a0-6e2f8d1c4b02',
 } as const;
 
+export const articlesAVerifierDemo = {
+  aPublier: 'Figurine de collection numérotée',
+  aRefuser: 'Carte rare holographique',
+  modifieParLeVendeur: 'Pièce de 5 francs Semeuse, 1960',
+} as const;
+
 const marqueurSansRechargement = 'collectorE2eSansRechargement';
 
 export function contenant(texte: string): RegExp {
@@ -110,6 +116,14 @@ export class Collector {
 
   annonce(texte: RegExp): Locator {
     return this.page.getByRole('status').filter({ hasText: texte }).first();
+  }
+
+  carteAVerifier(titre: string): Locator {
+    return this.page.getByRole('article').filter({ hasText: titre });
+  }
+
+  boutonDeDecision(carte: Locator, libelle: string): Locator {
+    return carte.getByRole('button', { name: new RegExp(`^${libelle}`) });
   }
 
   etatDeLAnnonce(): Locator {

@@ -1,4 +1,5 @@
-import { expect, test } from '../support/collector';
+import { articlesAVerifierDemo, expect, test } from '../support/collector';
+import { administrateur } from '../support/fournisseurIdentite';
 import { textes } from '../support/textes';
 
 const { fr, en } = textes;
@@ -52,6 +53,36 @@ test.describe('US-025-AC1 passage en anglais par le sélecteur, sans rechargemen
     await expect(page.getByRole('button', { name: en.seConnecter })).toBeVisible();
     await page.getByRole('link', { name: en.retourCatalogue }).click();
     await expect(collector.titrePrincipal()).toHaveText(en.catalogue);
+    expect(await collector.marqueurSansRechargementPresent()).toBe(true);
+  });
+
+  test('articles à vérifier : motifs, dialogue de refus et conflit en anglais', async ({
+    collector,
+  }) => {
+    const { page } = collector;
+    collector.seConnecterEn(administrateur);
+    await collector.ouvrirEspaceProtege('/admin');
+    const enConflit = collector.carteAVerifier(articlesAVerifierDemo.modifieParLeVendeur);
+    await expect(enConflit).toContainText(fr.motifControlePrix);
+    await collector.poserMarqueurSansRechargement();
+
+    await collector.choisirLangue('en');
+
+    await expect(collector.titrePrincipal()).toHaveText(en.articlesAVerifier);
+    await expect(enConflit).toContainText(en.motifControlePrix);
+    await expect(page.getByText(fr.motifControlePrix)).toHaveCount(0);
+
+    await collector.boutonDeDecision(enConflit, en.publier).click();
+    await expect(enConflit.getByText(en.conflitAdmin)).toBeVisible();
+
+    const aRefuser = collector.carteAVerifier(articlesAVerifierDemo.aRefuser);
+    await collector.boutonDeDecision(aRefuser, en.refuser).click();
+    const dialogue = page.getByRole('dialog', { name: 'Reject the listing' });
+    await expect(dialogue.getByRole('radiogroup', { name: en.motifDuRefus })).toBeVisible();
+    await dialogue.getByRole('radio', { name: en.motifPrixAbusif }).check();
+    await dialogue.getByRole('button', { name: en.confirmerRefus }).click();
+    await expect(collector.annonce(en.articleRefuse)).toBeAttached();
+
     expect(await collector.marqueurSansRechargementPresent()).toBe(true);
   });
 });

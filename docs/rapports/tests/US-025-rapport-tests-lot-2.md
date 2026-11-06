@@ -7,8 +7,7 @@
 | Date | 2026-11-06 |
 | Fonction | Test |
 | Lot précédent | [Rapport du lot 1](US-025-rapport-tests.md) (écrans existants, parité, lint, contrastes du thème sous jsdom) |
-| Périmètre du lot 2 | Parcours de bout en bout dans un vrai navigateur sur le build de démonstration : catalogue, filtre, fiche (US-023), connexion vendeur, création, soumission et suivi d'un brouillon (US-013), modification d'un article publié (US-021), pages d'erreur ; porte axe-core et parcours dans la CI |
-| Hors lot 2 | Écran admin (US-022, PR #28 non fusionnée) : une entrée à ajouter dans `web/e2e/support/ecrans.ts` à son arrivée |
+| Périmètre du lot 2 | Parcours de bout en bout dans un vrai navigateur sur le build de démonstration : catalogue, filtre, fiche (US-023), connexion vendeur, création, soumission et suivi d'un brouillon (US-013), modification d'un article publié (US-021), écran admin « Articles à vérifier » (US-022 : publication, refus avec motif, conflit 409, accès réservé), pages d'erreur ; porte axe-core et parcours dans la CI |
 | Outils | Playwright 1.64.1 (Chromium seul), `@axe-core/playwright` 4.14.0 (même `axe-core` 4.14.0 que le lot 1), Vitest 3.2.4, Node 24 |
 | Verdict | **AC1, AC3, AC4 et AC5 couverts et conformes sur le périmètre du lot 2** ; 1 violation axe réelle trouvée et corrigée ; contrôle manuel au clavier d'AC5 à tracer par Martin en fin de sprint |
 
@@ -16,8 +15,8 @@
 
 Scénarios dérivés des AC, étiquetés `US-025-ACn`, joués en boîte noire contre le build de production (`npm run build`, puis `vite preview` lancé par le `webServer` de Playwright).
 
-- Mode démonstration : `/config.json` est remplacé par une configuration `catalogue.source: demo` ; les données viennent des adaptateurs de démonstration du catalogue et de l'espace vendeur.
-- Connexion : le fournisseur d'identité est simulé par interception réseau (`web/e2e/support/fournisseurIdentite.ts`) : document de découverte, redirection d'autorisation vers `/rappel` avec un code, jetons non signés portant le rôle `vendeur` (ou `acheteur` pour l'accès refusé). Le vrai client OIDC de l'application (PKCE, `state`, retour sur la page d'origine) est exercé ; aucun code de production ne simule la connexion.
+- Mode démonstration : `/config.json` est remplacé par une configuration `catalogue.source: demo` ; les données viennent des adaptateurs de démonstration du catalogue, de l'espace vendeur et de l'écran admin (titres balisés, article qui répond 409 à la première décision).
+- Connexion : le fournisseur d'identité est simulé par interception réseau (`web/e2e/support/fournisseurIdentite.ts`) : document de découverte, redirection d'autorisation vers `/rappel` avec un code, jetons non signés portant le rôle `vendeur`, `admin` ou `acheteur` (accès refusé). Le second facteur de l'administrateur (OTP) est exigé par Keycloak, hors du périmètre de ces tests. Le vrai client OIDC de l'application (PKCE, `state`, retour sur la page d'origine) est exercé ; aucun code de production ne simule la connexion.
 - Langues : un projet Playwright par langue de `E2E_LANGUES` (`fr` par défaut, `fr,en` sur `main`) ; le navigateur est en `fr-FR`. Le parcours AC3 choisit sa langue par le sélecteur de l'en-tête ; les écrans AC4 et le parcours AC5 s'ouvrent avec un navigateur réglé sur la langue du projet (indispensable pour l'écran d'échec de démarrage, qui n'a pas de sélecteur). Le projet `bascule-fr-en` joue toujours le passage du français à l'anglais (AC1).
 - Oracle : les textes attendus sont écrits en dur dans `web/e2e/support/textes.ts`, indépendamment des fichiers de traduction.
 
@@ -25,25 +24,26 @@ Tests : `web/e2e/US-025/`
 
 | Fichier | Contenu | Tests par langue |
 |---|---|---|
-| `AC3-parcours-mise-en-vente.spec.ts` | Parcours complet jusqu'à « Publié » ; modification d'un article publié avec avertissement (US-021) | 2 |
-| `AC4-axe-ecrans.spec.ts` | axe-core sur chaque écran de `e2e/support/ecrans.ts` (15 écrans) | 15 |
+| `AC3-parcours-mise-en-vente.spec.ts` | Parcours complet jusqu'à « Publié » ; modification d'un article publié avec avertissement (US-021) ; administrateur : publication et refus avec motif (US-022) ; vendeur et acheteur refusés sur `/admin` | 5 |
+| `AC4-axe-ecrans.spec.ts` | axe-core sur chaque écran de `e2e/support/ecrans.ts` (18 écrans) | 18 |
 | `AC5-mise-en-vente-clavier.spec.ts` | Mise en vente au clavier seul, indicateur de focus contrôlé à chaque tabulation | 1 |
-| `AC1-bascule-anglais.spec.ts` (projet `bascule-fr-en`) | Passage en anglais sans rechargement : espace vendeur (textes, erreur, motif) ; fiche introuvable | 2 (une fois) |
+| `AC1-bascule-anglais.spec.ts` (projet `bascule-fr-en`) | Passage en anglais sans rechargement : espace vendeur (textes, erreur, motif) ; fiche introuvable ; articles à vérifier (motifs, dialogue de refus, conflit) | 3 (une fois) |
 
 ## Résultats d'exécution
 
 | Commande (depuis `web/`) | Résultat |
 |---|---|
 | `npx playwright install chromium` | Chromium téléchargé |
-| `npm run e2e` (`E2E_LANGUES` absent, donc `fr`) | **20 tests verts**, 0 échec, 0 instable (≈ 50 s, build compris) |
-| `E2E_LANGUES=fr,en npm run e2e` | **38 tests verts** (18 `fr`, 18 `en`, 2 `bascule-fr-en`), 0 échec, 0 instable (≈ 1,5 min) |
-| `npx vitest run --pool=forks --poolOptions.forks.maxForks=2` | 29 fichiers, **314 tests verts** |
+| `npm run e2e` (`E2E_LANGUES` absent, donc `fr`) | **27 tests verts** (24 `fr`, 3 `bascule-fr-en`), 0 échec, 0 instable (≈ 1,2 min, build compris) |
+| `E2E_LANGUES=fr,en npm run e2e` | **51 tests verts** (24 `fr`, 24 `en`, 3 `bascule-fr-en`), 0 échec, 0 instable (≈ 1,9 min) |
+| `npx vitest run --pool=forks --poolOptions.forks.maxForks=2` | 30 fichiers, **347 tests verts** |
 | `npm run typecheck` | 0 erreur (le projet `tsconfig.e2e.json` couvre `e2e/` et `playwright.config.ts`) |
 | `npx eslint . --max-warnings 0` | 0 erreur, 0 avertissement |
 | `npx prettier --check .` | Conforme |
-| `npm run i18n:check` | « Traductions alignées : 179 clés, langues fr, en. » |
+| `npm run i18n:check` | « Traductions alignées : 226 clés, langues fr, en. » |
 | `bash ../tools/ci/verifier-eslint.sh` | Règles obligatoires actives |
-| `actionlint`, `zizmor` (`tools/ci/outils.yml`) | Non exécutés localement (moteur Docker arrêté) ; joués par le job « Workflows et scripts » de la PR. YAML relu et analysé |
+| `docker compose -f tools/ci/outils.yml run --rm actionlint -color` | Code 0, aucun constat |
+| `zizmor --offline --persona=regular .github/workflows` (même image) | « No findings to report » (audits en ligne joués en CI avec `GH_TOKEN`) |
 
 ## Résultats par AC
 
@@ -57,7 +57,7 @@ Tests : `web/e2e/US-025/`
 | Absence de rechargement | Aucun rechargement | Marqueur posé dans `window` avant la bascule toujours présent ; `/config.json` non rechargé | OK |
 | Fiche introuvable, puis « EN » | Message d'erreur en anglais | « Item not found », « Sign in » ; retour au catalogue en anglais sans rechargement | OK |
 | Langue conservée à travers la connexion (parcours AC3 en `en`) | Choix conservé pendant la session | Anglais choisi sur le catalogue, conservé après l'aller-retour chez le fournisseur d'identité (`lang="en"`, « Seller ») | OK |
-| Motif sur l'écran admin | — | Écran non livré | **US-022** |
+| Articles à vérifier, puis « EN » | Motifs et messages d'erreur en anglais, sans rechargement | Titre « Items to review », « Review reason: Price to be confirmed » (plus aucun « Motif du contrôle : Prix à confirmer ») ; décision en conflit : « The item has changed, reload the list » ; dialogue de refus « Rejection reason », motif « Excessive price », annonce « … has been rejected. » ; marqueur sans rechargement présent | OK |
 
 ### AC3 — Parcours en français sur PR, en français et en anglais sur `main`
 
@@ -71,6 +71,8 @@ Tests : `web/e2e/US-025/`
 | Soumission | « En contrôle » puis « Publié » (contrôle simulé) | « Under review » puis « Published » | OK |
 | Liste « Mes articles » | Le nouvel article est « Publié » | « Published » | OK |
 | Modification d'un article publié (US-021) | Avertissement « L'annonce sera retirée du catalogue » en `role="note"`, description accessible du bouton « Enregistrer et renvoyer au contrôle », succès « révision 3 : l'annonce repasse au contrôle », « En contrôle » puis « Publié » | Équivalents anglais | OK |
+| Administrateur (US-022) : lien « Articles à vérifier » de l'en-tête, « Publier » une figurine, « Refuser » une carte | Annonce « … a été publié. », carte retirée ; confirmation sans motif refusée (« Choisissez un motif de refus. »), motif « Prix abusif », annonce « … a été refusé. », carte retirée ; carte restante « Motif du contrôle : Prix à confirmer » | « … has been published. », « Choose a rejection reason. », « Excessive price », « … has been rejected. », « Review reason: Price to be confirmed » | OK |
+| Vendeur, puis acheteur, sur `/admin` | « Accès réservé », aucun lien « Articles à vérifier » dans l'en-tête | « Restricted access » | OK |
 | Sélection de la langue selon l'événement | `E2E_LANGUES=fr` en PR | `fr,en` sur push vers `main` (et planification, déclenchement manuel) | OK (configuration ; première exécution à constater sur la PR) |
 
 ### AC4 — axe-core : aucune violation serious ou critical, porte bloquante
@@ -94,7 +96,9 @@ Tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa` ; règle `color-contrast` active
 | Accès réservé (compte acheteur) | 0 | 0 | OK |
 | Page introuvable | 0 | 0 | OK |
 | Échec de démarrage | 0 | 0 | OK |
-| Écran admin | — | — | **US-022** (une entrée dans `ecrans.ts`) |
+| Admin, articles à vérifier (titres balisés affichés en texte) | 0 | 0 | OK |
+| Admin, dialogue de refus ouvert | 0 | 0 | OK |
+| Admin, décision en conflit (409) | 0 | 0 | OK |
 
 Porte : job `e2e` de `.github/workflows/ci.yml`, ajouté aux dépendances de `ci-ok` ; il s'exécute quand le filtre `changements` retient le front (`web/**`, `contracts/**`, workflows et outillage de CI, tout hors PR).
 
@@ -118,14 +122,14 @@ Observation (comportement voulu, non bloquant) : après une navigation, le focus
 |---|---|---|---|---|
 | `label-content-name-mismatch` (serious) | 2.5.3 Étiquette dans le nom | Tous les écrans avec en-tête | Boutons du sélecteur de langue affichant « FR » et « EN » avec un nom accessible « Français » et « English » qui ne contient pas le texte visible | Libellés `app.language.frFull` et `enFull` remplacés par « FR, Français » et « EN, English » dans `fr.ts` et `en.ts` (le nom commence par le texte visible). Un code entre parenthèses (« Français (FR) ») ne suffit pas : axe ignore les parenthèses. Requêtes par nom mises à jour dans cinq tests Vitest (US-010, US-023, US-025) |
 
-Aucune violation de contraste (`color-contrast`) sur les 15 écrans, en français comme en anglais : les couples de jetons vérifiés au lot 1 tiennent dans le rendu réel.
+Aucune violation sur les trois écrans admin. Aucune violation de contraste (`color-contrast`) sur les 18 écrans, en français comme en anglais : les couples de jetons vérifiés au lot 1 tiennent dans le rendu réel.
 
 ## Revue du lot 1 : mineures
 
 | Mineure | État |
 |---|---|
 | 1. `no-restricted-syntax` contournable par composition | Déjà soldée sur `main` (`eslint.config.js` : sélecteurs `ConditionalExpression`, `LogicalExpression`, `BinaryExpression`) |
-| 2. `useControlReasonLabel` et `controlReason` sans consommateur en production | Déjà soldée sur `main` : `useArticleLabels` (liste « Mes articles », panneau d'état, annonces) les utilise ; prouvé en navigateur par AC1 (« Reason: Incomplete listing ») et AC4 (article refusé) |
+| 2. `useControlReasonLabel` et `controlReason` sans consommateur en production | Déjà soldée sur `main` : le hook, devenu `useArticleReasonLabel` avec US-022, sert l'espace vendeur (`useArticleLabels`) et l'écran admin (motif du contrôle, motifs de refus) ; prouvé en navigateur par AC1 (« Reason: Incomplete listing », « Review reason: Price to be confirmed », « Excessive price ») et AC4 |
 
 ## Contrôle manuel au clavier (AC5), à tracer par Martin en fin de sprint
 
@@ -142,7 +146,8 @@ Aucune violation de contraste (`color-contrast`) sur les 15 écrans, en françai
 | 7 | Prix invalide puis enregistrement | Focus sur le champ en erreur, résumé annoncé | ☐ | ☐ |
 | 8 | « Soumettre au contrôle » (Espace) | État annoncé, « Publié » après le contrôle | ☐ | ☐ |
 | 9 | Ouvrir un article publié, modifier, « Enregistrer et renvoyer au contrôle » | Avertissement lu avec le bouton, retour au contrôle annoncé | ☐ | ☐ |
-| 10 | Avec lecteur d'écran (NVDA) sur les étapes 2, 6 et 8 | Noms « FR, Français » / « EN, English », erreurs et changements d'état annoncés | ☐ | ☐ |
+| 10 | Administrateur : « Articles à vérifier », « Refuser » puis motif au clavier (flèches dans le groupe de boutons radio), « Confirmer le refus » ; Échap ferme le dialogue et rend le focus au bouton | Focus piégé dans le dialogue puis restitué, décision annoncée | ☐ | ☐ |
+| 11 | Avec lecteur d'écran (NVDA) sur les étapes 2, 6, 8 et 10 | Noms « FR, Français » / « EN, English », erreurs et changements d'état annoncés | ☐ | ☐ |
 
 | Champ | Valeur |
 |---|---|
@@ -157,11 +162,10 @@ Aucune anomalie ouverte. La violation `label-content-name-mismatch` est corrigé
 
 ## Points restants
 
-- Écran admin (US-022) : à son arrivée sur `main`, ajouter son entrée dans `web/e2e/support/ecrans.ts` (AC4) et, si l'écran affiche des motifs, un scénario AC1 de bascule.
-- Première exécution du job `e2e` en CI à constater sur la PR (`fr`), puis sur `main` (`fr,en`) ; `actionlint` et `zizmor` passeront dans le job « Workflows et scripts ».
+- Première exécution du job `e2e` en CI à constater sur la PR (`fr`), puis sur `main` (`fr,en`).
 - Contrôle manuel au clavier d'AC5 ci-dessus.
 - Job 11 de `docs/processus/cicd.md` : tests d'API sur pile compose, hors US-025.
 
 ## Verdict
 
-AC1, AC3, AC4 et AC5 sont couverts par des tests de bout en bout verts en français et en anglais ; la porte axe-core est bloquante via `ci-ok`. Restent l'écran admin (US-022) et le contrôle manuel au clavier de fin de sprint.
+AC1, AC3, AC4 et AC5 sont couverts par des tests de bout en bout verts en français et en anglais ; la porte axe-core est bloquante via `ci-ok`. Écran admin (US-022) compris. Reste le contrôle manuel au clavier de fin de sprint.
