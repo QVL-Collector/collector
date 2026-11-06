@@ -147,7 +147,7 @@ func TestUS012AC1_DecodeRestitueLEnveloppeEtLesDonnees(t *testing.T) {
 func TestUS012AC2_ChaqueExempleEstAccepteOuRefuseAvecSaRaison(t *testing.T) {
 	validator := newValidator(t, message.DefaultMaxSize)
 	examples := loadExamples(t)
-	for _, messageType := range []string{requestType, resultType} {
+	for _, messageType := range []string{requestType, resultType, decisionType} {
 		expectValidAndInvalidExamples(t, examples, messageType)
 	}
 	for _, ex := range examples {

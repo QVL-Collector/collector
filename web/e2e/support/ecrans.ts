@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { articlesAVerifierDemo, articlesDemo, type Collector } from './collector';
 import { acheteur, administrateur } from './fournisseurIdentite';
+import { delaiEchecMs, InteractionsSimulees, notificationEmise } from './interactions';
 
 export type Ecran = {
   readonly nom: string;
@@ -15,6 +16,15 @@ async function ouvrirArticlesAVerifier(collector: Collector): Promise<void> {
   collector.seConnecterEn(administrateur);
   await collector.ouvrirEspaceProtege('/admin');
   await expect(collector.carteAVerifier(articlesAVerifierDemo.aRefuser)).toBeVisible();
+}
+
+const cheminNotifications = '/vendeur/notifications';
+
+async function ouvrirNotificationsRepondant(collector: Collector, statut: number): Promise<void> {
+  const interactions = new InteractionsSimulees();
+  interactions.statut = statut;
+  await interactions.brancher(collector);
+  await collector.ouvrirEspaceProtege(cheminNotifications);
 }
 
 async function titreAffiche(collector: Collector, titre: string | RegExp): Promise<void> {
@@ -146,6 +156,66 @@ export const ecrans: readonly Ecran[] = [
       collector.seConnecterEn(acheteur);
       await collector.ouvrirEspaceProtege('/vendeur');
       await titreAffiche(collector, collector.textes.accesReserve);
+    },
+  },
+  {
+    nom: 'espace vendeur, notifications',
+    ouvrir: async (collector) => {
+      await collector.ouvrirEspaceProtege(cheminNotifications);
+      const region = collector.page.getByRole('region', {
+        name: collector.textes.decisionsSurVosArticles,
+      });
+      await expect(region.getByRole('listitem')).toHaveCount(3);
+    },
+  },
+  {
+    nom: 'espace vendeur, notifications des trois issues (API)',
+    ouvrir: async (collector) => {
+      const interactions = new InteractionsSimulees();
+      interactions.notifications = [
+        notificationEmise(3, 'refuse', 'article_interdit'),
+        notificationEmise(2, 'a_verifier', 'categorie_inconnue'),
+        notificationEmise(1),
+      ];
+      await interactions.brancher(collector);
+      await collector.ouvrirEspaceProtege(cheminNotifications);
+      await expect(collector.page.getByRole('heading', { level: 3 })).toHaveCount(3);
+    },
+  },
+  {
+    nom: 'espace vendeur, aucune notification',
+    ouvrir: async (collector) => {
+      await ouvrirNotificationsRepondant(collector, 200);
+      await expect(
+        collector.page.getByRole('heading', { name: collector.textes.aucuneNotification }),
+      ).toBeVisible();
+    },
+  },
+  {
+    nom: 'espace vendeur, notifications indisponibles',
+    ouvrir: async (collector) => {
+      await ouvrirNotificationsRepondant(collector, 503);
+      await expect(
+        collector.page.getByRole('heading', { name: collector.textes.notificationsIndisponibles }),
+      ).toBeVisible({ timeout: delaiEchecMs });
+    },
+  },
+  {
+    nom: 'espace vendeur, notifications, session expirée (401)',
+    ouvrir: async (collector) => {
+      await ouvrirNotificationsRepondant(collector, 401);
+      await expect(
+        collector.page.getByRole('heading', { name: collector.textes.sessionExpiree }),
+      ).toBeVisible();
+    },
+  },
+  {
+    nom: 'espace vendeur, notifications, accès réservé (403)',
+    ouvrir: async (collector) => {
+      await ouvrirNotificationsRepondant(collector, 403);
+      await expect(
+        collector.page.getByRole('heading', { name: collector.textes.accesReserve }),
+      ).toBeVisible();
     },
   },
   {

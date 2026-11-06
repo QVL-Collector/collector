@@ -166,7 +166,7 @@ func (b *bancControleFerme) ac1SoumisPendantLArret(t *testing.T) {
 	}
 	b.exigerMessages(t, fileDemandes, articlesSoumisPendant)
 	for _, a := range b.soumis {
-		if lignes := b.outboxDe(t, a.ID); len(lignes) != 1 || !lignes[0].publiee {
+		if lignes := b.demandesEnOutboxDe(t, a.ID); len(lignes) != 1 || !lignes[0].publiee {
 			t.Fatalf("demande de %s : %+v", a.ID, lignes)
 		}
 	}
@@ -192,9 +192,9 @@ func (b *bancControleFerme) ac1FiletDeRelance(t *testing.T) {
 	if _, err := b.base.maitre.Exec(t.Context(), `UPDATE article SET demande_controle_le = now() - interval '3 minutes' WHERE id = $1`, b.relance.ID); err != nil {
 		t.Fatalf("vieillissement de la demande : %v", err)
 	}
-	duree := attendre(t, delaiDuFilet, "relance de la demande par le filet", func() bool { return len(b.outboxDe(t, b.relance.ID)) == 2 })
+	duree := attendre(t, delaiDuFilet, "relance de la demande par le filet", func() bool { return len(b.demandesEnOutboxDe(t, b.relance.ID)) == 2 })
 	t.Logf("demande relancée %s après le vieillissement", duree.Round(time.Second))
-	lignes := b.outboxDe(t, b.relance.ID)
+	lignes := b.demandesEnOutboxDe(t, b.relance.ID)
 	var identifiants []string
 	for _, l := range lignes {
 		var demande demandeRecue
@@ -210,11 +210,11 @@ func (b *bancControleFerme) ac1FiletDeRelance(t *testing.T) {
 	if identifiants[0] == identifiants[1] {
 		t.Errorf("demande relancée sous le même identifiant de message %s", identifiants[0])
 	}
-	attendre(t, delaiDeTraitement, "publication de la demande relancée", func() bool { return b.outboxDe(t, b.relance.ID)[1].publiee })
+	attendre(t, delaiDeTraitement, "publication de la demande relancée", func() bool { return b.demandesEnOutboxDe(t, b.relance.ID)[1].publiee })
 	if len(evenementsPortant(b.journal, evenementRelance, b.relance.ID)) == 0 {
 		t.Errorf("aucun journal %s pour %s", evenementRelance, b.relance.ID)
 	}
-	if n := len(b.outboxDe(t, b.temoinRecent.ID)); n != 1 {
+	if n := len(b.demandesEnOutboxDe(t, b.temoinRecent.ID)); n != 1 {
 		t.Errorf("article soumis il y a moins de 2 min relancé : %d demande(s)", n)
 	}
 	b.exigerEnControleHorsCatalogue(t, b.relance, b.temoinRecent)
@@ -535,7 +535,17 @@ func (b *bancControleFerme) mc9RejeuNominal(t *testing.T) {
 	}
 	attendre(t, delaiDeReprise, "republication des lignes rejouées", func() bool { return b.toutEstPublie(t) })
 	b.exigerSeulePublieLeReecriteDansLaFenetre(t, avant, lancement)
-	b.exigerSansDoubleEffet(t, avant, rejouees)
+	b.exigerSansDoubleEffet(t, avant, avant.demandesDansLaFenetre())
+}
+
+func (e etatAvantRejeu) demandesDansLaFenetre() int {
+	demandes := 0
+	for id, l := range e.outbox {
+		if id != e.exclue && strings.Contains(l.contenu, "|"+typeDemande+"|") {
+			demandes++
+		}
+	}
+	return demandes
 }
 
 func (b *bancControleFerme) mc9RejeuEnLimiteDeConservation(t *testing.T) {
@@ -663,7 +673,7 @@ func (b *bancControleFerme) publierUnSuivant(titre string) func(t *testing.T) {
 }
 
 func (b *bancControleFerme) ac3DemandesInvalidesEcartees(t *testing.T) {
-	modele := b.outboxDe(t, b.temoinRecent.ID)[0].corps
+	modele := b.demandesEnOutboxDe(t, b.temoinRecent.ID)[0].corps
 	b.exigerEcartesSansBloquer(t, ecartAttendu{
 		file: fileDemandes, ecartes: fileDemandesEcartees, echange: echangeDemandes, emetteur: identiteMarche,
 		journal: func() *journalPartage { return b.controle.journal },
@@ -682,7 +692,7 @@ func (b *bancControleFerme) ac3ResultatsInvalidesEcartes(t *testing.T) {
 
 func (b *bancControleFerme) mc6MessageTropGrandRefuseParLeBroker(t *testing.T) {
 	ecartesAvant := b.canal.compter(t, fileDemandesEcartees)
-	corps := append(varianteDe(t, b.outboxDe(t, b.temoinRecent.ID)[0].corps, func(map[string]any) {}), bytes.Repeat([]byte(" "), tailleHorsBroker)...)
+	corps := append(varianteDe(t, b.demandesEnOutboxDe(t, b.temoinRecent.ID)[0].corps, func(map[string]any) {}), bytes.Repeat([]byte(" "), tailleHorsBroker)...)
 	err := b.canal.publier(t, identiteMarche, publication{echange: echangeDemandes, cle: cleDeRoutageV1, id: uuid.NewString(), emetteur: identiteMarche, corps: corps})
 	if err == nil {
 		t.Fatalf("message de %d octets accepté par le broker", len(corps))

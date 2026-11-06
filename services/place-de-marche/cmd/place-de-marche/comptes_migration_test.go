@@ -14,9 +14,7 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"collector/services/place-de-marche/internal/annonces"
-	"collector/services/place-de-marche/internal/annonces/controle"
 	"collector/services/place-de-marche/internal/annonces/stockage"
-	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/migrations"
 )
 
@@ -139,7 +137,7 @@ func bancSansCanal(t *testing.T, base basePostgreSQL) *bancComplet {
 		t.Fatalf("connexion en %s : %v", roleExecution, err)
 	}
 	t.Cleanup(pool.Close)
-	depot := stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)), comptesstockage.NewStore(pool))
+	depot := depotPostgreSQL(t, pool)
 	return &bancComplet{environnement: demarrer(t, annonces.NewService(depot, depot)), base: base, validateur: validateurDeContrats(t)}
 }
 

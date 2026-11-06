@@ -13,7 +13,6 @@ import (
 	"collector/libs/platform/logging"
 	"collector/services/place-de-marche/internal/annonces/controle"
 	"collector/services/place-de-marche/internal/annonces/stockage"
-	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 )
 
 const (
@@ -45,7 +44,7 @@ func demarrerBancDuFilet(t *testing.T) *bancDuFilet {
 		environnement: e,
 		base:          base,
 		pool:          pool,
-		store:         stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)), comptesstockage.NewStore(pool)),
+		store:         depotPostgreSQL(t, pool),
 		jeton:         e.vendeur(),
 	}
 }

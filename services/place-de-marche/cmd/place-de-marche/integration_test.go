@@ -17,6 +17,7 @@ import (
 
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/annonces/controle"
+	"collector/services/place-de-marche/internal/annonces/diffusion"
 	"collector/services/place-de-marche/internal/annonces/stockage"
 	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/migrations"
@@ -150,7 +151,7 @@ func servicePostgreSQL(t *testing.T) (basePostgreSQL, *pgxpool.Pool, *annonces.S
 		t.Fatalf("connexion en %s : %v", roleExecution, err)
 	}
 	t.Cleanup(pool.Close)
-	depot := stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)), comptesstockage.NewStore(pool))
+	depot := depotPostgreSQL(t, pool)
 	return base, pool, annonces.NewService(depot, depot)
 }
 
@@ -206,4 +207,10 @@ func TestUS009IntegrationPostgreSQL(t *testing.T) {
 	t.Run("rôle d'exécution limité au DML de ses tables", func(t *testing.T) {
 		verifierDroitsMinimaux(t, base, pool)
 	})
+}
+
+func depotPostgreSQL(t *testing.T, pool *pgxpool.Pool) *stockage.Store {
+	t.Helper()
+	validateur := validateurDeContrats(t)
+	return stockage.NewStore(pool, controle.NewRequestEncoder(validateur), diffusion.NewDecisionEncoder(validateur), comptesstockage.NewStore(pool))
 }

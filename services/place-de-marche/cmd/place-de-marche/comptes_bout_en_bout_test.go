@@ -95,7 +95,7 @@ func jourUTC(instant time.Time) string {
 
 func (b *bancComplet) vendeurTransmis(t *testing.T, article articleRecu) vendeurTransmis {
 	t.Helper()
-	lignes := b.outboxDe(t, article.ID)
+	lignes := b.demandesEnOutboxDe(t, article.ID)
 	if len(lignes) == 0 {
 		t.Fatalf("aucune demande en outbox pour %s", article.ID)
 	}
