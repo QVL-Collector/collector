@@ -44,17 +44,33 @@ Scénarios dérivés des AC, étiquetés `US028ACn`. Trois niveaux :
 | `controle_ferme_test.go` (US-024 MC9) | Le rejeu republie aussi les décisions, qui ne produisent aucun résultat de contrôle : on attendait autant de `controle.resultat_ignore` que de lignes rejouées | La trace attend toujours toutes les lignes ; les doublons ignorés attendus se limitent aux demandes de la fenêtre |
 | `libs/platform/message/fuzz_test.go` | Déjà rouge avant mes modifications : les exemples `publication.decidee` étaient des « contrats inconnus » | Contrat et motifs d'administrateur reconnus |
 
-### Résultats d'exécution
+### Correctifs de revue (commits `refactor(platform)` 53c8749 et `refactor(web)` 5fa2c49)
+
+Le code partagé `libs/platform/database`, `token.LoadConfig`, `httpserver.PaginationOf`, `BoundedQueryInt`, `SingleQueryParameter`, `problem.CodeInvalid` et `CodeOutOfBounds` est maintenant utilisé par la Place de marché et Interactions. Toutes les suites back ont été rejouées sans modifier les tests existants ; j'ai ajouté des tests unitaires dérivés des tableaux de variables des README et des bornes de pagination de l'OpenAPI.
+
+| Fichier | Contenu |
+|---|---|
+| `libs/platform/database/config_test.go` | `LoadConfig` (7 tests) : adresse `verify-full` acceptée et conservée ; TLS exigé si `BASE_DE_DONNEES_TLS_EXIGE` est absente, vide ou `true` ; refus si `sslmode` est absent, `disable`, `require`, `verify-ca`, `prefer` ou `VERIFY-FULL` ; refus des adresses autres que `postgres://` (mysql, https, sans schéma, texte, schéma vide) même sans TLS exigé ; refus d'une URL absente ou faite d'espaces ; `false` accepte un autre `sslmode` en local ; refus d'une valeur de TLS illisible ; aucun refus ne recopie le mot de passe |
+| `libs/platform/token/config_test.go` | `LoadConfig` (4 tests) : valeurs par défaut (audience du service, `collector-web`, `<émetteur>/protocol/openid-connect/certs`) ; valeurs fournies respectées ; émetteur absent ou fait d'espaces refusé ; sans audience, aucun vérificateur n'est créé |
+| `libs/platform/httpserver/query_test.go` | `PaginationOf` avec les bornes d'Interactions (page 1 à 10 000, taille 1 à 50, 20 par défaut), `BoundedQueryInt` et `SingleQueryParameter` (10 tests) : valeurs par défaut, bornes incluses, `hors_limites` hors bornes, `invalide` ou `hors_limites` sur une valeur illisible, vide ou répétée, ou un nombre trop grand, une erreur par paramètre fautif, paramètre unique absent, présent ou répété (`invalide`) |
+| `web/src/acceptance/US-028/contrat-payload-notifications.test.ts` | 9 cas de plus (19 → 28) : `motif` absent (publié, refusé, à vérifier) et issue et motif incohérents (motif avec « publié », `null` avec « refusé » ou « à vérifier ») rejetés ; les trois combinaisons cohérentes acceptées |
+
+Point tranché sans anomalie : `token.LoadConfig` accepte une audience par défaut vide. Aucune exigence ne le lui interdit, et `token.NewVerifier` refuse ensuite cette configuration : aucun service ne démarre sans audience.
+
+### Résultats d'exécution (après les correctifs de revue)
 
 | Commande | Résultat | Durée |
 |---|---|---|
-| `go test ./... -count=1 -v` (`libs/platform`) | `ok` (`httpjson`, `httpserver`, `logging`, `message`, `ratelimit`, `token`), 71 tests de premier niveau, 0 skip, 0 échec | 5 s |
-| `go test ./... -count=1 -v` (`contracts`) | Aucun fichier de test (les exemples sont joués par `libs/platform/message`) | 0 s |
-| `go test ./... -count=1 -v` (`services/controle`) | `ok` (`canal`, `coordonnees`, `regles`), 0 skip | 3 s |
-| `go test ./... -count=1 -v` (`services/interactions`) | `ok` (`cmd/interactions` 25 s, `canal` 0,8 s), 15 tests de premier niveau, 0 skip, dont `TestUS028IntegrationInteractions` (testcontainers réels) | 27 s |
-| `go test ./... -count=1 -v -timeout 60m` (`services/place-de-marche`) | `ok`, 92 tests de premier niveau, **0 skip**, 0 échec ; dont `TestUS028BoutEnBoutPlaceDeMarcheInteractions` (40 s) et, sans régression, `TestUS013…`, `TestUS021…`, `TestUS024…` | 282 s |
+| `go test ./... -count=1 -v` (`libs/platform`) | `ok` (`database`, `httpjson`, `httpserver`, `logging`, `message`, `ratelimit`, `token`), 92 tests de premier niveau, 0 skip, 0 échec | 5 s |
+| `go test ./... -count=1 -v` (`contracts`) | Aucun fichier de test (les exemples sont joués par `libs/platform/message`) | 1 s |
+| `go test ./... -count=1 -v` (`services/controle`) | `ok` (`canal`, `coordonnees`, `regles`), 45 tests, 0 skip | 3 s |
+| `go test ./... -count=1 -v` (`services/interactions`) | `ok` (`cmd/interactions` 26 s, `canal` 0,9 s), 15 tests de premier niveau, 0 skip, dont `TestUS028IntegrationInteractions` (testcontainers réels, 25 s) | 28 s |
+| `go test ./... -count=1 -v -timeout 40m` (`services/place-de-marche`) | `ok`, 92 tests de premier niveau, **0 skip**, 0 échec ; dont `TestUS028BoutEnBoutPlaceDeMarcheInteractions` (41 s) et, sans régression, `TestUS013…` (27 s), `TestUS021…` (15 s), `TestUS024…` (49 s) | 282 s |
 | `golangci-lint run --config ../../.golangci.yml ./...` (v2.15.0), dans les 5 modules | 0 issue partout | — |
+| Dans `web/` : `npx tsc -b`, `npm run lint`, `npx prettier --check .`, `npx vitest run` | Verts ; Vitest : 35 fichiers, 441 tests | 16 s, 31 s, —, 110 s |
 | Conteneurs | Arrêtés et supprimés par testcontainers en fin de test | — |
+
+Une première passe de la Place de marché a été tuée par le chien de garde de `go test` (« ran too long », 1 h 06 de test pour 5 h d'horloge) pendant le filet de relance d'US-024 : le poste était en veille. Rejouée telle quelle, la suite passe en 282 s, `TestUS024…` en 49 s. Ce n'est pas une anomalie.
 
 ### AC1 — Décision écrite dans l'outbox dans la même transaction, puis diffusée
 
@@ -170,7 +186,7 @@ Aucune : aucun comportement observé ne contredit un AC du périmètre back.
 |---|---|
 | `web/src/acceptance/US-028/notificationFixtures.ts` | Notification au format du contrat (identifiants, issue, motif, date) |
 | `web/src/acceptance/US-028/sellerNotificationsHarness.ts` | Interactions simulé (liste, statut forcé, réponse retenue, relevé des appels et du jeton), libellés FR/EN, onglet masqué, avance des faux timers |
-| `web/src/acceptance/US-028/contrat-payload-notifications.test.ts` | Lecture de la réponse : page valide (3 issues), vide, date en microsecondes ; rejet de 5 enveloppes invalides et de 11 éléments invalides (issue ou motif hors liste, motif numérique, date illisible, révision textuelle, champ obligatoire absent) — 19 tests |
+| `web/src/acceptance/US-028/contrat-payload-notifications.test.ts` | Lecture de la réponse : page valide (3 issues), vide, date en microsecondes ; rejet de 5 enveloppes invalides et de 17 éléments invalides (issue ou motif hors liste, motif numérique, date illisible, révision textuelle, champ obligatoire absent, motif absent, issue et motif incohérents), 3 combinaisons cohérentes acceptées — 28 tests (9 ajoutés après la revue) |
 | `web/src/acceptance/US-028/AC2-liste-et-rafraichissement.test.tsx` | Lien « Notifications », liste dans l'ordre reçu, annonce `status` singulier/pluriel, 20 éléments, état vide, contrat d'appel et jeton ; faux timers : nouvelle notification en moins de 10 s, relecture à 5 s, premier élément sur écran vide, aucune relecture onglet masqué, rattrapage au retour — 11 tests |
 | `web/src/acceptance/US-028/AC4-texte-construit-sans-contenu-utilisateur.test.tsx` | 3 issues × FR/EN, 9 motifs × FR/EN sans code brut, aucun motif pour « publié », bascule FR → EN, titre et description de l'article absents, champs libres ajoutés à la réponse non rendus ni interprétés, issue ou motif hors liste jamais affichés — 30 tests |
 | `web/src/acceptance/US-028/AC6-etats-session-expiree-et-acces-reserve.test.tsx` | 401 FR/EN (« session expirée » + « Se reconnecter »), 401 à la relecture, 403 FR/EN, comptes acheteur et administrateur, chargement, erreur FR/EN et reprise par « Réessayer », réponse 200 malformée — 12 tests |
@@ -187,7 +203,7 @@ Aucune : aucun comportement observé ne contredit un AC du périmètre back.
 | `npx tsc -b` | Vert |
 | `npm run lint` | Vert, 0 avertissement |
 | `npx prettier --check .` | Vert |
-| `npx vitest run` | Vert : 35 fichiers, 432 tests (dont 85 pour US-028) |
+| `npx vitest run` | Vert : 35 fichiers, 432 tests (dont 85 pour US-028) ; après les correctifs de revue : 441 tests (dont 94 pour US-028), 110 s |
 | `E2E_LANGUES=fr,en npx playwright test` (projets `fr`, `en`, `bascule-fr-en` ; le projet `fr` est celui des PR en CI) | Vert : 81 tests, 2,9 min |
 
 ### 3. Résultats par AC
