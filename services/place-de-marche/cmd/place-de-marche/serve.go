@@ -21,6 +21,7 @@ import (
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/annonces/api"
 	"collector/services/place-de-marche/internal/annonces/controle"
+	"collector/services/place-de-marche/internal/annonces/diffusion"
 	"collector/services/place-de-marche/internal/annonces/stockage"
 	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/config"
@@ -55,7 +56,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator), comptesstockage.NewStore(pool))
+	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator), diffusion.NewDecisionEncoder(validator), comptesstockage.NewStore(pool))
 	service := annonces.NewService(store, store)
 	guard := ratelimit.NewGuard(cfg.RateLimit, logger, time.Now)
 	safeguard, err := controle.NewSafeguard(store, productionSafeguardTiming, logger)

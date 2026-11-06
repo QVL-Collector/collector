@@ -1,6 +1,6 @@
 # Service Place de marché
 
-Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication et application de son résultat. Module Comptes minimal : statut des vendeurs (inscription, suspension). Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), messages [`controle.demande` et `controle.resultat` v1](../../contracts/README.md).
+Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication, application de son résultat et diffusion des décisions de publication. Module Comptes minimal : statut des vendeurs (inscription, suspension). Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), messages [`controle.demande`, `controle.resultat` et `publication.decidee` v1](../../contracts/README.md).
 
 ## Sous-commandes et ports
 
@@ -75,6 +75,10 @@ Routes réservées au rôle `admin` (403 pour tout autre rôle, 401 sans jeton v
 - `POST /marche/v1/admin/articles/{id}/decision` avec `{"revision": n, "decision": "publier" | "refuser", "motif"?}` : `publier` donne `publie`, `refuser` donne `refuse` avec un motif de la liste fermée (`annonce_incomplete`, `coordonnees_detectees`, `prix_abusif`, `article_interdit`, `vendeur_non_fiable`). La révision ne change pas. 409 `revision-perimee` si l'article est passé à une autre révision, 409 `article-non-a-verifier` s'il n'est plus à vérifier, 422 `saisie-invalide` sur le motif (absent pour refuser, présent pour publier, hors liste).
 
 Dans la même transaction que la décision, une ligne est ajoutée à `decision_admin` (admin, article, révision, décision, motif, date ; une seule décision par révision). Le rôle d'exécution peut seulement y insérer et lire : ni `UPDATE` ni `DELETE`. Après le commit, un journal Info `event=annonces.decision_admin` reprend les mêmes champs.
+
+## Diffusion des décisions de publication (US-028)
+
+Chaque décision appliquée écrit `publication.decidee` v1 dans l'outbox, dans sa propre transaction : application d'un résultat du Contrôle (`publie`, `refuse`, `a_verifier`, étape 3 du cycle de soumission) et décision d'un administrateur (`publie`, `refuse`). Un résultat sans effet (doublon, révision périmée) n'émet rien. L'événement porte `article_id`, `revision`, `seller_id`, `issue`, `reason` (sauf `publie`) et `decided_at` (`modifie_le` de l'article), sans aucun contenu saisi. Le relais le publie sur l'échange `pdm.evenements` (topic), clé `publication.decidee.v1` ; seule l'identité de la Place de marché a le droit d'y écrire, et seulement cette clé ([infra/canal](../../infra/canal/README.md)). Encodage : paquet `internal/annonces/diffusion`. Abonné : [Interactions](../interactions/README.md).
 
 ## Comptes (US-019)
 

@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"collector/libs/platform/broker"
+	"collector/libs/platform/message"
 )
 
 const insertEventQuery = `
@@ -22,6 +23,18 @@ type Event struct {
 	CorrelationID string
 	Body          []byte
 	CreatedAt     time.Time
+}
+
+func NewEvent(envelope message.Envelope, exchange, routingKey string, body []byte) Event {
+	return Event{
+		ID:            envelope.ID,
+		Exchange:      exchange,
+		RoutingKey:    routingKey,
+		Type:          envelope.Type,
+		CorrelationID: envelope.CorrelationID,
+		Body:          body,
+		CreatedAt:     envelope.EmittedAt,
+	}
 }
 
 func Enqueue(ctx context.Context, tx pgx.Tx, event Event) error {
