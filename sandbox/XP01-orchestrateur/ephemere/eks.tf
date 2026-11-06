@@ -129,7 +129,7 @@ resource "aws_vpc_security_group_ingress_rule" "noeuds_nodeport" {
   count = local.eks ? 1 : 0
 
   security_group_id            = aws_eks_cluster.principal[0].vpc_config[0].cluster_security_group_id
-  description                  = "NodePort du service de test depuis l'ALB seul (MS2)"
+  description                  = "NodePort du service de test depuis le seul ALB (MS2)"
   referenced_security_group_id = aws_security_group.alb.id
   ip_protocol                  = "tcp"
   from_port                    = var.nodeport_test

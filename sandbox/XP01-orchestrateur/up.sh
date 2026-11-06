@@ -93,13 +93,13 @@ armer_garde_fou() {
   done
 
   if [ -n "$node_group" ]; then
-    planifier "${NOM}-t30-node-group" "$t30" "eks:deleteNodegroup"       "$(jq -nc --arg c "$cluster_eks" --arg n "$node_group" '{clusterName: $c, nodegroupName: $n}')" || ko=1
+    planifier "${NOM}-t30-node-group" "$t30" "eks:deleteNodegroup"       "$(jq -nc --arg c "$cluster_eks" --arg n "$node_group" '{ClusterName: $c, NodegroupName: $n}')" || ko=1
   fi
   if [ -n "$service_ecs" ]; then
-    planifier "${NOM}-t30-service-ecs" "$t30" "ecs:deleteService"       "$(jq -nc --arg c "$cluster_ecs" --arg s "$service_ecs" '{cluster: $c, service: $s, force: true}')" || ko=1
+    planifier "${NOM}-t30-service-ecs" "$t30" "ecs:deleteService"       "$(jq -nc --arg c "$cluster_ecs" --arg s "$service_ecs" '{Cluster: $c, Service: $s, Force: true}')" || ko=1
   fi
   if [ -n "$id_rds" ]; then
-    planifier "${NOM}-t30-rds" "$t30" "rds:deleteDBInstance"       "$(jq -nc --arg i "$id_rds" '{DBInstanceIdentifier: $i, SkipFinalSnapshot: true, DeleteAutomatedBackups: true}')" || ko=1
+    planifier "${NOM}-t30-rds" "$t30" "rds:deleteDBInstance"       "$(jq -nc --arg i "$id_rds" '{DbInstanceIdentifier: $i, SkipFinalSnapshot: true, DeleteAutomatedBackups: true}')" || ko=1
   fi
   if [ -n "$arn_alb" ]; then
     planifier "${NOM}-t30-alb" "$t30" "elasticloadbalancingv2:deleteLoadBalancer"       "$(jq -nc --arg a "$arn_alb" '{LoadBalancerArn: $a}')" || ko=1
@@ -108,10 +108,10 @@ armer_garde_fou() {
     planifier "${NOM}-t30-nat" "$t30" "ec2:deleteNatGateway"       "$(jq -nc --arg n "$id_nat" '{NatGatewayId: $n}')" || ko=1
   fi
   if [ -n "$cluster_eks" ]; then
-    planifier "${NOM}-t10-cluster-eks" "$t10" "eks:deleteCluster"       "$(jq -nc --arg c "$cluster_eks" '{name: $c}')" || ko=1
+    planifier "${NOM}-t10-cluster-eks" "$t10" "eks:deleteCluster"       "$(jq -nc --arg c "$cluster_eks" '{Name: $c}')" || ko=1
   fi
   if [ -n "$cluster_ecs" ]; then
-    planifier "${NOM}-t10-cluster-ecs" "$t10" "ecs:deleteCluster"       "$(jq -nc --arg c "$cluster_ecs" '{cluster: $c}')" || ko=1
+    planifier "${NOM}-t10-cluster-ecs" "$t10" "ecs:deleteCluster"       "$(jq -nc --arg c "$cluster_ecs" '{Cluster: $c}')" || ko=1
   fi
   if [ -n "$id_eip" ]; then
     planifier "${NOM}-t10-eip" "$t10" "ec2:releaseAddress"       "$(jq -nc --arg a "$id_eip" '{AllocationId: $a}')" || ko=1

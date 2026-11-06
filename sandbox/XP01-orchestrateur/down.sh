@@ -33,7 +33,7 @@ retirer_releases() {
     return 0
   fi
   if command -v helm >/dev/null 2>&1; then
-    helm --kube-context "$NOM" list -A -o json | tr -d '\r' | jq -r '.[] | "\(.namespace) \(.name)"' |
+    helm --kube-context "$NOM" list -A -o json | tr -d '\r' | jq -r '.[] | "\(.namespace) \(.name)"' | tr -d '\r' |
       while read -r espace release; do
         journal "retrait de la release $release ($espace)"
         helm --kube-context "$NOM" uninstall "$release" -n "$espace" --wait --timeout 5m >/dev/null

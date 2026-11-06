@@ -12,12 +12,12 @@ export AWS_DEFAULT_REGION="$AWS_REGION"
 export AWS_PAGER=""
 export TF_IN_AUTOMATION=1
 
-RACINE_XP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RACINE_XP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && { pwd -W 2>/dev/null || pwd; })"
 DOSSIER_TF="$RACINE_XP/ephemere"
 DOSSIER_SESSION="$RACINE_XP/.session"
 DOSSIER_SAUVEGARDES="$RACINE_XP/.etat-sauvegardes"
 FICHIER_SESSION="$DOSSIER_SESSION/session.env"
-DEPOT="$(cd "$RACINE_XP/../.." && pwd)"
+DEPOT="$(cd "$RACINE_XP/../.." && { pwd -W 2>/dev/null || pwd; })"
 CSV_MESURES="$DEPOT/docs/mesures/XP01-orchestrateur.csv"
 
 NOM="collector-xp01"
