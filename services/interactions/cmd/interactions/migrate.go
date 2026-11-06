@@ -5,14 +5,14 @@ import (
 	"log/slog"
 	"os"
 
-	"collector/services/interactions/internal/config"
+	"collector/libs/platform/database"
 	"collector/services/interactions/internal/migrations"
 )
 
 func migrate(ctx context.Context, logger *slog.Logger) error {
-	database, err := config.LoadDatabase(os.Getenv)
+	databaseConfig, err := database.LoadConfig(os.Getenv)
 	if err != nil {
 		return err
 	}
-	return migrations.Apply(ctx, logger, database.URL)
+	return migrations.Apply(ctx, logger, databaseConfig.URL)
 }

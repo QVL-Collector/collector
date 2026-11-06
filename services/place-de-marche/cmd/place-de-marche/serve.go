@@ -12,6 +12,7 @@ import (
 
 	"collector/contracts"
 	"collector/libs/platform/broker"
+	"collector/libs/platform/database"
 	"collector/libs/platform/httpserver"
 	"collector/libs/platform/logging"
 	"collector/libs/platform/message"
@@ -43,7 +44,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	pool, err := stockage.Connect(ctx, cfg.Database.URL)
+	pool, err := database.Connect(ctx, cfg.Database.URL)
 	if err != nil {
 		return err
 	}

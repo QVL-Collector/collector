@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"collector/libs/platform/httpjson"
 	"collector/libs/platform/httpserver"
@@ -18,11 +17,13 @@ const (
 	basePath          = "/interactions/v1"
 	notificationsPath = basePath + "/notifications"
 	sellerRole        = "vendeur"
-	pageParameter     = "page"
-	pageSizeParameter = "taille"
-	codeInvalid       = "invalide"
-	codeOutOfBounds   = "hors_limites"
 )
+
+var pageLimits = httpserver.PageLimits{
+	DefaultSize: notifications.DefaultPageSize,
+	MaxSize:     notifications.MaxPageSize,
+	MaxNumber:   notifications.MaxPageNumber,
+}
 
 type NotificationLister interface {
 	ListForSeller(ctx context.Context, seller notifications.SellerID, page notifications.PageRequest) (notifications.Page, error)
@@ -80,25 +81,6 @@ func sellerOf(w http.ResponseWriter, r *http.Request) (notifications.SellerID, b
 }
 
 func pageRequestOf(query url.Values) (notifications.PageRequest, []problem.FieldError) {
-	number, numberErrors := boundedParameter(query, pageParameter, 1, notifications.MaxPageNumber)
-	size, sizeErrors := boundedParameter(query, pageSizeParameter, notifications.DefaultPageSize, notifications.MaxPageSize)
-	return notifications.PageRequest{Number: number, Size: size}, append(numberErrors, sizeErrors...)
-}
-
-func boundedParameter(query url.Values, name string, fallback, maximum int) (int, []problem.FieldError) {
-	values, present := query[name]
-	if !present {
-		return fallback, nil
-	}
-	if len(values) != 1 || values[0] == "" {
-		return 0, []problem.FieldError{{Field: name, Code: codeInvalid}}
-	}
-	value, err := strconv.Atoi(values[0])
-	if err != nil {
-		return 0, []problem.FieldError{{Field: name, Code: codeInvalid}}
-	}
-	if value < 1 || value > maximum {
-		return 0, []problem.FieldError{{Field: name, Code: codeOutOfBounds}}
-	}
-	return value, nil
+	pagination, fieldErrors := httpserver.PaginationOf(query, pageLimits)
+	return notifications.PageRequest(pagination), fieldErrors
 }

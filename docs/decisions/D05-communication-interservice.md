@@ -69,7 +69,7 @@ Ces choix valent quel que soit le broker ; ils ne sont pas départagés par les 
 - **Filet de la file de contrôle** (préférence de D02) : tout article resté « en contrôle » au-delà d'un délai est renvoyé au contrôle ; la demande se reconstruit à partir de l'article.
   - Précisé le 2026-11-06 (US-024) : délai doublé à chaque relance, plafonné à 1 h, sans arrêt.
 - **Contrôle sans base** : il consomme la demande, publie le résultat, attend la confirmation du broker, puis acquitte la demande. Une panne entre les deux produit un doublon, jamais une perte.
-- **Idempotence côté consommateur** : Place de marché par la garde d'état et de révision (D02), sans table de messages traités ; Interactions par une contrainte d'unicité sur l'identifiant de la décision (« une seule notification par décision »).
+- **Idempotence côté consommateur** : Place de marché par la garde d'état et de révision (D02), sans table de messages traités ; Interactions par une contrainte d'unicité sur l'identifiant de la décision (« une seule notification par décision »). Précisé le 2026-11-06 (US-028) : cet identifiant est l'`id` de l'enveloppe, conservé au rejeu de l'outbox, et non le couple (article, révision), qui n'est pas unique (`a_verifier` puis décision de l'administrateur sur la même révision).
 - **Topologie provisionnée par l'IaC** : files, échanges ou flux, consommateurs, identités et droits sont déclarés dans le chart, jamais par le code (M-CAN-06). L'abonnement de test est posé puis retiré par l'exploitation.
 - **Règle d'argent** : un événement reçu peut suspendre un achat ou un reversement, jamais déclencher un mouvement de fonds (architecture § 6, règle 11). V1 : une « commande payée » reçue après l'échéance alors qu'un autre acheteur a réservé produit un événement de conflit ; Transactions suspend et un humain décide du remboursement tracé (ES-14).
 - **État du broker sans volume persistant** : stockage sur `emptyDir`, qui survit au redémarrage du conteneur mais pas à la replanification du pod. Couverture : la file de contrôle par le filet ; la diffusion par le rejeu des lignes de l'outbox publiées depuis une date, commande réservée à l'exploitation, sans risque puisque les consommateurs sont idempotents.
@@ -294,7 +294,7 @@ Fonction : Faisabilité — 2026-10-26. Références : avis back de [D04](D04-st
   - Client AMQP 1.0 de RabbitMQ 4 (`rabbitmq-amqp-go-client`) : reconnexion fournie, mais version 0.x, peu de retours, et la vérification du `user-id` comme les droits seraient à reprouver [?]. Écarté pour le POC ; réexaminable en V1, derrière la même frontière.
 - **Idempotence consommateur, dans les US** :
   - Place de marché : mise à jour conditionnée par l'état « en contrôle » et la révision ; zéro ligne touchée signifie doublon, acquitté sans effet.
-  - Interactions : insertion avec `ON CONFLICT (decision_id) DO NOTHING`, dans la même transaction que la notification.
+  - Interactions : `INSERT … ON CONFLICT (message_id) DO NOTHING` sur `notification` ; l'`id` de l'enveloppe identifie la décision et est conservé au rejeu de l'outbox (précisé le 2026-11-06, US-028).
   - Acquittement manuel après l'effet, `Qos` de l'ordre de 10.
 - **Validation stricte (MC6)** : taille vérifiée avant toute lecture du corps, et `max_message_size` côté broker en défense ; passe sur `json.Decoder.Token()` avec un ensemble de clés par objet ouvert (≈ 60 lignes, sans `encoding/json/v2`, encore expérimental) ; schéma compilé au démarrage avec `santhosh-tekuri/jsonschema` v6 ; décodage seulement ensuite.
   - Piège : `go:embed` ne lit pas hors du module ; `contracts/` porterait un module minimal qui n'embarque que les fichiers de schéma, sans type Go, ce qui reste conforme à D04.
@@ -348,7 +348,7 @@ La recommandation est retenue ; ses conséquences :
 
 - **Statut et expérimentation** : D05 passe en `Candidate (XPnn)` ; l'expérimentation du canal (XC1 à XC8) est mutualisée avec celle de l'orchestrateur et précède J4 (condition de WS-2).
 - **D06** : jeton de service de Transactions et revérification du jeton de l'acheteur sur « réserver » ; authentification du service appelé ; en-têtes de transport des deux jetons. À trancher avant le sprint 3.
-- **D07** : table d'outbox dans l'espace de la Place de marché ; contrainte d'unicité sur l'identifiant de la décision dans l'espace d'Interactions ; aucun espace pour le Contrôle.
+- **D07** : table d'outbox dans l'espace de la Place de marché ; contrainte d'unicité sur l'identifiant de la décision (`id` de l'enveloppe, colonne `notification.message_id`, et non le couple article, révision) dans l'espace d'Interactions ; aucun espace pour le Contrôle.
 - **D09** : identifiant de corrélation et contexte de trace W3C dans les en-têtes des messages ; alertes sur la longueur des files et sur toute mise à l'écart (ES-31) ; console de gestion hors du point d'entrée.
 - **D11** : le chart porte le broker, son fichier de définitions et ses politiques ; identifiants générés au déploiement, utilisateur `guest` supprimé ; aucun volume persistant ; ressources du broker comptées dans le dimensionnement du node group.
 - **D13** : un test de contrat par paire producteur-consommateur sur les schémas de `contracts/` ; tests négatifs des droits du canal (XC2) ; test de perte d'un abonné (ENF-12) ; test de clé dupliquée et de message malformé ; tests négatifs de l'appel synchrone (ES-38).

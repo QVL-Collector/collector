@@ -13,8 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
+	"collector/libs/platform/database"
 	"collector/services/place-de-marche/internal/annonces"
-	"collector/services/place-de-marche/internal/annonces/stockage"
 	"collector/services/place-de-marche/internal/migrations"
 )
 
@@ -132,7 +132,7 @@ func exigerComptesRepris(t *testing.T, conn *pgx.Conn, vendeurs []vendeurHistori
 
 func bancSansCanal(t *testing.T, base basePostgreSQL) *bancComplet {
 	t.Helper()
-	pool, err := stockage.Connect(t.Context(), base.execution)
+	pool, err := database.Connect(t.Context(), base.execution)
 	if err != nil {
 		t.Fatalf("connexion en %s : %v", roleExecution, err)
 	}

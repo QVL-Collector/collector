@@ -10,6 +10,8 @@ const (
 	blankType       = "about:blank"
 	validationType  = "urn:collector:probleme:saisie-invalide"
 	validationTitle = "Saisie invalide"
+	CodeInvalid     = "invalide"
+	CodeOutOfBounds = "hors_limites"
 )
 
 type FieldError struct {

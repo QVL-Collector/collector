@@ -1,4 +1,4 @@
-package stockage
+package database
 
 import (
 	"context"
