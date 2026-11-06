@@ -11,3 +11,5 @@ INSERT INTO compte (id, inscrit_le)
 SELECT vendeur_id, min(cree_le)
 FROM article
 GROUP BY vendeur_id;
+
+REVOKE UPDATE ON compte FROM marche_execution;

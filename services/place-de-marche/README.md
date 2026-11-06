@@ -55,8 +55,8 @@ Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006)
 
 | Variable | Commande | Défaut | Contenu |
 |---|---|---|---|
-| `BASE_DE_DONNEES_URL` | les deux | obligatoire | `postgres://<rôle>:<mot de passe>@<hôte>:5432/marche?sslmode=verify-full&sslrootcert=<paquet RDS>` ; secret du rôle d'exécution pour `serve`, du rôle de migration pour `migrate`, `suspendre` et `retablir` |
-| `BASE_DE_DONNEES_TLS_EXIGE` | les deux | `true` | `false` seulement en local : autorise un autre `sslmode` que `verify-full` |
+| `BASE_DE_DONNEES_URL` | toutes | obligatoire | `postgres://<rôle>:<mot de passe>@<hôte>:5432/marche?sslmode=verify-full&sslrootcert=<paquet RDS>` ; secret du rôle d'exécution pour `serve`, du rôle de migration pour `migrate`, `suspendre` et `retablir` |
+| `BASE_DE_DONNEES_TLS_EXIGE` | toutes | `true` | `false` seulement en local : autorise un autre `sslmode` que `verify-full` |
 | `OIDC_EMETTEUR` | `serve` | obligatoire | Émetteur exact, ex. `https://auth.<domaine>/realms/collector` |
 | `OIDC_JEU_DE_CLES_URL` | `serve` | `<émetteur>/protocol/openid-connect/certs` | Adresse interne du jeu de clés si l'émetteur public n'est pas joignable depuis le cluster |
 | `OIDC_AUDIENCE` | `serve` | `place-de-marche` | Audience exigée dans le jeton |
@@ -69,7 +69,7 @@ Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006)
 | `CANAL_EMETTEUR_ATTENDU` | `serve` | `controle` | Seul `user-id` accepté sur la file des résultats (MC2) |
 | `ADRESSE_API` | `serve` | `:8080` | Écoute de l'API |
 | `ADRESSE_GESTION` | `serve` | `:9090` | Écoute de la santé |
-| `JOURNAL_NIVEAU` | les deux | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
+| `JOURNAL_NIVEAU` | toutes | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
 
 ## Rôles PostgreSQL attendus
 

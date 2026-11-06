@@ -174,6 +174,7 @@ func verifierDroitsMinimaux(t *testing.T, base basePostgreSQL, pool *pgxpool.Poo
 	exigerRefusDeDroit(t, pool, "DELETE FROM decision_admin")
 	exigerRefusDeDroit(t, pool, "UPDATE decision_admin SET motif = NULL")
 	exigerRefusDeDroit(t, pool, "DELETE FROM compte")
+	exigerRefusDeDroit(t, pool, "UPDATE compte SET suspendu = false, suspendu_le = NULL")
 	var hors, possedes int
 	err := base.maitre.QueryRow(t.Context(), `
 		SELECT
