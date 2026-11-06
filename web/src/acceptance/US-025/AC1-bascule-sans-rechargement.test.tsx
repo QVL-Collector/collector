@@ -10,7 +10,7 @@ import {
 } from '../US-008/identityProviderHarness';
 
 async function chooseEnglish(): Promise<void> {
-  await press(await screen.findByRole('button', { name: 'English' }));
+  await press(await screen.findByRole('button', { name: 'EN, English' }));
 }
 
 function configRequests(): number {
@@ -68,6 +68,9 @@ describe('US-025-AC1 bascule en anglais sans rechargement', () => {
     await press(await screen.findByRole('link', { name: 'Back to the catalogue' }));
 
     expect(await screen.findByRole('list', { name: 'Published items' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'EN, English' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 });

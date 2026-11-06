@@ -333,6 +333,45 @@ jobs:
           retention-days: 90
           if-no-files-found: ignore
 
+  e2e:
+    name: Front (parcours et accessibilité, Playwright)
+    needs: changements
+    if: needs.changements.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    env:
+      E2E_LANGUES: ${{ github.event_name == 'pull_request' && 'fr' || 'fr,en' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Installer les dépendances (verrou, sans script)
+        run: npm ci --ignore-scripts
+      - name: Installer Chromium et ses dépendances système
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Parcours, bascule de langue, axe-core et clavier (build de démonstration)
+        run: npm run e2e
+      - name: Conserver le rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rapport-playwright
+          path: |
+            web/playwright-report
+            web/test-results/e2e
+          retention-days: 14
+          if-no-files-found: ignore
+
   securite:
     name: Compteurs de sécurité (I6)
     needs: [secrets, sast, config, go]
@@ -370,7 +409,7 @@ jobs:
 
   ci-ok:
     name: ci-ok
-    needs: [changements, outillage, secrets, sast, config, go, web]
+    needs: [changements, outillage, secrets, sast, config, go, web, e2e]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5

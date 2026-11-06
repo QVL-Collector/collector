@@ -87,7 +87,7 @@ describe('US-025-AC5 focus visible au clavier, mouvements réduits compris', () 
       const user = userEvent.setup();
       preferMotion(preference);
       await openCollector('/');
-      const english = await screen.findByRole('button', { name: 'English' });
+      const english = await screen.findByRole('button', { name: 'EN, English' });
 
       await tabUntilFocused(user, english);
 

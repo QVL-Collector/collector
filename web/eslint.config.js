@@ -38,7 +38,7 @@ const literalTextSelectors = [
 ].map((selector) => ({ selector, message: literalTextMessage }));
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'test-results', 'node_modules'] },
+  { ignores: ['dist', 'coverage', 'test-results', 'playwright-report', 'node_modules'] },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

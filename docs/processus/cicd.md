@@ -105,6 +105,8 @@ B = bloquant (la fusion ou la publication est refusée) ; NB = non bloquant, arc
 | 19 | Fin de `up` ; après une réconciliation en session | Après déploiement | tests de fumée, X17, contrôles TLS et d'exposition | B (retour arrière) | 1 à 2 min | Sortie archivée |
 | 20 | Fin de sprint, déclenchement manuel | DAST | ZAP baseline sur l'URL de démonstration | NB ; constats au registre | 5 à 10 min | Rapport ZAP |
 
+État du job 11 (US-025) : la partie front est en place dans le job `e2e` de `ci.yml` (Playwright et `@axe-core/playwright` sur le build de démonstration, Chromium seul, `E2E_LANGUES=fr` en PR et `fr,en` sur `main`, rapport HTML en artefact en cas d'échec, agrégé par `ci-ok`) ; les tests d'API sur pile compose restent à brancher.
+
 Durées cibles de bout en bout : PR en moins de 15 min (10 à 12 visées) ; `main` jusqu'à `env/demo` en moins de 20 min. Leviers : caches Go, npm et couches Docker, base Trivy en cache quotidien avec miroir `public.ecr.aws`, Chromium seul pour Playwright, annulation de l'exécution précédente sur la même PR.
 
 **Chaîne protégée** (ES-32) : droits par défaut en lecture ; écriture GHCR, jeton OIDC pour cosign et écriture de `env/demo` réservés aux jobs 13 à 17 sur `main` ; actions tierces épinglées par empreinte de commit, mises à jour par Dependabot ; jamais `pull_request_target` (une PR issue d'un fork s'exécute sans secret). Démonstration BP3 : une branche contenant une dépendance vulnérable connue et un secret fictif rend `ci-ok` rouge, `main` reste verte.

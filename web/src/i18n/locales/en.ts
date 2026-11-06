@@ -8,9 +8,9 @@ export const en: Translation = {
     language: {
       label: 'Interface language',
       frShort: 'FR',
-      frFull: 'Français',
+      frFull: 'FR, Français',
       enShort: 'EN',
-      enFull: 'English',
+      enFull: 'EN, English',
     },
     bootstrapFailure: {
       title: 'The application could not start',

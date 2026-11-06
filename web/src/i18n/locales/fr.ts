@@ -6,9 +6,9 @@ export const fr = {
     language: {
       label: 'Langue de l’interface',
       frShort: 'FR',
-      frFull: 'Français',
+      frFull: 'FR, Français',
       enShort: 'EN',
-      enFull: 'English',
+      enFull: 'EN, English',
     },
     bootstrapFailure: {
       title: 'L’application n’a pas pu démarrer',

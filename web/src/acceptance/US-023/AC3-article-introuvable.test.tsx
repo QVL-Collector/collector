@@ -91,7 +91,7 @@ describe('US-023-AC3 article non publié introuvable', () => {
       { timeout: 15000 },
     );
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'English' }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'EN, English' }));
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Item not found' }),
