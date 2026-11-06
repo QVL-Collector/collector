@@ -1,0 +1,14 @@
+image: registry.k8s.io/hpa-example@sha256:581697a37f0e136db86d6b30392f0db40ce99c8248a7044c770012f4e8491544
+replicas: 2
+nodePort: 30080
+ressources:
+  requests:
+    cpu: 200m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 128Mi
+hpa:
+  min: 2
+  max: 6
+  cibleCpu: 60

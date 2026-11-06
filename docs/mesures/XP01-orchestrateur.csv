@@ -1,0 +1,34 @@
+horodatage_utc;xp;session;plateforme;critere;etape;valeur;unite;seuil;atteint;commentaire
+2026-11-06T10:52:39Z;XP01;EKS1;eks;G2;apply:aws_eks_cluster.principal[0];645;s;;;fin de création depuis le lancement de l'apply
+2026-11-06T10:52:39Z;XP01;EKS1;eks;G2;apply:aws_eks_addon.avant_noeuds["vpc-cni"];653;s;;;fin de création depuis le lancement de l'apply
+2026-11-06T10:52:39Z;XP01;EKS1;eks;G2;apply:aws_eks_addon.avant_noeuds["kube-proxy"];653;s;;;fin de création depuis le lancement de l'apply
+2026-11-06T10:52:40Z;XP01;EKS1;eks;G2;apply:aws_eks_node_group.principal[0];772;s;;;fin de création depuis le lancement de l'apply
+2026-11-06T10:52:40Z;XP01;EKS1;eks;G2;apply:aws_eks_addon.apres_noeuds["coredns"];787;s;;;fin de création depuis le lancement de l'apply
+2026-11-06T10:52:40Z;XP01;EKS1;eks;G2;apply:aws_eks_addon.apres_noeuds["metrics-server"];808;s;;;fin de création depuis le lancement de l'apply
+2026-11-06T10:54:42Z;XP01;EKS1;eks;G2;apply;54;s;;;apply terminé
+2026-11-06T10:54:50Z;XP01;EKS1;eks;G2;noeuds-ready;63;s;;;kubeconfig et nœuds Ready
+2026-11-06T10:54:53Z;XP01;EKS1;eks;G2;https-200;2;min;45;oui;premier HTTPS 200 par l'ALB
+2026-11-06T10:54:53Z;XP01;EKS1;eks;G2;https-200-bout-en-bout;16;min;45;oui;du premier apply (10:38:36Z) au HTTPS 200, deux apply (description de règle refusée puis correctif), chart posé à la main à 10:52Z
+2026-11-06T11:07:33Z;XP01;EKS1;eks;MX3;api-hors-plage;20;s;;oui;TCP 443 vers l'API EKS depuis une Lambda éphémère (3.82.x.x) : délai expiré sur les deux adresses ; CloudShell indisponible dans le Learner Lab ; publicAccessCidrs = /32 du poste, accès privé actif ; kubectl depuis le poste OK
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G7-5;politiques-reseau-cni;1;bool;;oui;vpc-cni v1.22.4 enableNetworkPolicy=true, conteneur aws-eks-nodeagent --enable-network-policy=true sur 2/2 nœuds, CRD policyendpoints présente
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G8-1;imdsv2-ns-intrus;5;s;;oui;PUT /latest/api/token depuis ns-intrus : délai expiré (politique de sortie sans 169.254.169.254/32) ; témoin pdm-test : jeton et identifiants LabRole obtenus
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G8-2;imdsv1;0;s;;oui;GET /latest/meta-data/ : 401 depuis pdm-test (IMDSv2 exigé), délai expiré depuis ns-intrus et transactions-test ; namespace default sans politique : IMDS joignable, à couvrir par une politique par défaut dans chaque namespace
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G8-3;secret-autre-ns-anonyme;401;http;;oui;ns-intrus vers l'API (secret temoin de pdm-test) : 401, aucun jeton de compte de service monté
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G8-4;secret-autre-ns-identite-noeud;403;http;;oui;pdm-test avec LabRole (entrée d'accès de type nœud) vers secret temoin de ns-intrus : 403 (autorisateur Node) ; écart résiduel ES-38 non constaté
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G7-1;reserver-depuis-intrus;5;s;;oui;ns-intrus vers pdm-test/reserver:8080 : délai expiré ; témoin transactions-test : 200
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G7-3;rds-depuis-controle;6;s;;oui;controle-test vers RDS 5432 : délai expiré ; témoin pdm-test : TLS établi (sslmode=require, refus d'authentification attendu)
+2026-11-06T11:11:03Z;XP01;EKS1;eks;G4;s3-sans-identifiant-statique;3;operations;3;oui;pdm-test par IMDSv2 (LabRole), aucune variable AWS_ACCESS_KEY_ID : écriture, lecture, URL présignée 200
+2026-11-06T11:20:48Z;XP01;EKS1;eks;G5;tir1-delai-capacite;14;s;90;oui;8 req/s visés (hpa-example, montée 2 min, plateau 5 min) : seuil 60 % franchi à 11:12:17Z, 5 pods Ready à 11:12:26Z, 6 (max) à 11:13:24Z ; relevé toutes les 5 à 8 s
+2026-11-06T11:20:48Z;XP01;EKS1;eks;G5;tir1-erreurs;0.03;%;1;oui;1 échec sur 3179 requêtes
+2026-11-06T11:20:48Z;XP01;EKS1;eks;G5;tir1-p95;1070;ms;500;non;p95 1,07 s, médiane 285 ms, minimum 89 ms (aller-retour Paris–us-east-1) ; HPA au maximum (6) avec CPU 90 à 120 % des requêtes : capacité du service de test dépassée, pas un retard d'orchestration ; second tir à 5 req/s
+2026-11-06T11:21:21Z;XP01;EKS1;eks;densite;pods-par-noeud;10;pods;17;oui;t3.medium sans délégation de préfixes : 17 pods au plus par nœud (34 sur 2 nœuds), 10 occupés par nœud (système, chart de test à 6 réplicas, 7 sondes) ; aucun Pending ni OOMKilled
+2026-11-06T11:21:21Z;XP01;EKS1;eks;densite;memoire-noeud;593;Mi;;oui;16 à 18 % de 3,2 Gi allouables, CPU 11 à 12 % juste après le tir ; RabbitMQ et Keycloak non déployés (XP02, XP03 en session 2)
+2026-11-06T11:30:42Z;XP01;EKS1;eks;X7bis;retour-minimum;616;s;600;non;fin du tir 11:20:14Z, 2 réplicas à 11:30:30Z ; fenêtre de stabilisation de descente par défaut (300 s) : à réduire dans les valeurs démonstration
+2026-11-06T13:13:25Z;XP01;EKS1;eks;X14;reprise-apres-fin-de-session;1;bool;;oui;session du lab terminée vers 11:33Z (bien avant l'échéance estimée 14:20Z), nœuds arrêtés et identifiants révoqués (voc-cancel-cred) ; Start Lab vers 13:10Z : le groupe Auto Scaling remplace les 2 nœuds, Ready ~2 min après, Deployment et HTTPS 200 rétablis sans intervention ; pods nus (sondes) perdus
+2026-11-06T13:16:43Z;XP01;EKS1;eks;G6;remplacant-ready;14;s;60;oui;3 réplicas, 4 req/s constants, suppression forcée (grace 0) à 13:15:02Z
+2026-11-06T13:16:43Z;XP01;EKS1;eks;G6;erreurs;0;%;1;oui;0 échec sur 706 requêtes ; p95 1,81 s (service de test lent sur nœuds t3 neufs, même constat qu'en G5)
+2026-11-06T13:22:55Z;XP01;EKS1;eks;G5;tir2-delai-capacite;8;s;90;oui;5 req/s visés, plateau 3 min, départ à 3 réplicas (sortie de G6) : 6 Ready au relevé suivant (13:16:57Z) ; écart avec le tir 1 < 2× : délai prévisible
+2026-11-06T13:22:55Z;XP01;EKS1;eks;G5;tir2-erreurs;0;%;1;oui;0 échec sur 1409 requêtes
+2026-11-06T13:22:55Z;XP01;EKS1;eks;G5;tir2-p95;798;ms;500;non;p95 798 ms, médiane 249 ms, CPU 45 à 90 % sur 6 réplicas ; plancher de latence = aller-retour Paris–us-east-1 (min 173 ms) + calcul hpa-example sur t3.medium ; critère p95 à rejouer depuis une source dans la région (pod k6 ou tir depuis us-east-1)
+2026-11-06T13:29:47Z;XP01;EKS1;eks;G3;destroy;350;s;;;fin du destroy (statut 0)
+2026-11-06T13:30:59Z;XP01;EKS1;eks;G3;inventaire-vide;8;min;20;oui;destroy 0, inventaire 0

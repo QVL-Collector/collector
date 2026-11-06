@@ -171,18 +171,30 @@ Demi-session de rejeu d'un critère bloquant en échec corrigé, ou rejeu de XP0
 
 ## Résultats
 
-| # | EKS | ECS Fargate | Atteint EKS | Atteint ECS |
+Session EKS 1 jouée le 2026-11-06 (mesures : `docs/mesures/XP01-orchestrateur.csv`, tirs et relevés HPA : `docs/mesures/XP01-orchestrateur/EKS1-*`).
+
+| # | EKS (session 1) | ECS Fargate | Atteint EKS | Atteint ECS |
 |---|---|---|---|---|
-| G1 | | | | |
-| G2 | | | | |
-| G3 | | | | |
-| G4 | | | | |
-| G5 | | | | |
-| G6 | | | | |
-| G7 | | | | |
-| G8 | | | | |
-| G9 | | | | |
-| G10 | | | | |
+| G1 | Cluster 1.35 et node group `ACTIVE` (2 × t3.medium), add-ons vpc-cni, kube-proxy, coredns, metrics-server | | Oui | |
+| G2 | 16 min du premier `apply` au HTTPS 200 (cluster 10,5 min, RDS 7,4 min en parallèle) ; deux `apply` : description de règle refusée par EC2, corrigée | | Oui (1/2) | |
+| G3 | 8 min : `destroy` 5,8 min, inventaire strict vide | | Oui | |
+| G4 | Écriture, lecture, URL présignée (200) depuis `pdm-test` par IMDSv2, aucune clé statique | | Oui | |
+| G5 | Délai seuil → capacité : 14 s (tir 1, 8 req/s) et 8 s (tir 2, 5 req/s) ; erreurs 0,03 % et 0 % ; p95 1,07 s et 0,80 s | | Non (p95) | |
+| G6 | Remplaçant `Ready` en 14 s, 0 erreur sur 706 requêtes | | Oui | |
+| G7 | G7-1 refus (témoin 200), G7-3 refus (témoin TLS établi), G7-5 politiques actives sur 2/2 nœuds ; G7-2 et G7-4 en XP02, XP03 | | Oui (partiel) | |
+| G8 | G8-1 et G8-2 refus hors `pdm-test`, IMDSv1 401 ; G8-3 401 ; G8-4 403 (autorisateur Node), écart ES-38 non constaté | | Oui | |
+| G9 | Session 2 | | | |
+| G10 | Session 2 | | | |
+
+Constats de la session 1 :
+
+- **p95 de G5** : plancher de 173 ms (aller-retour Paris – us-east-1), médiane 250 à 285 ms ; la queue vient du service `hpa-example`, calcul CPU par requête sur t3.medium. Délai de capacité et erreurs conformes. À rejouer en session 2 avec une source de tir dans la région (pod k6) pour isoler l'orchestrateur.
+- **X7 bis** : retour à 2 réplicas en 10 min 16 s (seuil 10 min), dû à la fenêtre de stabilisation de descente par défaut (300 s) : à réduire dans les valeurs « démonstration ».
+- **X14** : le lab s'est arrêté vers 11:33Z, avant l'échéance estimée (identifiants révoqués, nœuds arrêtés). Après « Start Lab », le groupe Auto Scaling a remplacé les 2 nœuds, `Ready` en 2 min environ, Deployment et HTTPS 200 rétablis sans intervention ; seuls les pods nus de sonde sont perdus. L'heure de fin vient désormais du compteur du lab, pas d'une estimation.
+- **MX3** : CloudShell indisponible dans le Learner Lab ; test fait depuis une Lambda éphémère (adresse AWS publique hors plage) : délai expiré. `publicAccessCidrs` limité au /32 du poste.
+- **Densité** : 17 pods au plus par nœud t3.medium sans délégation de préfixes (34 sur 2 nœuds), 10 occupés par nœud au test ; mémoire 16 à 18 %. Délégation de préfixes à essayer en session 2 avant d'ajouter RabbitMQ et Keycloak.
+- **Namespace `default`** sans politique : IMDS joignable depuis ses pods. Règle retenue : politique de sortie par défaut sans 169.254.169.254/32 dans chaque namespace applicatif.
+- **Correctifs d'IaC et de scripts** : description de règle de groupe de sécurité (apostrophe refusée), casse des champs des destructions programmées (EventBridge Scheduler), retour chariot de `jq` sous Windows dans `down.sh`, chemins Windows pour Terraform dans `lib.sh`.
 
 ## Difficultés
 
