@@ -56,7 +56,7 @@ func toRequestData(request annonces.ReviewRequest) requestData {
 		SubmittedAt: request.SubmittedAt.UTC(),
 		Seller: sellerData{
 			AccountID:   article.Seller.String(),
-			MemberSince: request.Seller.MemberSince.Format(time.DateOnly),
+			MemberSince: request.Seller.MemberSince.UTC().Format(time.DateOnly),
 			Suspended:   request.Seller.Suspended,
 		},
 		Listing: listingData{

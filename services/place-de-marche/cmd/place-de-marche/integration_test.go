@@ -18,6 +18,7 @@ import (
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/annonces/controle"
 	"collector/services/place-de-marche/internal/annonces/stockage"
+	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/migrations"
 )
 
@@ -149,7 +150,7 @@ func servicePostgreSQL(t *testing.T) (basePostgreSQL, *pgxpool.Pool, *annonces.S
 		t.Fatalf("connexion en %s : %v", roleExecution, err)
 	}
 	t.Cleanup(pool.Close)
-	depot := stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)))
+	depot := stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)), comptesstockage.NewStore(pool))
 	return base, pool, annonces.NewService(depot, depot)
 }
 
@@ -172,10 +173,12 @@ func verifierDroitsMinimaux(t *testing.T, base basePostgreSQL, pool *pgxpool.Poo
 	exigerRefusDeDroit(t, pool, "DELETE FROM resultat_controle")
 	exigerRefusDeDroit(t, pool, "DELETE FROM decision_admin")
 	exigerRefusDeDroit(t, pool, "UPDATE decision_admin SET motif = NULL")
+	exigerRefusDeDroit(t, pool, "DELETE FROM compte")
+	exigerRefusDeDroit(t, pool, "UPDATE compte SET suspendu = false, suspendu_le = NULL")
 	var hors, possedes int
 	err := base.maitre.QueryRow(t.Context(), `
 		SELECT
-			count(*) FILTER (WHERE c.relname NOT IN ('article', 'categorie', 'outbox', 'resultat_controle', 'decision_admin') AND has_table_privilege($1, c.oid, 'SELECT,INSERT,UPDATE,DELETE')),
+			count(*) FILTER (WHERE c.relname NOT IN ('article', 'categorie', 'outbox', 'resultat_controle', 'decision_admin', 'compte') AND has_table_privilege($1, c.oid, 'SELECT,INSERT,UPDATE,DELETE')),
 			count(*) FILTER (WHERE pg_get_userbyid(c.relowner) = $1)
 		FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')`, roleExecution).Scan(&hors, &possedes)
