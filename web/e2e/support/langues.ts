@@ -1,4 +1,4 @@
-export const languesE2e = ['fr', 'en'] as const;
+const languesE2e = ['fr', 'en'] as const;
 
 export type Langue = (typeof languesE2e)[number];
 

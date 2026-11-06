@@ -9,7 +9,7 @@ import {
 import { localeNavigateur, type Langue } from './langues';
 import { textes, type Textes } from './textes';
 
-export const configurationDemo = {
+const configurationDemo = {
   marketplaceApiUrl: '/marche',
   catalogue: { source: 'demo', demoScenario: 'nominal' },
   oidc: { authority: autoriteE2e, clientId: clientIdE2e, scope: 'openid profile' },

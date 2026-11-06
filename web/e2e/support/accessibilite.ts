@@ -1,11 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export const tagsWcag21AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+const tagsWcag21AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
 const impactsBloquants = new Set(['serious', 'critical']);
 
-export async function attendreRenduStable(page: Page): Promise<void> {
+async function attendreRenduStable(page: Page): Promise<void> {
   await page.waitForFunction(() =>
     document
       .getAnimations()
@@ -32,7 +32,7 @@ export type IndicateurDeFocus = {
   readonly indicateur: string | null;
 };
 
-export async function indicateurDeFocus(page: Page): Promise<IndicateurDeFocus> {
+async function indicateurDeFocus(page: Page): Promise<IndicateurDeFocus> {
   return page.evaluate(() => {
     const element = document.activeElement;
     if (!(element instanceof HTMLElement) || element === document.body) {
@@ -78,7 +78,7 @@ export async function tabulerJusqua(
   page: Page,
   cible: Locator,
   sens: Sens = 'avant',
-): Promise<IndicateurDeFocus[]> {
+): Promise<void> {
   const parcourus: IndicateurDeFocus[] = [];
   for (let tabulation = 0; tabulation < tabulationsMax; tabulation += 1) {
     await page.keyboard.press(touches[sens]);
@@ -89,7 +89,7 @@ export async function tabulerJusqua(
       `focus visible sur ${focus.element} (parcours : ${parcourus.map(({ element }) => element).join(' → ')})`,
     ).not.toBeNull();
     if (await cible.evaluate((element) => element === document.activeElement)) {
-      return parcourus;
+      return;
     }
   }
   throw new Error(`Cible non atteinte après ${String(tabulationsMax)} tabulations`);
