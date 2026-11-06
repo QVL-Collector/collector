@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"collector/libs/platform/ratelimit"
 	"collector/libs/platform/token"
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/annonces/api"
@@ -130,7 +131,17 @@ func demarrer(t *testing.T, service api.ArticleService) *environnement {
 	return demarrerJournalise(t, service, journalMuet())
 }
 
+func limiteurSansEffet() api.RateLimiter {
+	tresHaute := ratelimit.PerMinute(60_000_000, 1_000_000)
+	return ratelimit.NewGuard(ratelimit.Policy{Nominal: tresHaute, LoadTest: tresHaute}, journalMuet(), time.Now)
+}
+
 func demarrerJournalise(t *testing.T, service api.ArticleService, journal *slog.Logger) *environnement {
+	t.Helper()
+	return demarrerAvecLimiteur(t, service, journal, limiteurSansEffet())
+}
+
+func demarrerAvecLimiteur(t *testing.T, service api.ArticleService, journal *slog.Logger, limiteur api.RateLimiter) *environnement {
 	t.Helper()
 	emetteur := nouvelEmetteurDeJetons(t)
 	verificateur, err := token.NewVerifier(t.Context(), token.Config{
@@ -142,7 +153,7 @@ func demarrerJournalise(t *testing.T, service api.ArticleService, journal *slog.
 	if err != nil {
 		t.Fatalf("vérificateur de jetons : %v", err)
 	}
-	serveur := httptest.NewServer(publicHandler(journal, service, verificateur))
+	serveur := httptest.NewServer(publicHandler(journal, service, verificateur, limiteur))
 	t.Cleanup(serveur.Close)
 	return emetteur.environnementSur(t, serveur.URL, serveur.Client())
 }
