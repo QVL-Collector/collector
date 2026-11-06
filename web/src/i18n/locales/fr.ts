@@ -175,6 +175,52 @@ export const fr = {
       failure: 'La soumission a échoué. Vérifiez votre connexion, puis réessayez.',
     },
   },
+  notifications: {
+    documentTitle: 'Notifications · Collector',
+    navigation: 'Notifications',
+    title: 'Notifications',
+    subtitle:
+      'Chaque décision prise sur vos articles apparaît ici : publication, refus ou examen par un administrateur.',
+    listTitle: 'Décisions sur vos articles',
+    loading: 'Chargement de vos notifications en cours',
+    loaded_one: '{{count}} notification',
+    loaded_other: '{{count}} notifications',
+    decidedAt: 'Décision du {{date}}',
+    revision: 'Révision {{revision}}',
+    issues: {
+      publie: {
+        title: 'Votre article a été publié',
+        description: 'Il est désormais visible dans le catalogue.',
+      },
+      refuse: {
+        title: 'Votre article a été refusé',
+        description: 'Corrigez l’annonce, enregistrez-la, puis soumettez-la de nouveau.',
+      },
+      a_verifier: {
+        title: 'Votre article doit être vérifié',
+        description: 'Un administrateur va l’examiner. Il reste invisible au catalogue d’ici là.',
+      },
+    },
+    empty: {
+      title: 'Aucune notification pour le moment',
+      description:
+        'Vous serez prévenu ici dès qu’une décision sera prise sur l’un de vos articles.',
+    },
+    error: {
+      title: 'Vos notifications sont momentanément indisponibles',
+      description: 'Vérifiez votre connexion, puis réessayez.',
+      retry: 'Réessayer',
+    },
+    unauthenticated: {
+      title: 'Votre session a expiré',
+      description: 'Reconnectez-vous pour consulter vos notifications.',
+      signIn: 'Se reconnecter',
+    },
+    forbidden: {
+      title: 'Accès réservé',
+      description: 'Votre compte n’a pas le rôle requis pour consulter ces notifications.',
+    },
+  },
   common: {
     backToCatalogue: 'Retour au catalogue',
     pagination: {

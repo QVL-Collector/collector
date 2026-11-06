@@ -5,6 +5,8 @@ import { AdminReviewPage } from '../features/admin/components/AdminReviewPage';
 import { publishedArticleRoutePattern } from '../features/catalogue/cataloguePaths';
 import { ArticlePage } from '../features/catalogue/components/ArticlePage';
 import { CataloguePage } from '../features/catalogue/components/CataloguePage';
+import { NotificationsPage } from '../features/notifications/components/NotificationsPage';
+import { notificationsPath } from '../features/notifications/notificationsPaths';
 import { ArticleEditorPage } from '../features/seller/components/ArticleEditorPage';
 import { NewArticlePage } from '../features/seller/components/NewArticlePage';
 import { SellerSpacePage } from '../features/seller/components/SellerSpacePage';
@@ -33,6 +35,7 @@ export const appRoutes: RouteObject[] = [
           { path: sellerSpacePath, element: <SellerSpacePage /> },
           { path: newArticlePath, element: <NewArticlePage /> },
           { path: articleRoutePattern, element: <ArticleEditorPage /> },
+          { path: notificationsPath, element: <NotificationsPage /> },
         ],
       },
       {
