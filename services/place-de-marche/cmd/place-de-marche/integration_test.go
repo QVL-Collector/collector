@@ -15,8 +15,10 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
+	"collector/libs/platform/database"
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/annonces/controle"
+	"collector/services/place-de-marche/internal/annonces/diffusion"
 	"collector/services/place-de-marche/internal/annonces/stockage"
 	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/migrations"
@@ -145,12 +147,12 @@ func servicePostgreSQL(t *testing.T) (basePostgreSQL, *pgxpool.Pool, *annonces.S
 			t.Fatalf("migrations en %s : %v", roleMigration, err)
 		}
 	}
-	pool, err := stockage.Connect(ctx, base.execution)
+	pool, err := database.Connect(ctx, base.execution)
 	if err != nil {
 		t.Fatalf("connexion en %s : %v", roleExecution, err)
 	}
 	t.Cleanup(pool.Close)
-	depot := stockage.NewStore(pool, controle.NewRequestEncoder(validateurDeContrats(t)), comptesstockage.NewStore(pool))
+	depot := depotPostgreSQL(t, pool)
 	return base, pool, annonces.NewService(depot, depot)
 }
 
@@ -206,4 +208,10 @@ func TestUS009IntegrationPostgreSQL(t *testing.T) {
 	t.Run("rôle d'exécution limité au DML de ses tables", func(t *testing.T) {
 		verifierDroitsMinimaux(t, base, pool)
 	})
+}
+
+func depotPostgreSQL(t *testing.T, pool *pgxpool.Pool) *stockage.Store {
+	t.Helper()
+	validateur := validateurDeContrats(t)
+	return stockage.NewStore(pool, controle.NewRequestEncoder(validateur), diffusion.NewDecisionEncoder(validateur), comptesstockage.NewStore(pool))
 }

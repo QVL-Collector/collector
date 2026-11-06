@@ -4,6 +4,7 @@ import { anonymousSession } from '../auth/AuthSession';
 import { AuthSessionProvider } from '../auth/AuthSessionContext';
 import { AdminClientProvider } from '../features/admin/api/AdminClientContext';
 import { CatalogueClientProvider } from '../features/catalogue/api/CatalogueClientContext';
+import { NotificationsClientProvider } from '../features/notifications/api/NotificationsClientContext';
 import { SellerClientProvider } from '../features/seller/api/SellerClientContext';
 import { AppThemeRoot } from './AppThemeRoot';
 import type { AppServices } from './createAppServices';
@@ -22,7 +23,9 @@ export function AppProviders({ services, queryClient, children }: AppProvidersPr
           <CatalogueClientProvider client={services.catalogueClient}>
             <SellerClientProvider client={services.sellerClient}>
               <AdminClientProvider client={services.adminClient ?? null}>
-                {children}
+                <NotificationsClientProvider client={services.notificationsClient ?? null}>
+                  {children}
+                </NotificationsClientProvider>
               </AdminClientProvider>
             </SellerClientProvider>
           </CatalogueClientProvider>

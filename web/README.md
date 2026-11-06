@@ -41,6 +41,7 @@ Un composant ne contient que du JSX ; état, effets et appels vivent dans un hoo
 | Clé                      | Valeurs                                                                 | Rôle                                                                               |
 | ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `marketplaceApiUrl`      | chemin de même origine, ex. `/marche`                                   | Préfixe de la Place de marché ; une URL absolue est refusée                        |
+| `interactionsApiUrl`     | chemin de même origine, défaut `/interactions`                          | Préfixe du service Interactions (notifications) ; une URL absolue est refusée      |
 | `catalogue.source`       | `api`, `demo`                                                           | Client HTTP réel ou adaptateur de démonstration (catalogue et espace vendeur)      |
 | `catalogue.demoScenario` | `nominal`, `empty`, `error`                                             | États du catalogue rejouables sans back                                            |
 | `oidc.authority`         | URL de l'émetteur, ex. `https://auth.<domaine>/realms/collector`        | HTTPS obligatoire (HTTP admis sur `localhost` seulement), sans requête ni fragment |
@@ -80,6 +81,15 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, isolé dans `src/feat
 - Tous les états sont modifiables. Un article `publie`, `en_controle` ou `a_verifier` enregistré repasse en `en_controle` (motif effacé, révision + 1) ; un brouillon ou un refusé reste dans son état. La soumission reste réservée à `brouillon` et `refuse`.
 - Avant d'enregistrer, un avertissement (`Alert` en `role="note"`, relié au bouton par `aria-describedby`) annonce le retrait du catalogue (publié) ou la relance du contrôle sur la nouvelle version (en contrôle, à vérifier) ; le bouton devient « Enregistrer et renvoyer au contrôle » et le succès annonce le retour au contrôle.
 - Un résultat de contrôle portant sur une révision antérieure est sans effet (démonstration comprise).
+
+## Notifications du vendeur (US-028)
+
+Contrat : `GET {interactionsApiUrl}/v1/notifications?page=1&taille=20` (jeton du vendeur, audience `interactions`), réponse `{ elements, page, taille, total }`, élément `{ id, articleId, revision, issue, motif, decideLe }`. Isolé dans `src/features/notifications/api/` (`notificationPayload.ts` valide chaque réponse).
+
+- `/vendeur/notifications` (rôle `vendeur`, lien « Notifications » dans l'en-tête) : première page de 20 décisions dans l'ordre renvoyé par l'API, sans pagination (POC), dans une liste `ul`. Un élément sans `motif`, ou dont le motif ne correspond pas à l'issue (non nul si `publie`, `null` sinon), rend la réponse invalide. Chaque carte mène à `/vendeur/articles/:id`.
+- Texte construit uniquement à partir de l'issue (`publie`, `refuse`, `a_verifier`) et du code de motif (`null` si publié ; contrôle ou refus admin, traduits par `useArticleReasonLabel`), jamais du titre de l'article. Issue rendue par une puce icône + libellé ; « Décision du » `decideLe` par `useDateTimeFormatter` (`<time datetime>`).
+- Relecture toutes les 5 s, suspendue onglet masqué et relancée au retour (AC2 : moins de 10 s) ; arrêtée sur 401 (« Votre session a expiré », bouton « Se reconnecter ») ou 403. Nombre de notifications annoncé en `role="status"`.
+- Démonstration : trois notifications liées aux articles de démonstration du vendeur.
 
 ## Articles à vérifier (US-022)
 

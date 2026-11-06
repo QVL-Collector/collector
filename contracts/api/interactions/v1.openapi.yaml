@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: Interactions, API v1
+  version: 1.0.0
+  description: >-
+    API HTTP du service Interactions. Erreurs au format Problem Details (RFC 9457, application/problem+json), sans
+    trace technique. Toutes les routes exigent un jeton d'accès Keycloak valide (signature RS256, émetteur, audience
+    interactions, client autorisé collector-web, type Bearer, expiration) portant le rôle de realm vendeur. Une
+    notification ne porte aucun contenu saisi par un utilisateur : le texte affiché est construit par le front à partir
+    de l'issue et du code de motif, en français ou en anglais.
+servers:
+  - url: /interactions/v1
+tags:
+  - name: Notifications
+paths:
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: listerMesNotifications
+      summary: >-
+        Notifications du vendeur connecté, une par décision de publication sur ses articles, de la plus récente à la
+        plus ancienne ; seules celles du sujet du jeton sont lues
+      security:
+        - jetonKeycloak: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Taille"
+      responses:
+        "200":
+          description: Page de notifications ; une page au-delà du total est vide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageNotifications"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+components:
+  securitySchemes:
+    jetonKeycloak:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000
+        default: 1
+    Taille:
+      name: taille
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+  schemas:
+    Issue:
+      type: string
+      description: Issue de la décision sur l'article
+      enum: [publie, refuse, a_verifier]
+    Motif:
+      type: string
+      nullable: true
+      description: >-
+        Catégorie du motif de la décision, contrôle automatique ou décision d'un administrateur ; présente pour les
+        issues refuse et a_verifier, null pour publie. Ne cite jamais la règle ni le seuil appliqués.
+      enum:
+        - annonce_incomplete
+        - coordonnees_detectees
+        - compte_non_autorise
+        - prix_a_confirmer
+        - vendeur_a_verifier
+        - categorie_inconnue
+        - prix_abusif
+        - article_interdit
+        - vendeur_non_fiable
+        - null
+    Notification:
+      type: object
+      additionalProperties: false
+      required: [id, articleId, revision, issue, motif, decideLe]
+      properties:
+        id:
+          type: string
+          format: uuid
+        articleId:
+          type: string
+          format: uuid
+          description: Article du vendeur concerné, lisible par GET /marche/v1/vendeur/articles/{id}
+        revision:
+          type: integer
+          minimum: 1
+          description: Révision de l'article sur laquelle porte la décision
+        issue:
+          $ref: "#/components/schemas/Issue"
+        motif:
+          $ref: "#/components/schemas/Motif"
+        decideLe:
+          type: string
+          format: date-time
+          description: Date de la décision, en UTC
+    PageNotifications:
+      type: object
+      additionalProperties: false
+      required: [elements, page, taille, total]
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+    ErreurDeChamp:
+      type: object
+      additionalProperties: false
+      required: [champ, code]
+      properties:
+        champ:
+          type: string
+          example: taille
+        code:
+          type: string
+          enum:
+            - invalide
+            - hors_limites
+    Probleme:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: about:blank pour les erreurs génériques ; urn:collector:probleme:saisie-invalide sinon
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        erreurs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErreurDeChamp"
+  responses:
+    SaisieInvalide:
+      description: Paramètre page ou taille répété, vide, non entier ou hors bornes
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonAuthentifie:
+      description: Jeton absent, expiré, mal signé, d'un autre émetteur, d'une autre audience ou d'un autre client
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonAutorise:
+      description: Jeton valide sans le rôle vendeur
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    ErreurInterne:
+      description: Erreur interne, sans détail technique
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"

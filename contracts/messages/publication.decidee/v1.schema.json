@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Décision de publication, contrat v1",
+  "description": "Diffusé par la Place de marché (échange pdm.evenements, clé de routage publication.decidee.v1) à chaque décision appliquée sur un article : résultat du Contrôle de publication ou décision d'un administrateur. Aucun contenu saisi par un utilisateur : identifiants opaques, révision, issue et catégorie de motif dans des listes fermées.",
+  "allOf": [{ "$ref": "../enveloppe-v1.schema.json" }],
+  "properties": {
+    "type": { "const": "publication.decidee" },
+    "version": { "const": 1 },
+    "data": { "$ref": "#/$defs/decision" }
+  },
+  "$defs": {
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["article_id", "revision", "seller_id", "issue", "decided_at"],
+      "properties": {
+        "article_id": {
+          "description": "Identifiant de l'article décidé.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "revision": {
+          "description": "Révision de l'article sur laquelle porte la décision.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "seller_id": {
+          "description": "Identifiant opaque du vendeur (sujet de son jeton), sans autre donnée personnelle.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "issue": { "$ref": "#/$defs/issue" },
+        "reason": { "$ref": "#/$defs/motif" },
+        "decided_at": {
+          "description": "Date à laquelle la décision a été appliquée par la Place de marché.",
+          "$ref": "../enveloppe-v1.schema.json#/$defs/horodatage_utc"
+        }
+      },
+      "if": {
+        "required": ["issue"],
+        "properties": { "issue": { "const": "publie" } }
+      },
+      "then": {
+        "properties": { "reason": false }
+      },
+      "else": {
+        "required": ["reason"]
+      }
+    },
+    "issue": {
+      "description": "Issue appliquée à l'article : publié, refusé, ou à vérifier par un administrateur.",
+      "enum": ["publie", "refuse", "a_verifier"]
+    },
+    "motif": {
+      "description": "Catégorie de motif, obligatoire si l'issue n'est pas « publie », absente sinon : motifs du Contrôle (controle.resultat v1) et motifs de refus d'un administrateur.",
+      "enum": [
+        "annonce_incomplete",
+        "coordonnees_detectees",
+        "compte_non_autorise",
+        "prix_a_confirmer",
+        "vendeur_a_verifier",
+        "categorie_inconnue",
+        "prix_abusif",
+        "article_interdit",
+        "vendeur_non_fiable"
+      ]
+    }
+  }
+}

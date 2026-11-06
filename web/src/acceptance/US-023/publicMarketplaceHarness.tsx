@@ -145,6 +145,7 @@ export function catalogueRequests(marketplace: PublicMarketplace): URL[] {
 export async function openAt(url: string): Promise<void> {
   const services = await createAppServices({
     marketplaceApiUrl: '/marche',
+    interactionsApiUrl: '/interactions',
     catalogue: { source: 'api', demoScenario: 'nominal' },
   });
   renderApp(services, url);

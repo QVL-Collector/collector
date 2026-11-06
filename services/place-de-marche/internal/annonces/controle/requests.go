@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"collector/libs/platform/logging"
 	"collector/libs/platform/message"
 	"collector/libs/platform/outbox"
@@ -22,7 +20,7 @@ func NewRequestEncoder(validator *message.Validator) *RequestEncoder {
 }
 
 func (e *RequestEncoder) Encode(ctx context.Context, request annonces.ReviewRequest) (outbox.Event, error) {
-	envelope, err := message.NewEnvelope(requestContract, correlationOf(ctx), toRequestData(request), time.Now())
+	envelope, err := message.NewEnvelope(requestContract, logging.CorrelationIDOrNew(ctx), toRequestData(request), time.Now())
 	if err != nil {
 		return outbox.Event{}, err
 	}
@@ -30,22 +28,7 @@ func (e *RequestEncoder) Encode(ctx context.Context, request annonces.ReviewRequ
 	if err != nil {
 		return outbox.Event{}, fmt.Errorf("demande de contrôle de %s : %w", request.Article.ID, err)
 	}
-	return outbox.Event{
-		ID:            envelope.ID,
-		Exchange:      RequestExchange,
-		RoutingKey:    routingKeyV1,
-		Type:          envelope.Type,
-		CorrelationID: envelope.CorrelationID,
-		Body:          body,
-		CreatedAt:     envelope.EmittedAt,
-	}, nil
-}
-
-func correlationOf(ctx context.Context) string {
-	if id, found := logging.CorrelationID(ctx); found {
-		return id
-	}
-	return uuid.NewString()
+	return outbox.NewEvent(envelope, RequestExchange, routingKeyV1, body), nil
 }
 
 func toRequestData(request annonces.ReviewRequest) requestData {

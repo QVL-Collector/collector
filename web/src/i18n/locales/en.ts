@@ -174,6 +174,52 @@ export const en: Translation = {
       failure: 'Submission failed. Check your connection, then try again.',
     },
   },
+  notifications: {
+    documentTitle: 'Notifications · Collector',
+    navigation: 'Notifications',
+    title: 'Notifications',
+    subtitle:
+      'Every decision made on your items shows up here: publication, rejection or review by an administrator.',
+    listTitle: 'Decisions on your items',
+    loading: 'Loading your notifications',
+    loaded_one: '{{count}} notification',
+    loaded_other: '{{count}} notifications',
+    decidedAt: 'Decided on {{date}}',
+    revision: 'Revision {{revision}}',
+    issues: {
+      publie: {
+        title: 'Your item has been published',
+        description: 'It is now visible in the catalogue.',
+      },
+      refuse: {
+        title: 'Your item has been rejected',
+        description: 'Fix the listing, save it, then submit it again.',
+      },
+      a_verifier: {
+        title: 'Your item needs to be checked',
+        description:
+          'An administrator will examine it. It stays hidden from the catalogue until then.',
+      },
+    },
+    empty: {
+      title: 'No notifications yet',
+      description: 'You will be told here as soon as a decision is made on one of your items.',
+    },
+    error: {
+      title: 'Your notifications are temporarily unavailable',
+      description: 'Check your connection, then try again.',
+      retry: 'Try again',
+    },
+    unauthenticated: {
+      title: 'Your session has expired',
+      description: 'Sign in again to see your notifications.',
+      signIn: 'Sign in again',
+    },
+    forbidden: {
+      title: 'Restricted access',
+      description: 'Your account does not have the role required to see these notifications.',
+    },
+  },
   common: {
     backToCatalogue: 'Back to the catalogue',
     pagination: {

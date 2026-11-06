@@ -9,16 +9,15 @@ import (
 )
 
 const (
-	codeRequired    = "obligatoire"
-	codeInvalid     = "invalide"
-	codeOutOfBounds = "hors_limites"
-	amountMember    = ".montantCentimes"
-	currencyMember  = ".devise"
-	priceField      = "prix"
-	shippingField   = "fraisDePort"
-	revisionField   = "revision"
-	verdictField    = "decision"
-	reasonField     = "motif"
+	codeRequired   = "obligatoire"
+	codeInvalid    = problem.CodeInvalid
+	amountMember   = ".montantCentimes"
+	currencyMember = ".devise"
+	priceField     = "prix"
+	shippingField  = "fraisDePort"
+	revisionField  = "revision"
+	verdictField   = "decision"
+	reasonField    = "motif"
 )
 
 var fieldNames = map[annonces.Field]string{

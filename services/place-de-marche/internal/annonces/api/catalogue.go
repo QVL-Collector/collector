@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"collector/libs/platform/httpjson"
+	"collector/libs/platform/httpserver"
 	"collector/libs/platform/problem"
 	"collector/services/place-de-marche/internal/annonces"
 )
@@ -67,7 +68,7 @@ func (h handlers) publishedArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func catalogueFilterOf(query url.Values) (annonces.CatalogueFilter, []problem.FieldError) {
-	raw, present, fieldErrors := singleParameter(query, categoryParameter)
+	raw, present, fieldErrors := httpserver.SingleQueryParameter(query, categoryParameter)
 	if !present || len(fieldErrors) > 0 {
 		return annonces.CatalogueFilter{}, fieldErrors
 	}

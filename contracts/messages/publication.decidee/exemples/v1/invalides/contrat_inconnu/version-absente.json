@@ -1,0 +1,13 @@
+{
+  "id": "3f6b8d0a-2c4e-4a6b-8d0f-1a3c5e7b9d2f",
+  "type": "publication.decidee",
+  "emitted_at": "2026-11-06T09:15:02.481Z",
+  "correlation_id": "7d9f1b3c-5e7a-4c9e-b1d3-f5a7c9e1b3d5",
+  "data": {
+    "article_id": "8a2d4f6b-1c3e-4a5b-9d7f-0e2c4a6b8d1f",
+    "revision": 2,
+    "seller_id": "c1e3a5b7-9d0f-4b2d-8e4a-6c8e0a2c4e6a",
+    "issue": "publie",
+    "decided_at": "2026-11-06T09:15:02.476513Z"
+  }
+}

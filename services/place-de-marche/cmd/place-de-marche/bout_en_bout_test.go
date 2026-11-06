@@ -94,12 +94,17 @@ func (b *bancComplet) attendreEtat(t *testing.T, id, etat string, delai time.Dur
 	return dernier, duree
 }
 
-func (b *bancComplet) outboxDe(t *testing.T, id string) []ligneOutbox {
+func (b *bancComplet) demandesEnOutboxDe(t *testing.T, id string) []ligneOutbox {
 	t.Helper()
-	lignes, err := b.base.maitre.Query(t.Context(), `
+	return lignesDOutbox(t, b.base, id, typeDemande)
+}
+
+func lignesDOutbox(t *testing.T, base basePostgreSQL, id, typ string) []ligneOutbox {
+	t.Helper()
+	lignes, err := base.maitre.Query(t.Context(), `
 		SELECT echange, cle_routage, type_message, corps, publie_le IS NOT NULL
-		FROM outbox WHERE convert_from(corps, 'UTF8')::jsonb -> 'data' ->> 'article_id' = $1
-		ORDER BY cree_le`, id)
+		FROM outbox WHERE convert_from(corps, 'UTF8')::jsonb -> 'data' ->> 'article_id' = $1 AND type_message = $2
+		ORDER BY cree_le`, id, typ)
 	if err != nil {
 		t.Fatalf("lecture de l'outbox : %v", err)
 	}
@@ -218,7 +223,7 @@ func TestUS013BoutEnBoutPlaceDeMarcheEtControle(t *testing.T) {
 
 func (b *bancComplet) ac5DemandeEcriteDansLOutboxPuisPubliee(t *testing.T) {
 	exigerEtat(t, b.relire(t, b.jeton, b.enAttente.ID), etatEnControle, "")
-	lignes := b.outboxDe(t, b.enAttente.ID)
+	lignes := b.demandesEnOutboxDe(t, b.enAttente.ID)
 	if len(lignes) != 1 || lignes[0].echange != echangeDemandes || lignes[0].cle != cleDeRoutageV1 || lignes[0].typ != typeDemande {
 		t.Fatalf("outbox de %s : %+v", b.enAttente.ID, lignes)
 	}
@@ -229,7 +234,7 @@ func (b *bancComplet) ac5DemandeEcriteDansLOutboxPuisPubliee(t *testing.T) {
 	if demande.ArticleID != b.enAttente.ID || demande.Revision != b.enAttente.Revision {
 		t.Fatalf("demande %+v pour l'article %s en révision %d", demande, b.enAttente.ID, b.enAttente.Revision)
 	}
-	attendre(t, delaiDeTraitement, "publication de la demande", func() bool { return b.outboxDe(t, b.enAttente.ID)[0].publiee })
+	attendre(t, delaiDeTraitement, "publication de la demande", func() bool { return b.demandesEnOutboxDe(t, b.enAttente.ID)[0].publiee })
 	b.exigerMessages(t, fileDemandes, 1)
 }
 
@@ -252,8 +257,8 @@ func (b *bancComplet) ac5EchecDeLOutboxAnnuleLaSoumission(t *testing.T) {
 	}
 	relu := b.relire(t, b.jeton, article.ID)
 	exigerEtat(t, relu, etatBrouillon, "")
-	if relu.Revision != article.Revision || len(b.outboxDe(t, article.ID)) != 0 {
-		t.Fatalf("soumission partielle : révision %d, outbox %d ligne(s)", relu.Revision, len(b.outboxDe(t, article.ID)))
+	if relu.Revision != article.Revision || len(b.demandesEnOutboxDe(t, article.ID)) != 0 {
+		t.Fatalf("soumission partielle : révision %d, outbox %d ligne(s)", relu.Revision, len(b.demandesEnOutboxDe(t, article.ID)))
 	}
 }
 
@@ -294,7 +299,7 @@ func (b *bancComplet) ac8ResultatNonConformeEcarte(t *testing.T) {
 }
 
 func (b *bancComplet) ac7ac8DemandesUsurpeeOuNonConformeEcartees(t *testing.T) {
-	corps := b.outboxDe(t, b.enAttente.ID)[0].corps
+	corps := b.demandesEnOutboxDe(t, b.enAttente.ID)[0].corps
 	var demande map[string]any
 	if err := json.Unmarshal(corps, &demande); err != nil {
 		t.Fatalf("demande : %v", err)
@@ -388,7 +393,7 @@ func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV3(t *testing.T) {
 			}
 		}
 	}
-	lignes := b.outboxDe(t, b.enAttente.ID)
+	lignes := b.demandesEnOutboxDe(t, b.enAttente.ID)
 	var demande message.Envelope
 	if err := json.Unmarshal(lignes[0].corps, &demande); err != nil {
 		t.Fatalf("demande : %v", err)
@@ -445,7 +450,7 @@ func (b *bancComplet) exigerDemandeSansIdentiteDuVendeur(t *testing.T, id string
 			Seller map[string]json.RawMessage `json:"seller"`
 		} `json:"data"`
 	}
-	lignes := b.outboxDe(t, id)
+	lignes := b.demandesEnOutboxDe(t, id)
 	if err := json.Unmarshal(lignes[len(lignes)-1].corps, &demande); err != nil {
 		t.Fatalf("demande : %v", err)
 	}
@@ -498,7 +503,7 @@ func (b *bancComplet) ac9AutreVendeurIntrouvable(t *testing.T) {
 	article := b.creer(t, b.jeton, corpsComplet("Figurine Dupond", categorieSure, 100, 0))
 	b.soumettre(t, b.vendeur(), article.ID, article.Revision).probleme(t, http.StatusNotFound)
 	exigerEtat(t, b.relire(t, b.jeton, article.ID), etatBrouillon, "")
-	if len(b.outboxDe(t, article.ID)) != 0 {
+	if len(b.demandesEnOutboxDe(t, article.ID)) != 0 {
 		t.Fatal("la tentative d'un autre vendeur a écrit une demande")
 	}
 }

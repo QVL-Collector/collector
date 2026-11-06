@@ -9,6 +9,7 @@ export type AccountControlLabels = {
   readonly account: string;
   readonly sellerSpace: string;
   readonly adminSpace: string;
+  readonly notifications: string;
 };
 
 export type AccountControlModel = {
@@ -47,6 +48,7 @@ export function useAccountControl(): AccountControlModel {
       account: t('auth.accountLabel'),
       sellerSpace: t('seller.navigation'),
       adminSpace: t('admin.navigation'),
+      notifications: t('notifications.navigation'),
     },
     failureMessage: failedAction === null ? '' : t(failureMessageKeys[failedAction]),
     failureVisible,

@@ -21,6 +21,7 @@ const (
 	invalidDir     = "invalides"
 	requestType    = "controle.demande"
 	resultType     = "controle.resultat"
+	decisionType   = "publication.decidee"
 	minLeakedValue = 3
 )
 

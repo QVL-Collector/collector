@@ -85,7 +85,8 @@ FROM relance AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 const applyReviewQuery = `
 UPDATE article
 SET etat = $3, motif = $4, modifie_le = now()
-WHERE id = $1 AND revision = $2 AND etat = $5`
+WHERE id = $1 AND revision = $2 AND etat = $5
+RETURNING vendeur_id, modifie_le`
 
 const recordReviewQuery = `
 INSERT INTO resultat_controle (message_id, article_id, revision, issue, motif, version_regles)
@@ -141,19 +142,24 @@ type ReviewRequestEncoder interface {
 	Encode(ctx context.Context, request annonces.ReviewRequest) (outbox.Event, error)
 }
 
+type PublicationDecisionEncoder interface {
+	Encode(ctx context.Context, decision annonces.PublicationDecision) (outbox.Event, error)
+}
+
 type SellerAccounts interface {
 	Enroll(ctx context.Context, tx pgx.Tx, id comptes.AccountID) error
 	Status(ctx context.Context, tx pgx.Tx, id comptes.AccountID) (comptes.Status, error)
 }
 
 type Store struct {
-	pool     *pgxpool.Pool
-	requests ReviewRequestEncoder
-	accounts SellerAccounts
+	pool      *pgxpool.Pool
+	requests  ReviewRequestEncoder
+	decisions PublicationDecisionEncoder
+	accounts  SellerAccounts
 }
 
-func NewStore(pool *pgxpool.Pool, requests ReviewRequestEncoder, accounts SellerAccounts) *Store {
-	return &Store{pool: pool, requests: requests, accounts: accounts}
+func NewStore(pool *pgxpool.Pool, requests ReviewRequestEncoder, decisions PublicationDecisionEncoder, accounts SellerAccounts) *Store {
+	return &Store{pool: pool, requests: requests, decisions: decisions, accounts: accounts}
 }
 
 func (s *Store) CreateDraft(ctx context.Context, seller annonces.SellerID, content annonces.Content) (annonces.Article, error) {
@@ -293,23 +299,55 @@ func (s *Store) sellerStatus(ctx context.Context, tx pgx.Tx, seller annonces.Sel
 func (s *Store) ApplyReview(ctx context.Context, outcome annonces.ReviewOutcome) (bool, error) {
 	applied := false
 	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		reason := reasonColumn(outcome.Reason)
-		tag, err := tx.Exec(ctx, applyReviewQuery,
-			uuid.UUID(outcome.Article), int(outcome.Revision), string(outcome.Status), reason, string(annonces.StatusUnderReview),
-		)
-		if err != nil || tag.RowsAffected() == 0 {
+		decision, err := applyReviewInTransaction(ctx, tx, outcome)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if err = recordReview(ctx, tx, outcome); err != nil {
+			return err
+		}
+		if err = s.announceDecision(ctx, tx, decision); err != nil {
 			return err
 		}
 		applied = true
-		_, err = tx.Exec(ctx, recordReviewQuery,
-			outcome.MessageID, uuid.UUID(outcome.Article), int(outcome.Revision), string(outcome.Status), reason, outcome.RulesVersion,
-		)
-		return err
+		return nil
 	})
 	if err != nil {
 		return false, fmt.Errorf("application du résultat de contrôle : %w", err)
 	}
 	return applied, nil
+}
+
+func applyReviewInTransaction(ctx context.Context, tx pgx.Tx, outcome annonces.ReviewOutcome) (annonces.PublicationDecision, error) {
+	var (
+		seller    uuid.UUID
+		decidedAt time.Time
+	)
+	err := tx.QueryRow(ctx, applyReviewQuery,
+		uuid.UUID(outcome.Article), int(outcome.Revision), string(outcome.Status), reasonColumn(outcome.Reason), string(annonces.StatusUnderReview),
+	).Scan(&seller, &decidedAt)
+	if err != nil {
+		return annonces.PublicationDecision{}, err
+	}
+	return outcome.DecisionFor(annonces.SellerID(seller), decidedAt), nil
+}
+
+func recordReview(ctx context.Context, tx pgx.Tx, outcome annonces.ReviewOutcome) error {
+	_, err := tx.Exec(ctx, recordReviewQuery,
+		outcome.MessageID, uuid.UUID(outcome.Article), int(outcome.Revision), string(outcome.Status), reasonColumn(outcome.Reason), outcome.RulesVersion,
+	)
+	return err
+}
+
+func (s *Store) announceDecision(ctx context.Context, tx pgx.Tx, decision annonces.PublicationDecision) error {
+	event, err := s.decisions.Encode(ctx, decision)
+	if err != nil {
+		return err
+	}
+	return outbox.Enqueue(ctx, tx, event)
 }
 
 func (s *Store) ResendOverdueReviews(ctx context.Context, backoff annonces.ResendBackoff, limit int) ([]annonces.ResentReview, error) {
@@ -449,7 +487,10 @@ func (s *Store) Decide(ctx context.Context, decision annonces.Decision) (annonce
 		if err != nil {
 			return err
 		}
-		return recordDecision(ctx, tx, decision)
+		if err = recordDecision(ctx, tx, decision); err != nil {
+			return err
+		}
+		return s.announceDecision(ctx, tx, annonces.DecisionOn(decided))
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return annonces.Article{}, s.explainDecisionConflict(ctx, decision)

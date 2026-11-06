@@ -42,6 +42,17 @@ Le contexte de trace W3C voyage dans les en-têtes du message, l'émetteur dans 
 - **Catégories de motif** : `annonce_incomplete`, `coordonnees_detectees`, `compte_non_autorise`, `prix_a_confirmer`, `vendeur_a_verifier`, `categorie_inconnue`. Le motif ne cite jamais la règle ni le seuil appliqués.
 - **Données minimales** : `additionalProperties: false` à chaque niveau ; aucun email, nom ni coordonnée du vendeur ne peut y figurer.
 
+## Contrat v1 de la décision de publication (US-028)
+
+| Message | Émetteur → destinataires | Échange, clé | Schéma |
+|---|---|---|---|
+| `publication.decidee` | Place de marché → Interactions (et tout abonné posé par l'exploitation) | `pdm.evenements` (topic), `publication.decidee.v1` | [v1](messages/publication.decidee/v1.schema.json) |
+
+- **Émission** : à chaque décision appliquée, résultat du Contrôle (`publie`, `refuse`, `a_verifier`) ou décision d'un administrateur (`publie`, `refuse`), écrite dans l'outbox dans la transaction de la décision.
+- **Données** : `article_id`, `revision`, `seller_id` (sujet du jeton du vendeur), `issue`, `reason` sauf issue `publie`, `decided_at` (RFC 3339 UTC, comme `emitted_at`).
+- **Catégories de motif** : celles du Contrôle, plus les motifs de refus d'un administrateur (`prix_abusif`, `article_interdit`, `vendeur_non_fiable`). Aucun texte libre : le texte affiché est construit par le front à partir du code.
+- **Idempotence** : l'`id` de l'enveloppe identifie la décision ; il est conservé au rejeu de l'outbox, et Interactions n'en garde qu'une notification.
+
 ## Versionnement
 
 - Un nouveau jeu de règles change `rules_version`, jamais la version du contrat.
