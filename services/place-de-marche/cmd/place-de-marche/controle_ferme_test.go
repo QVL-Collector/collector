@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -133,6 +134,7 @@ func TestUS024ControleFermeParDefautEtRepriseSansPerte(t *testing.T) {
 	t.Run("MC9 rejeu refusé hors fenêtre sans aucune écriture", b.mc9RejeuRefuse)
 	t.Run("MC9 rejeu de la fenêtre : seule la date de publication réécrite, republié sans double effet, tracé", b.mc9RejeuNominal)
 	t.Run("MC9 rejeu en limite de conservation accepté", b.mc9RejeuEnLimiteDeConservation)
+	t.Run("MC9 conservation lue en base et citée dans le refus, sans écriture", b.mc9ConservationLueEnBase)
 	t.Run("US-024-AC3 MC6 demandes non conformes écartées dès la première livraison sans bloquer la suivante", b.ac3DemandesInvalidesEcartees)
 	t.Run("US-024-AC3 MC6 résultats non conformes écartés dès la première livraison sans bloquer le suivant", b.ac3ResultatsInvalidesEcartes)
 	t.Run("MC6 message au-delà de la taille admise par le broker refusé à la publication", b.mc6MessageTropGrandRefuseParLeBroker)
@@ -690,4 +692,29 @@ func (b *bancControleFerme) mc6MessageTropGrandRefuseParLeBroker(t *testing.T) {
 	if n := b.canal.compter(t, fileDemandesEcartees); n != ecartesAvant {
 		t.Errorf("%d message(s) écarté(s), %d attendu(s)", n, ecartesAvant)
 	}
+}
+
+func (b *bancControleFerme) remplacerLaConservation(ctx context.Context, t *testing.T, duree string) {
+	t.Helper()
+	executerFormate(ctx, t, b.base.maitre, "CREATE OR REPLACE FUNCTION conservation_outbox() RETURNS interval LANGUAGE sql IMMUTABLE AS $$ SELECT %L::interval $$", duree)
+}
+
+func (b *bancControleFerme) exigerRejeuRefuseCitant(t *testing.T, depuis time.Time, conservation string) {
+	t.Helper()
+	avant := b.instantaneOutbox(t)
+	journal, err := b.lancerLeRejeu(t, "--depuis", horodatage(depuis))
+	if err == nil || !strings.Contains(err.Error(), conservation) {
+		t.Errorf("rejeu depuis %s : %v, refus citant %q attendu", horodatage(depuis), err, conservation)
+	}
+	if len(evenementsJournalises(journal, evenementRejeu)) != 0 {
+		t.Errorf("rejeu refusé tracé comme effectué")
+	}
+	exigerOutboxInchangee(t, avant, b.instantaneOutbox(t))
+}
+
+func (b *bancControleFerme) mc9ConservationLueEnBase(t *testing.T) {
+	b.exigerRejeuRefuseCitant(t, time.Now().Add(-conservationOutbox-time.Hour), "7 days")
+	b.remplacerLaConservation(t.Context(), t, "1 day")
+	t.Cleanup(func() { b.remplacerLaConservation(context.Background(), t, "7 days") })
+	b.exigerRejeuRefuseCitant(t, time.Now().Add(-48*time.Hour), "1 day")
 }

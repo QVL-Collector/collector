@@ -247,6 +247,7 @@ func TestUS024MC8PurgeDeLOutboxEtDroits(t *testing.T) {
 		}
 		b.demandes = append(b.demandes, id)
 	}
+	t.Run("MC8 conservation de l'outbox fixée en base à 7 jours", b.conservationDeSeptJours)
 	t.Run("MC8 rôle d'exécution : purge des seules lignes publiées depuis plus de 7 jours", b.purgeDesSeulesLignesPublieesDepuisPlusDe7Jours)
 	t.Run("MC8 rôle d'exécution sans DELETE sur l'outbox", b.sansDeleteSurLOutbox)
 	t.Run("MC8 fonction de purge SECURITY DEFINER exécutable par le seul rôle d'exécution", b.fonctionReserveeAuRoleDExecution)
@@ -359,4 +360,14 @@ func avecIdentite(t *testing.T, adresse, role, secret string) string {
 	}
 	cible.User = url.UserPassword(role, secret)
 	return cible.String()
+}
+
+func (b *bancDePurge) conservationDeSeptJours(t *testing.T) {
+	var conservation string
+	if err := b.pool.QueryRow(t.Context(), `SELECT conservation_outbox()::text`).Scan(&conservation); err != nil {
+		t.Fatalf("conservation_outbox() : %v", err)
+	}
+	if conservation != "7 days" {
+		t.Fatalf("conservation %q, 7 days attendue", conservation)
+	}
 }
