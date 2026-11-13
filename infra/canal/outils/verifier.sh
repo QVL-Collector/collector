@@ -180,9 +180,16 @@ else
     kc apply -f - >/dev/null
   svc="rabbitmq.$NS_CANAL.svc"
   noeud="rabbitmq-0.rabbitmq-noeuds.$NS_CANAL.svc"
-  kc -n "$NS_CANAL" port-forward svc/rabbitmq 15673:15672 >/dev/null 2>&1 &
+  code="$(curl -s -o "$POUBELLE" -w '%{http_code}' --max-time 3 http://127.0.0.1:15673/ || true)"
+  [[ "$code" == 000 ]] || echec "127.0.0.1:15673 repond deja (port-forward oublie ?) : fermer avant de continuer"
+  kubectl --context "$KUBE_CONTEXT" -n "$NS_CANAL" port-forward svc/rabbitmq 15673:15672 >/dev/null 2>&1 &
   pf=$!
-  sleep 3
+  for _ in $(seq 1 20); do
+    kill -0 "$pf" 2>/dev/null || echec "port-forward arrete (127.0.0.1:15673 occupe ?)"
+    code="$(curl -s -o "$POUBELLE" -w '%{http_code}' --max-time 3 http://127.0.0.1:15673/ || true)"
+    [[ "$code" == 000 ]] || break
+    sleep 1
+  done
   secret_sonde
   executer_sonde droits pod_sonde "$NS_SONDE" droits
   executer_sonde ecartes pod_sonde "$NS_SONDE" ecartes

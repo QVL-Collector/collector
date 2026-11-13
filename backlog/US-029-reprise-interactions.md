@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E5 Diffusion et notifications |
-| Statut | À faire |
+| Statut | En revue |
 | Sprint | 3 (J5 bis) |
 | Engagement | Ferme |
 | Estimation | 2 points |
@@ -70,7 +70,7 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
 | Étape | Lien / date |
 |---|---|
-| Rapport de test | |
-| Rapport de revue de code | |
+| Rapport de test | [US-029-rapport-tests.md](../docs/rapports/tests/US-029-rapport-tests.md) |
+| Rapport de revue de code | [US-029-revue-code.md](../docs/rapports/revues/US-029-revue-code.md) |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |
