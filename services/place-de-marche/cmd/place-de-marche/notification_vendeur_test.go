@@ -142,7 +142,16 @@ func migrerInteractions(t *testing.T, binaire string, base basePostgreSQL) {
 	}
 }
 
-func lancerInteractions(t *testing.T, binaire string, canal *canalDeTest, base basePostgreSQL, emetteur emetteurDeJetons) (string, *journalPartage) {
+type instanceInteractions struct {
+	api       string
+	gestion   string
+	journal   *journalPartage
+	processus *exec.Cmd
+	termine   chan error
+	arretee   bool
+}
+
+func lancerProcessusInteractions(t *testing.T, binaire string, canal *canalDeTest, base basePostgreSQL, emetteur emetteurDeJetons) *instanceInteractions {
 	t.Helper()
 	api, gestion := adresseLibre(t), adresseLibre(t)
 	variables := canal.environnementDeService(identiteInteractions)
@@ -155,36 +164,64 @@ func lancerInteractions(t *testing.T, binaire string, canal *canalDeTest, base b
 	variables["CANAL_EMETTEUR_ATTENDU"] = identiteMarche
 	variables["ADRESSE_API"] = api
 	variables["ADRESSE_GESTION"] = gestion
-	journal := &journalPartage{}
-	processus := exec.Command(binaire, "serve")
-	processus.Env = environnementDuProcessus(variables)
-	processus.Stdout, processus.Stderr = journal, journal
-	if err := processus.Start(); err != nil {
+	instance := &instanceInteractions{api: "http://" + api, gestion: "http://" + gestion, journal: &journalPartage{}, termine: make(chan error, 1)}
+	instance.processus = exec.Command(binaire, "serve")
+	instance.processus.Env = environnementDuProcessus(variables)
+	instance.processus.Stdout, instance.processus.Stderr = instance.journal, instance.journal
+	if err := instance.processus.Start(); err != nil {
 		t.Fatalf("lancement d'Interactions : %v", err)
 	}
-	termine := make(chan error, 1)
-	go func() { termine <- processus.Wait() }()
-	t.Cleanup(func() {
-		_ = processus.Process.Kill()
-		select {
-		case erreur := <-termine:
-			t.Logf("arrêt d'Interactions : %v", erreur)
-		case <-time.After(10 * time.Second):
-		}
-	})
-	client := &http.Client{Timeout: 2 * time.Second}
-	attendre(t, time.Minute, "démarrage d'Interactions", func() bool {
-		select {
-		case err := <-termine:
-			t.Fatalf("Interactions s'est arrêté : %v\n%s", err, journal.tampon.String())
-		default:
-		}
-		return repond(client, "http://"+gestion+"/disponibilite")
-	})
-	return "http://" + api, journal
+	go func() { instance.termine <- instance.processus.Wait() }()
+	t.Cleanup(func() { instance.arreterBrutalement(t) })
+	return instance
 }
 
+func (i *instanceInteractions) exigerEnVie(t *testing.T) {
+	t.Helper()
+	select {
+	case err := <-i.termine:
+		i.arretee = true
+		t.Fatalf("Interactions s'est arrêté : %v\n%s", err, i.journal.tampon.String())
+	default:
+	}
+}
+
+func (i *instanceInteractions) attendreDisponibilite(t *testing.T) *instanceInteractions {
+	t.Helper()
+	client := &http.Client{Timeout: 2 * time.Second}
+	attendre(t, time.Minute, "démarrage d'Interactions", func() bool {
+		i.exigerEnVie(t)
+		return repond(client, i.gestion+"/disponibilite")
+	})
+	return i
+}
+
+func (i *instanceInteractions) arreterBrutalement(t *testing.T) {
+	t.Helper()
+	if i.arretee {
+		return
+	}
+	i.arretee = true
+	_ = i.processus.Process.Kill()
+	select {
+	case erreur := <-i.termine:
+		t.Logf("arrêt d'Interactions : %v", erreur)
+	case <-time.After(10 * time.Second):
+		t.Errorf("Interactions ne s'est pas arrêté en 10 s")
+	}
+}
+
+type lanceurInteractions func(t *testing.T) *instanceInteractions
+
 func demarrerBancNotification(t *testing.T) *bancNotification {
+	t.Helper()
+	b, lancer := demarrerBancSansInteractions(t)
+	instance := lancer(t).attendreDisponibilite(t)
+	b.api, b.journalInter = instance.api, instance.journal
+	return b
+}
+
+func demarrerBancSansInteractions(t *testing.T) (*bancNotification, lanceurInteractions) {
 	t.Helper()
 	ctx := contexteBorne(t, 4*time.Minute)
 	adresseMaitre := demarrerPostgreSQL(t)
@@ -204,17 +241,18 @@ func demarrerBancNotification(t *testing.T) *bancNotification {
 		t.Fatalf("catégorie inconnue du Contrôle : %v", err)
 	}
 	lancerControle(t, construireControle(t), canal)
-	api, journalInter := lancerInteractions(t, binaireInteractions, canal, interactions, emetteur)
-	return &bancNotification{
+	b := &bancNotification{
 		environnement: e,
 		canal:         canal,
 		base:          base,
 		interactions:  interactions,
 		journal:       journal,
 		validateur:    validateurDeContrats(t),
-		api:           api,
-		journalInter:  journalInter,
 		admin:         e.administrateur(),
+	}
+	return b, func(t *testing.T) *instanceInteractions {
+		t.Helper()
+		return lancerProcessusInteractions(t, binaireInteractions, canal, interactions, emetteur)
 	}
 }
 

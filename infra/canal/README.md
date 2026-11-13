@@ -15,6 +15,7 @@ Broker RabbitMQ 4.3.7 du canal entre services ([D05](../../docs/decisions/D05-co
 | `Chart.yaml`, `values.yaml`, `templates/` | Chart Helm : StatefulSet, Services internes, ConfigMap, politiques réseau | **Kubernetes** |
 | `outils/kubernetes.sh` | Namespaces, Secrets par l'entrée standard, installation du chart, console par `port-forward` | **Kubernetes** |
 | `outils/verifier.sh` | Vérification après déploiement (`local` ou `kubernetes`) | Mode `kubernetes` seulement |
+| `outils/abonnement-test.sh` | Abonnement de test sur `publication.decidee.v1`, posé puis retiré par l'exploitation (US-029) | Mode `kubernetes` seulement |
 | `.genere/` | Identifiants de la session : ignoré par git et par Helm (`.helmignore`), effacé par `down` | — |
 
 L'image est épinglée une seule fois, dans `values.yaml` ; `outils/lib.sh` la relit pour docker compose.
@@ -39,6 +40,7 @@ Files quorum. Politique de chaque file de travail : `delivery-limit` **4**, soit
 | `interactions` | — | vide | vide | `interactions.publication-decidee` |
 | `keda` | `monitoring` | vide | vide | vide (entrée de droits vide : sans elle, l'API répond 404 sur la file) |
 | `admin-canal` | `administrator` | tout | tout | tout — console du poste, hors de tout Secret de service |
+| `abonne-test` | — | vide | vide | `test.publication-decidee` — temporaire, créée et supprimée par `abonnement-test.sh` (US-029) |
 
 `guest` n'est jamais créé ; `loopback_users.guest` reste en défense. Résiduel : `queue.purge` dépend du droit `read`, donc un service peut vider **sa propre** file (pas celle d'un autre).
 
@@ -64,7 +66,17 @@ infra/canal/outils/kubernetes.sh console       # console sur 127.0.0.1:15672 (ad
 infra/canal/outils/kubernetes.sh down          # chart, Secrets, .genere/ (namespaces conservés)
 ```
 
-Prérequis : Docker, `openssl`, `xxd`, `curl` ; en plus pour Kubernetes : `kubectl`, Helm 4 (et `k3d` pour importer l'image de sonde dans un cluster k3d). `SONDE_IMAGE` remplace l'image de sonde (par défaut construite depuis `verification/`).
+### Abonnement de test (US-029, ES-38, M-CAN-06)
+
+```bash
+infra/canal/outils/abonnement-test.sh poser    # file quorum test.publication-decidee liée à pdm.evenements (publication.decidee.v1), identité abonne-test
+infra/canal/outils/abonnement-test.sh lire     # nombre de messages et premiers corps JSON (LIRE_MAX, 5 par défaut), remis en file
+infra/canal/outils/abonnement-test.sh retirer  # liaison, file, identité, mot de passe ; idempotent, échoue s'il reste quelque chose
+```
+
+Cible en second argument : `local` (par défaut, 127.0.0.1:15672) ou `kubernetes` (garde-fou `KUBE_CONTEXT`, port-forward sur 127.0.0.1:15673). Tout passe par `admin-canal` et l'API de gestion, identifiants par l'entrée standard de `curl` (`-K -`), jamais en argument. File bornée (10 000 messages, 24 h), sans mise à l'écart, en `drop-head` et non en `reject-publish` : un abonnement de test oublié et plein perd ses plus anciens messages au lieu de refuser la publication, qui bloquerait l'outbox de la Place de marché et donc la diffusion vers Interactions (D05). Mot de passe de `abonne-test` : `MDP_ABONNE_TEST` dans `.genere/mots-de-passe.env`, effacé par `retirer`. `lire` passe par `admin-canal` : sans étiquette, `abonne-test` reçoit 401 de l'API de gestion ; il lit en AMQP (`basic.consume`). Une publication par `abonne-test` est refusée (403 `ACCESS_REFUSED`).
+
+Prérequis : Docker, `openssl`, `xxd`, `curl`, `jq` (abonnement de test) ; en plus pour Kubernetes : `kubectl`, Helm 4 (et `k3d` pour importer l'image de sonde dans un cluster k3d). `SONDE_IMAGE` remplace l'image de sonde (par défaut construite depuis `verification/`).
 
 **Garde-fou de contexte** : `kubernetes.sh` et `verifier.sh kubernetes` exigent `KUBE_CONTEXT` et le refusent hors des motifs `k3d-*` (poste) et `*collector*` (cluster du projet), avant toute commande. Chaque appel passe `--context` (`--kube-context` pour Helm) : le contexte courant n'est jamais lu, le poste en porte d'autres. Un `KUBECONFIG` au format `/c/...` est converti par `cygpath -m` ; sans cela, sous `MSYS_NO_PATHCONV=1`, `kubectl` l'ignorait et lisait `~/.kube/config`. Exemple : `KUBECONFIG=<kubeconfig k3d> KUBE_CONTEXT=k3d-<nom> infra/canal/outils/kubernetes.sh up`.
 
@@ -93,3 +105,8 @@ Restent valables : `broker/`, `outils/identifiants.sh`, la sonde, `compose.yml`.
 - `rabbitmqctl stop_app` (nœud Erlang vivant, que `rabbitmq-diagnostics ping` ne voyait pas) : retrait du Service en ~25 s, redémarrage par la vivacité à ~60 s, de nouveau prêt à ~78 s.
 - `verifier.sh kubernetes` 79/79, `helm lint`, `kubeconform -strict` (9/9).
 - Garde-fou de contexte : sans `KUBE_CONTEXT` et avec le contexte EKS du poste, `kubernetes.sh up` et `verifier.sh kubernetes` refusent sans aucun appel à `kubectl`, `helm`, `k3d`, `docker` ni `curl` (remplacés par des espions) ; avec `k3d-*` et un `KUBECONFIG` en `/c/...`, `verifier.sh kubernetes` 79/79. shellcheck sans remarque.
+
+## Abonnement de test du 2026-11-13 (poste, US-029)
+
+- docker compose : `poser`, publication par `marche` (AMQP, `user-id` marche) reçue à la fois par `interactions.publication-decidee` et `test.publication-decidee` (`lire` : 1 message, corps JSON) ; publication par `abonne-test` refusée 403 `ACCESS_REFUSED` ; `retirer` deux fois de suite, rien ne reste (identité, droits, file, liaison, mot de passe) ; mot de passe absent du journal du broker. API de gestion : 401 pour `marche` et `abonne-test` (sans étiquette). shellcheck 0.11.0 sans remarque.
+- k3d (k3s 1.35.5, `KUBECONFIG` dédié, `KUBE_CONTEXT=k3d-*`) : `kubernetes.sh up`, `poser`, publication par `marche` depuis un pod de `place-de-marche`, `lire` (1 message, corps JSON), publication par `abonne-test` refusée 403, `retirer` deux fois, file en `drop-head` ; après chaque appel, aucun `kubectl` restant et 127.0.0.1:15673 fermé ; port 15673 déjà occupé : refus avant tout appel. `verifier.sh kubernetes` 79/79, port-forward fermé ensuite.

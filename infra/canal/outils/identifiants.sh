@@ -13,8 +13,6 @@ if [[ -f "$MDP_FILE" && "${1:-}" != "--force" ]]; then
   echec "$MDP_FILE existe deja (session en cours ?) ; --force pour regenerer"
 fi
 
-mdp_aleatoire() { openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32; }
-
 empreinte_rabbitmq() {
   local sel_hex
   sel_hex="$(openssl rand -hex 4)"
