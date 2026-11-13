@@ -2,7 +2,7 @@ module collector/services/place-de-marche
 
 go 1.26.0
 
-toolchain go1.26.10
+toolchain go1.26.11
 
 require (
 	collector/contracts v0.0.0
