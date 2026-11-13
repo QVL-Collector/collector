@@ -4,6 +4,7 @@ import type { UserIdentity } from '../../auth/useUserIdentity';
 import { AccountBadge } from '../../ui/components/AccountBadge';
 import { ResponsiveActionButton } from '../../ui/components/ResponsiveActionButton';
 import { AdminSpaceLink } from './AdminSpaceLink';
+import { NotificationsSpaceLink } from './NotificationsSpaceLink';
 import { SellerSpaceLink } from './SellerSpaceLink';
 import type { AccountControlLabels } from './useAccountControl';
 
@@ -37,6 +38,9 @@ export function SignedInAccount({
     >
       {canOpenAdminSpace && <AdminSpaceLink label={labels.adminSpace} compact={compact} />}
       {canOpenSellerSpace && <SellerSpaceLink label={labels.sellerSpace} compact={compact} />}
+      {canOpenSellerSpace && (
+        <NotificationsSpaceLink label={labels.notifications} compact={compact} />
+      )}
       <AccountBadge
         name={identity.name}
         detail={identity.roleLabel}

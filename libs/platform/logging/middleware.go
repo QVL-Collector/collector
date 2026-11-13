@@ -25,6 +25,13 @@ func CorrelationID(ctx context.Context) (string, bool) {
 	return id, found
 }
 
+func CorrelationIDOrNew(ctx context.Context) string {
+	if id, found := CorrelationID(ctx); found {
+		return id
+	}
+	return uuid.NewString()
+}
+
 func Middleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()

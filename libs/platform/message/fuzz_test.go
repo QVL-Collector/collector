@@ -49,13 +49,13 @@ func expectAcceptedMessageIsInContract(t *testing.T, body []byte) {
 	if err := json.Unmarshal(body, &accepted); err != nil {
 		t.Fatalf("message accepté illisible: %v", err)
 	}
-	if accepted.Version != 1 || (accepted.Type != requestType && accepted.Type != resultType) {
+	if accepted.Version != 1 || !slices.Contains([]string{requestType, resultType, decisionType}, accepted.Type) {
 		t.Fatalf("contrat inconnu accepté: %s v%d", accepted.Type, accepted.Version)
 	}
 	if accepted.Data.Issue != nil && !slices.Contains(closedIssues, *accepted.Data.Issue) {
 		t.Fatalf("issue hors liste acceptée: %q", *accepted.Data.Issue)
 	}
-	if accepted.Data.Reason != nil && !slices.Contains(closedReasons, *accepted.Data.Reason) {
+	if accepted.Data.Reason != nil && !slices.Contains(reasonsOf(accepted.Type), *accepted.Data.Reason) {
 		t.Fatalf("motif hors liste accepté: %q", *accepted.Data.Reason)
 	}
 	for key := range accepted.Data.Seller {
@@ -63,4 +63,11 @@ func expectAcceptedMessageIsInContract(t *testing.T, body []byte) {
 			t.Fatalf("email du vendeur accepté")
 		}
 	}
+}
+
+func reasonsOf(messageType string) []string {
+	if messageType == decisionType {
+		return append(slices.Clone(closedReasons), adminRefusalReasons...)
+	}
+	return closedReasons
 }

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"collector/libs/platform/httpjson"
 	"collector/libs/platform/httpserver"
@@ -24,9 +23,13 @@ const (
 	sellerRole        = "vendeur"
 	adminRole         = "admin"
 	maxBodyBytes      = 32 << 10
-	pageParameter     = "page"
-	pageSizeParameter = "taille"
 )
+
+var pageLimits = httpserver.PageLimits{
+	DefaultSize: annonces.DefaultPageSize,
+	MaxSize:     annonces.MaxPageSize,
+	MaxNumber:   annonces.MaxPageNumber,
+}
 
 var staleRevision = problem.Typed("urn:collector:probleme:revision-perimee", "Révision périmée",
 	http.StatusConflict, "L'article a été modifié depuis sa dernière lecture.")
@@ -302,35 +305,8 @@ func (h handlers) decode(w http.ResponseWriter, r *http.Request, target any) boo
 }
 
 func pageRequestOf(query url.Values) (annonces.PageRequest, []problem.FieldError) {
-	number, numberErrors := boundedParameter(query, pageParameter, 1, annonces.MaxPageNumber)
-	size, sizeErrors := boundedParameter(query, pageSizeParameter, annonces.DefaultPageSize, annonces.MaxPageSize)
-	return annonces.PageRequest{Number: number, Size: size}, append(numberErrors, sizeErrors...)
-}
-
-func boundedParameter(query url.Values, name string, fallback, maximum int) (int, []problem.FieldError) {
-	raw, present, fieldErrors := singleParameter(query, name)
-	if !present || len(fieldErrors) > 0 {
-		return fallback, fieldErrors
-	}
-	value, err := strconv.Atoi(raw)
-	if err != nil {
-		return 0, []problem.FieldError{{Field: name, Code: codeInvalid}}
-	}
-	if value < 1 || value > maximum {
-		return 0, []problem.FieldError{{Field: name, Code: codeOutOfBounds}}
-	}
-	return value, nil
-}
-
-func singleParameter(query url.Values, name string) (string, bool, []problem.FieldError) {
-	values, present := query[name]
-	if !present {
-		return "", false, nil
-	}
-	if len(values) != 1 || values[0] == "" {
-		return "", true, []problem.FieldError{{Field: name, Code: codeInvalid}}
-	}
-	return values[0], true, nil
+	pagination, fieldErrors := httpserver.PaginationOf(query, pageLimits)
+	return annonces.PageRequest(pagination), fieldErrors
 }
 
 func (h handlers) writeError(w http.ResponseWriter, r *http.Request, err error) {

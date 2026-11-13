@@ -1,5 +1,6 @@
 {
   "marketplaceApiUrl": "/marche",
+  "interactionsApiUrl": "/interactions",
   "catalogue": {
     "source": "demo",
     "demoScenario": "nominal"

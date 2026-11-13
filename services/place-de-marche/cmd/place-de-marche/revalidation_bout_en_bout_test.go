@@ -44,7 +44,7 @@ func (b *bancComplet) modifierAvecSucces(t *testing.T, article articleRecu, cont
 
 func (b *bancComplet) exigerDemandeEnOutbox(t *testing.T, article articleRecu, demandesAttendues int) {
 	t.Helper()
-	lignes := b.outboxDe(t, article.ID)
+	lignes := b.demandesEnOutboxDe(t, article.ID)
 	if len(lignes) != demandesAttendues {
 		t.Fatalf("%d demande(s) en outbox pour %s, %d attendue(s)", len(lignes), article.ID, demandesAttendues)
 	}
@@ -57,7 +57,7 @@ func (b *bancComplet) exigerDemandeEnOutbox(t *testing.T, article articleRecu, d
 		t.Fatalf("dernière demande %+v (échange %q), attendue en révision %d avec le titre %q", demande, derniere.echange, article.Revision, article.Titre)
 	}
 	attendre(t, delaiDeTraitement, "publication de la demande de la nouvelle révision", func() bool {
-		return b.outboxDe(t, article.ID)[demandesAttendues-1].publiee
+		return b.demandesEnOutboxDe(t, article.ID)[demandesAttendues-1].publiee
 	})
 }
 

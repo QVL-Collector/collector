@@ -14,9 +14,12 @@ export type CatalogueConfig = {
 
 export type RuntimeConfig = {
   readonly marketplaceApiUrl: string;
+  readonly interactionsApiUrl: string;
   readonly catalogue: CatalogueConfig;
   readonly oidc: OidcConfig;
 };
+
+export const defaultInteractionsApiUrl = '/interactions';
 
 const sameOriginPathPattern = /^(\/[A-Za-z0-9._~-]+)*$/;
 
@@ -43,6 +46,10 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfig {
   const root = expectRecord(value, 'config');
   return {
     marketplaceApiUrl: parseSameOriginPath(root.marketplaceApiUrl, 'marketplaceApiUrl'),
+    interactionsApiUrl:
+      root.interactionsApiUrl === undefined
+        ? defaultInteractionsApiUrl
+        : parseSameOriginPath(root.interactionsApiUrl, 'interactionsApiUrl'),
     catalogue: parseCatalogueConfig(root.catalogue),
     oidc: parseOidcConfig(root.oidc),
   };

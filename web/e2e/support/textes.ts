@@ -50,7 +50,24 @@ export type Textes = {
   readonly articlePublie: RegExp;
   readonly articleRefuse: RegExp;
   readonly conflitAdmin: string;
+  readonly notifications: string;
+  readonly decisionsSurVosArticles: string;
+  readonly nombreDeNotifications: (nombre: number) => string;
+  readonly notificationPubliee: string;
+  readonly notificationRefusee: string;
+  readonly notificationAVerifier: string;
+  readonly motifAnnonceIncomplete: string;
+  readonly motifCategorieInconnue: string;
+  readonly motifArticleInterdit: string;
+  readonly aucuneNotification: string;
+  readonly notificationsIndisponibles: string;
+  readonly sessionExpiree: string;
+  readonly seReconnecter: string;
 };
+
+function nombreDeNotifications(nombre: number): string {
+  return nombre === 1 ? '1 notification' : `${String(nombre)} notifications`;
+}
 
 const fr: Textes = {
   nomLangue: 'FR, Français',
@@ -102,6 +119,19 @@ const fr: Textes = {
   articlePublie: /a été publié\./,
   articleRefuse: /a été refusé\./,
   conflitAdmin: 'L’article a changé, rechargez la liste',
+  notifications: 'Notifications',
+  decisionsSurVosArticles: 'Décisions sur vos articles',
+  nombreDeNotifications,
+  notificationPubliee: 'Votre article a été publié',
+  notificationRefusee: 'Votre article a été refusé',
+  notificationAVerifier: 'Votre article doit être vérifié',
+  motifAnnonceIncomplete: 'Annonce incomplète',
+  motifCategorieInconnue: 'Catégorie inconnue',
+  motifArticleInterdit: 'Article interdit à la vente',
+  aucuneNotification: 'Aucune notification pour le moment',
+  notificationsIndisponibles: 'Vos notifications sont momentanément indisponibles',
+  sessionExpiree: 'Votre session a expiré',
+  seReconnecter: 'Se reconnecter',
 };
 
 const en: Textes = {
@@ -154,6 +184,19 @@ const en: Textes = {
   articlePublie: /has been published\./,
   articleRefuse: /has been rejected\./,
   conflitAdmin: 'The item has changed, reload the list',
+  notifications: 'Notifications',
+  decisionsSurVosArticles: 'Decisions on your items',
+  nombreDeNotifications,
+  notificationPubliee: 'Your item has been published',
+  notificationRefusee: 'Your item has been rejected',
+  notificationAVerifier: 'Your item needs to be checked',
+  motifAnnonceIncomplete: 'Incomplete listing',
+  motifCategorieInconnue: 'Unknown category',
+  motifArticleInterdit: 'Item not allowed for sale',
+  aucuneNotification: 'No notifications yet',
+  notificationsIndisponibles: 'Your notifications are temporarily unavailable',
+  sessionExpiree: 'Your session has expired',
+  seReconnecter: 'Sign in again',
 };
 
 export const textes: Readonly<Record<Langue, Textes>> = { fr, en };

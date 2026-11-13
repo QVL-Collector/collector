@@ -62,6 +62,7 @@ describe('US-010-AC4 un titre contenant du balisage s’affiche comme du texte',
     renderApp(
       await createAppServices({
         marketplaceApiUrl: '/marche',
+        interactionsApiUrl: '/interactions',
         catalogue: { source: 'demo', demoScenario: 'nominal' },
       }),
     );
