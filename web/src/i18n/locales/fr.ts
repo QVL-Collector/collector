@@ -221,6 +221,52 @@ export const fr = {
       description: 'Votre compte n’a pas le rôle requis pour consulter ces notifications.',
     },
   },
+  orders: {
+    documentTitle: 'Article réservé · Collector',
+    pendingDocumentTitle: 'Votre commande · Collector',
+    pendingTitle: 'Votre commande',
+    title: 'Article réservé',
+    subtitle:
+      'Votre commande est enregistrée. L’article vous est garanti jusqu’à l’échéance de paiement.',
+    loading: 'Chargement de votre commande en cours',
+    loaded: 'Réservation confirmée : commande en attente de paiement',
+    statusTitle: 'Statut de la commande',
+    statuses: {
+      en_attente_paiement: 'En attente de paiement',
+    },
+    createdAt: 'Commande passée le {{date}}',
+    paymentDue: 'À régler avant le',
+    paymentDueHint: 'Échéance fixée par la place de marché.',
+    amountsTitle: 'Montants',
+    price: 'Prix de référence',
+    shippingCost: 'Frais de port',
+    totalPaid: 'Total payé',
+    splitTitle: 'Répartition du total payé',
+    commission: 'Commission Collector (5 % du total)',
+    sellerAmount: 'Montant dû au vendeur',
+    commissionHint:
+      'La commission est prélevée sur le total payé : elle ne s’ajoute pas à votre paiement. Le vendeur reçoit le reste.',
+    viewArticle: 'Voir l’article',
+    notFound: {
+      documentTitle: 'Commande introuvable · Collector',
+      title: 'Commande introuvable',
+      description: 'Cette commande n’existe pas ou n’est pas liée à votre compte.',
+    },
+    error: {
+      title: 'Votre commande est momentanément indisponible',
+      description: 'Vérifiez votre connexion, puis réessayez.',
+      retry: 'Réessayer',
+    },
+    unauthenticated: {
+      title: 'Votre session a expiré',
+      description: 'Reconnectez-vous pour consulter votre commande.',
+      signIn: 'Se reconnecter',
+    },
+    forbidden: {
+      title: 'Accès réservé',
+      description: 'Votre compte n’a pas le rôle requis pour consulter cette commande.',
+    },
+  },
   common: {
     backToCatalogue: 'Retour au catalogue',
     pagination: {
@@ -289,6 +335,26 @@ export const fr = {
     privateSeller: 'Vendeur particulier',
     descriptionTitle: 'Description',
     noDescription: 'Le vendeur n’a pas rédigé de description.',
+    reserved: 'Réservé',
+    reservation: {
+      reserve: 'Réserver',
+      hint: 'L’article vous est garanti le temps du paiement.',
+      reservedReason: 'Cet article est déjà réservé : il n’est plus réservable.',
+      signInPrompt: 'Connectez-vous avec un compte acheteur pour réserver cet article.',
+      signIn: 'Connexion pour réserver',
+      buyerOnly: 'Seul un compte acheteur peut réserver un article.',
+      reconnect: 'Se reconnecter',
+      failures: {
+        alreadyReserved: 'Cet article est déjà réservé par un autre acheteur.',
+        reservationAlreadyActive:
+          'Vous avez déjà une réservation en cours sur un autre article. Réglez-la ou attendez son échéance avant d’en faire une nouvelle.',
+        rateLimited: 'Trop de tentatives en peu de temps. Patientez un instant, puis réessayez.',
+        notReservable: 'Cet article n’est plus réservable.',
+        sessionExpired: 'Votre session a expiré. Reconnectez-vous, puis réessayez.',
+        forbidden: 'Votre compte n’a pas le rôle acheteur : la réservation n’a pas été faite.',
+        unavailable: 'La réservation a échoué. Vérifiez votre connexion, puis réessayez.',
+      },
+    },
     notFound: {
       documentTitle: 'Article introuvable · Collector',
       title: 'Article introuvable',

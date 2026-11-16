@@ -1,9 +1,10 @@
 import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { catalogueQueryRoot } from '../api/catalogueQueryKeys';
 import { useCatalogueClient } from '../api/useCatalogueClient';
 import { cataloguePageSize, type CataloguePage } from '../domain/catalogue';
 
 const publishedArticlesQueryKey = (page: number, categoryId: string | null) =>
-  ['catalogue', 'published-articles', categoryId, page, cataloguePageSize] as const;
+  [...catalogueQueryRoot, 'published-articles', categoryId, page, cataloguePageSize] as const;
 
 export function usePublishedArticles(
   page: number,

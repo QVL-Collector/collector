@@ -4,14 +4,21 @@ import type { ArticlePageView } from '../hooks/articlePageView';
 import { ArticleDetails } from './ArticleDetails';
 import { ArticleDetailsSkeleton } from './ArticleDetailsSkeleton';
 import { ArticleErrorState } from './ArticleErrorState';
+import type { PurchaseActionRenderer } from './purchaseAction';
 
 type ArticlePageContentProps = {
   readonly view: ArticlePageView;
   readonly backPath: string;
   readonly retry: () => void;
+  readonly purchaseAction: PurchaseActionRenderer;
 };
 
-export function ArticlePageContent({ view, backPath, retry }: ArticlePageContentProps) {
+export function ArticlePageContent({
+  view,
+  backPath,
+  retry,
+  purchaseAction,
+}: ArticlePageContentProps) {
   const { t } = useTranslation();
   switch (view.status) {
     case 'loading':
@@ -21,6 +28,6 @@ export function ArticlePageContent({ view, backPath, retry }: ArticlePageContent
     case 'not-found':
       return <LinkButton to={backPath} label={t('common.backToCatalogue')} variant="contained" />;
     case 'ready':
-      return <ArticleDetails article={view.article} />;
+      return <ArticleDetails article={view.article} purchaseAction={purchaseAction} />;
   }
 }

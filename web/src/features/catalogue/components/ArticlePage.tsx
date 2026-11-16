@@ -6,8 +6,13 @@ import { LiveStatus } from '../../../ui/components/LiveStatus';
 import { PageHeading } from '../../../ui/components/PageHeading';
 import { useArticlePage } from '../hooks/useArticlePage';
 import { ArticlePageContent } from './ArticlePageContent';
+import type { PurchaseActionRenderer } from './purchaseAction';
 
-export function ArticlePage() {
+type ArticlePageProps = {
+  readonly purchaseAction: PurchaseActionRenderer;
+};
+
+export function ArticlePage({ purchaseAction }: ArticlePageProps) {
   const { t } = useTranslation();
   const { headingRef, title, subtitle, announcement, ...content } = useArticlePage();
   return (
@@ -25,7 +30,7 @@ export function ArticlePage() {
       <PageHeading headingRef={headingRef} title={title} subtitle={subtitle} />
       <LiveStatus message={announcement} />
       <Stack alignItems={content.view.status === 'not-found' ? 'flex-start' : 'stretch'}>
-        <ArticlePageContent {...content} />
+        <ArticlePageContent {...content} purchaseAction={purchaseAction} />
       </Stack>
     </Stack>
   );

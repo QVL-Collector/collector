@@ -63,6 +63,20 @@ export type Textes = {
   readonly notificationsIndisponibles: string;
   readonly sessionExpiree: string;
   readonly seReconnecter: string;
+  readonly reserver: string;
+  readonly mentionReserve: string;
+  readonly articleDejaReserve: string;
+  readonly connexionPourReserver: string;
+  readonly articleReserveTitre: string;
+  readonly enAttenteDePaiement: string;
+  readonly aReglerAvantLe: string;
+  readonly prixDeReference: string;
+  readonly fraisDePort: string;
+  readonly totalPaye: string;
+  readonly commissionCollector: string;
+  readonly montantDuAuVendeur: string;
+  readonly articleNonReservable: string;
+  readonly voirLArticle: string;
 };
 
 function nombreDeNotifications(nombre: number): string {
@@ -132,6 +146,20 @@ const fr: Textes = {
   notificationsIndisponibles: 'Vos notifications sont momentanément indisponibles',
   sessionExpiree: 'Votre session a expiré',
   seReconnecter: 'Se reconnecter',
+  reserver: 'Réserver',
+  mentionReserve: 'Réservé',
+  articleDejaReserve: 'Cet article est déjà réservé : il n’est plus réservable.',
+  connexionPourReserver: 'Connexion pour réserver',
+  articleReserveTitre: 'Article réservé',
+  enAttenteDePaiement: 'En attente de paiement',
+  aReglerAvantLe: 'À régler avant le',
+  prixDeReference: 'Prix de référence',
+  fraisDePort: 'Frais de port',
+  totalPaye: 'Total payé',
+  commissionCollector: 'Commission Collector (5 % du total)',
+  montantDuAuVendeur: 'Montant dû au vendeur',
+  articleNonReservable: 'Cet article n’est plus réservable.',
+  voirLArticle: 'Voir l’article',
 };
 
 const en: Textes = {
@@ -197,6 +225,20 @@ const en: Textes = {
   notificationsIndisponibles: 'Your notifications are temporarily unavailable',
   sessionExpiree: 'Your session has expired',
   seReconnecter: 'Sign in again',
+  reserver: 'Reserve',
+  mentionReserve: 'Reserved',
+  articleDejaReserve: 'This item is already reserved: it can no longer be reserved.',
+  connexionPourReserver: 'Reserve after signing in',
+  articleReserveTitre: 'Item reserved',
+  enAttenteDePaiement: 'Awaiting payment',
+  aReglerAvantLe: 'Pay before',
+  prixDeReference: 'Reference price',
+  fraisDePort: 'Shipping',
+  totalPaye: 'Total paid',
+  commissionCollector: 'Collector commission (5% of the total)',
+  montantDuAuVendeur: 'Amount owed to the seller',
+  articleNonReservable: 'This item can no longer be reserved.',
+  voirLArticle: 'View the item',
 };
 
 export const textes: Readonly<Record<Langue, Textes>> = { fr, en };

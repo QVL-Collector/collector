@@ -1,0 +1,289 @@
+openapi: 3.0.3
+info:
+  title: Transactions, API v1
+  version: 1.0.0
+  description: >-
+    API HTTP du service Transactions. Erreurs au format Problem Details (RFC 9457, application/problem+json), sans trace
+    technique. Toutes les routes exigent un jeton d'accès Keycloak valide (signature RS256, émetteur, audience
+    transactions, client autorisé collector-web, type Bearer, expiration) portant le rôle de realm acheteur. Les montants
+    sont des entiers en centimes, calculés côté serveur à partir des données de la Place de marché : aucun montant reçu
+    n'est lu. Commission de 5 % du total payé (prix + frais de port), arrondie au centime le plus proche, demi-centime
+    arrondi au centime supérieur ; montant dû au vendeur = total payé - commission.
+servers:
+  - url: /transactions/v1
+tags:
+  - name: Commandes
+paths:
+  /commandes:
+    post:
+      tags: [Commandes]
+      operationId: reserverEtCommander
+      summary: >-
+        Réserver un article publié et créer la commande en attente de paiement. Transactions obtient un jeton de service,
+        appelle « réserver » de la Place de marché en propageant le jeton de l'acheteur, puis enregistre la commande (une
+        seule par réservation). Le nouvel essai du même acheteur sur le même article, réservation encore en cours, renvoie
+        la commande existante (200).
+      security:
+        - jetonKeycloak: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreationCommande"
+      responses:
+        "200":
+          description: Commande déjà créée pour cette réservation, renvoyée telle quelle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Commande"
+        "201":
+          description: Commande créée
+          headers:
+            Location:
+              description: Chemin de la commande créée
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Commande"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "409":
+          $ref: "#/components/responses/Indisponible"
+        "413":
+          $ref: "#/components/responses/CorpsTropVolumineux"
+        "415":
+          $ref: "#/components/responses/TypeNonPrisEnCharge"
+        "422":
+          $ref: "#/components/responses/NonReservable"
+        "429":
+          $ref: "#/components/responses/TropDeRequetes"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+        "503":
+          $ref: "#/components/responses/PlaceDeMarcheIndisponible"
+  /commandes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Commandes]
+      operationId: lireMaCommande
+      summary: Lire une commande de l'acheteur connecté
+      security:
+        - jetonKeycloak: []
+      responses:
+        "200":
+          description: Commande de l'acheteur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Commande"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+components:
+  securitySchemes:
+    jetonKeycloak:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreationCommande:
+      description: >-
+        Seul articleId est lu. Tout autre champ (prix, montant, acheteur…) est ignoré : l'acheteur est le sujet du jeton,
+        les montants viennent de la Place de marché. Clé dupliquée (casse ignorée), valeur racine autre qu'un objet ou
+        corps de plus de 4 Kio refusés.
+      type: object
+      additionalProperties: true
+      required: [articleId]
+      properties:
+        articleId:
+          type: string
+          format: uuid
+    Montant:
+      type: object
+      additionalProperties: false
+      required: [montantCentimes, devise]
+      properties:
+        montantCentimes:
+          type: integer
+          format: int64
+          minimum: 0
+        devise:
+          type: string
+          enum: [EUR]
+    Commande:
+      type: object
+      additionalProperties: false
+      required: [id, articleId, statut, prix, fraisDePort, totalPaye, commission, montantVendeur, echeance, creeLe]
+      properties:
+        id:
+          type: string
+          format: uuid
+        articleId:
+          type: string
+          format: uuid
+        statut:
+          type: string
+          enum: [en_attente_paiement]
+        prix:
+          description: Prix de référence lu par la Place de marché dans ses propres données
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+        fraisDePort:
+          description: Frais de port lus par la Place de marché ; 0 si le vendeur ne les a pas renseignés
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+        totalPaye:
+          description: prix + fraisDePort
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+        commission:
+          description: 5 % de totalPaye, arrondi au centime, demi-centime vers le haut
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+        montantVendeur:
+          description: totalPaye - commission
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+        echeance:
+          type: string
+          format: date-time
+          description: Échéance de la réservation en UTC, fixée et plafonnée par la Place de marché
+        creeLe:
+          type: string
+          format: date-time
+    ErreurDeChamp:
+      type: object
+      additionalProperties: false
+      required: [champ, code]
+      properties:
+        champ:
+          type: string
+          example: articleId
+        code:
+          type: string
+          enum: [obligatoire, invalide]
+    Probleme:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: >-
+            about:blank pour les erreurs génériques ; sinon urn:collector:probleme:saisie-invalide,
+            urn:collector:probleme:corps-invalide, urn:collector:probleme:article-non-reservable,
+            urn:collector:probleme:article-deja-reserve ou urn:collector:probleme:reservation-deja-active
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        erreurs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErreurDeChamp"
+  responses:
+    SaisieInvalide:
+      description: >-
+        articleId absent ou qui n'est pas un UUID (urn:collector:probleme:saisie-invalide), ou corps invalide : JSON mal
+        formé, clé dupliquée, valeur racine autre qu'un objet, articleId d'un autre type (urn:collector:probleme:corps-invalide)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonAuthentifie:
+      description: Jeton absent, expiré, mal signé, d'un autre émetteur, d'une autre audience ou d'un autre client
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonAutorise:
+      description: Jeton valide sans le rôle acheteur
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    Introuvable:
+      description: Commande inexistante ou d'un autre acheteur ; réponse identique dans les deux cas
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    Indisponible:
+      description: >-
+        Article réservé par un autre acheteur (urn:collector:probleme:article-deja-reserve), ou réservation de
+        l'acheteur déjà en cours sur un autre article (urn:collector:probleme:reservation-deja-active)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonReservable:
+      description: >-
+        Article inexistant, non publié ou mis en vente par l'acheteur lui-même ; réponse identique dans tous les cas
+        (urn:collector:probleme:article-non-reservable)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    CorpsTropVolumineux:
+      description: Corps au-delà de 4 Kio
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    TypeNonPrisEnCharge:
+      description: Corps qui n'est pas application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    TropDeRequetes:
+      description: >-
+        Limite de débit dépassée pour l'adresse du client ou pour le compte authentifié ; Retry-After donne l'attente en
+        secondes, arrondie au supérieur
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    ErreurInterne:
+      description: Erreur interne, sans détail technique
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    PlaceDeMarcheIndisponible:
+      description: >-
+        Place de marché injoignable, jeton de service non obtenu, ou réponse inattendue de « réserver » ; aucune
+        commande n'est créée
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"

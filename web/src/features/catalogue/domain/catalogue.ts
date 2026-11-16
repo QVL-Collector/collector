@@ -10,6 +10,7 @@ export type CatalogueArticle = {
   readonly title: string;
   readonly price: Money;
   readonly category: ArticleCategory;
+  readonly reserved: boolean;
 };
 
 export type PublishedArticle = CatalogueArticle & {

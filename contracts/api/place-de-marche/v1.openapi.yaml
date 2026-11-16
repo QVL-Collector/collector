@@ -657,10 +657,15 @@ components:
         total:
           type: integer
           minimum: 0
+    Reserve:
+      type: boolean
+      description: >-
+        true tant qu'une réservation est en cours (échéance non dépassée, lue à l'horloge de la base) ; l'article reste
+        affiché mais n'est plus réservable
     EntreeCatalogue:
       type: object
       additionalProperties: false
-      required: [id, titre, prix, categorie]
+      required: [id, titre, prix, categorie, reserve]
       properties:
         id:
           type: string
@@ -671,11 +676,13 @@ components:
           $ref: "#/components/schemas/Montant"
         categorie:
           $ref: "#/components/schemas/Categorie"
+        reserve:
+          $ref: "#/components/schemas/Reserve"
     ArticlePublie:
       description: Fiche publique d'un article publié ; aucune donnée du vendeur n'y figure.
       type: object
       additionalProperties: false
-      required: [id, titre, prix, categorie, description, fraisDePort]
+      required: [id, titre, prix, categorie, reserve, description, fraisDePort]
       properties:
         id:
           type: string
@@ -686,6 +693,8 @@ components:
           $ref: "#/components/schemas/Montant"
         categorie:
           $ref: "#/components/schemas/Categorie"
+        reserve:
+          $ref: "#/components/schemas/Reserve"
         description:
           type: string
         fraisDePort:

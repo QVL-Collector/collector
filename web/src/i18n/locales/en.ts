@@ -220,6 +220,51 @@ export const en: Translation = {
       description: 'Your account does not have the role required to see these notifications.',
     },
   },
+  orders: {
+    documentTitle: 'Item reserved · Collector',
+    pendingDocumentTitle: 'Your order · Collector',
+    pendingTitle: 'Your order',
+    title: 'Item reserved',
+    subtitle: 'Your order is recorded. The item is held for you until the payment deadline.',
+    loading: 'Loading your order',
+    loaded: 'Reservation confirmed: order awaiting payment',
+    statusTitle: 'Order status',
+    statuses: {
+      en_attente_paiement: 'Awaiting payment',
+    },
+    createdAt: 'Ordered on {{date}}',
+    paymentDue: 'Pay before',
+    paymentDueHint: 'Deadline set by the marketplace.',
+    amountsTitle: 'Amounts',
+    price: 'Reference price',
+    shippingCost: 'Shipping',
+    totalPaid: 'Total paid',
+    splitTitle: 'How the total is split',
+    commission: 'Collector commission (5% of the total)',
+    sellerAmount: 'Amount owed to the seller',
+    commissionHint:
+      'The commission is taken from the total paid: it is not added to your payment. The seller receives the rest.',
+    viewArticle: 'View the item',
+    notFound: {
+      documentTitle: 'Order not found · Collector',
+      title: 'Order not found',
+      description: 'This order does not exist or is not linked to your account.',
+    },
+    error: {
+      title: 'Your order is temporarily unavailable',
+      description: 'Check your connection, then try again.',
+      retry: 'Try again',
+    },
+    unauthenticated: {
+      title: 'Your session has expired',
+      description: 'Sign in again to see your order.',
+      signIn: 'Sign in again',
+    },
+    forbidden: {
+      title: 'Restricted access',
+      description: 'Your account does not have the role required to see this order.',
+    },
+  },
   common: {
     backToCatalogue: 'Back to the catalogue',
     pagination: {
@@ -287,6 +332,26 @@ export const en: Translation = {
     privateSeller: 'Private seller',
     descriptionTitle: 'Description',
     noDescription: 'The seller has not written a description.',
+    reserved: 'Reserved',
+    reservation: {
+      reserve: 'Reserve',
+      hint: 'The item is held for you while you pay.',
+      reservedReason: 'This item is already reserved: it can no longer be reserved.',
+      signInPrompt: 'Sign in with a buyer account to reserve this item.',
+      signIn: 'Reserve after signing in',
+      buyerOnly: 'Only a buyer account can reserve an item.',
+      reconnect: 'Sign in again',
+      failures: {
+        alreadyReserved: 'This item is already reserved by another buyer.',
+        reservationAlreadyActive:
+          'You already have an active reservation on another item. Pay for it or wait for its deadline before making a new one.',
+        rateLimited: 'Too many attempts in a short time. Wait a moment, then try again.',
+        notReservable: 'This item can no longer be reserved.',
+        sessionExpired: 'Your session has expired. Sign in again, then try again.',
+        forbidden: 'Your account does not have the buyer role: nothing was reserved.',
+        unavailable: 'The reservation failed. Check your connection, then try again.',
+      },
+    },
     notFound: {
       documentTitle: 'Item not found · Collector',
       title: 'Item not found',

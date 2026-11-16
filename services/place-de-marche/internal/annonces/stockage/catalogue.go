@@ -11,7 +11,7 @@ import (
 	"collector/services/place-de-marche/internal/annonces"
 )
 
-const catalogueEntryColumns = `a.id, a.titre, c.id, c.libelle, a.prix_centimes`
+const catalogueEntryColumns = `a.id, a.titre, c.id, c.libelle, a.prix_centimes, coalesce(a.reserve_jusqu_a > now(), false)`
 
 const publishedArticles = `
 FROM article AS a JOIN categorie AS c ON c.id = a.categorie_id
@@ -92,10 +92,11 @@ type catalogueEntryRow struct {
 	categoryID    string
 	categoryLabel string
 	priceCents    int64
+	reserved      bool
 }
 
 func (r *catalogueEntryRow) targets() []any {
-	return []any{&r.id, &r.title, &r.categoryID, &r.categoryLabel, &r.priceCents}
+	return []any{&r.id, &r.title, &r.categoryID, &r.categoryLabel, &r.priceCents, &r.reserved}
 }
 
 func (r catalogueEntryRow) entry() annonces.CatalogueEntry {
@@ -104,6 +105,7 @@ func (r catalogueEntryRow) entry() annonces.CatalogueEntry {
 		Title:    r.title,
 		Category: annonces.Category{ID: annonces.CategoryID(r.categoryID), Label: r.categoryLabel},
 		Price:    annonces.Money{Cents: r.priceCents, Currency: annonces.Euro},
+		Reserved: r.reserved,
 	}
 }
 

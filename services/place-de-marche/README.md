@@ -1,12 +1,12 @@
 # Service Place de marché
 
-Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication, application de son résultat et diffusion des décisions de publication. Module Comptes minimal : statut des vendeurs (inscription, suspension). Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), messages [`controle.demande`, `controle.resultat` et `publication.decidee` v1](../../contracts/README.md).
+Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication, application de son résultat et diffusion des décisions de publication. Module Réservations : « réserver » pour Transactions. Module Comptes minimal : statut des vendeurs (inscription, suspension). Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), [`interne-v1.openapi.yaml`](../../contracts/api/place-de-marche/interne-v1.openapi.yaml) (port interne), messages [`controle.demande`, `controle.resultat` et `publication.decidee` v1](../../contracts/README.md).
 
 ## Sous-commandes et ports
 
 | Commande | Rôle | Compte de base attendu |
 |---|---|---|
-| `place-de-marche serve` (par défaut) | API publique sur `ADRESSE_API`, santé sur `ADRESSE_GESTION`, relais de l'outbox et consommateur des résultats de contrôle | `marche_execution` |
+| `place-de-marche serve` (par défaut) | API publique sur `ADRESSE_API`, API interne sur `ADRESSE_INTERNE`, santé sur `ADRESSE_GESTION`, relais de l'outbox et consommateur des résultats de contrôle | `marche_execution` |
 | `place-de-marche migrate` | Applique les migrations embarquées, puis s'arrête (Job Helm `pre-install`, `pre-upgrade`) | `marche_migration` |
 | `place-de-marche suspendre <compte-id>`, `place-de-marche retablir <compte-id>` | Suspend ou rétablit un compte vendeur, puis s'arrête (voir « Comptes ») | `marche_migration` |
 | `place-de-marche rejouer --depuis <RFC3339> [--jusqu-a <RFC3339>]` | Rejoue l'outbox sur une fenêtre, puis s'arrête (voir « Contrôle fermé par défaut ») | `marche_migration` |
@@ -14,11 +14,25 @@ Module Annonces : catalogue public, brouillons du vendeur, catégories, soumissi
 | Port | Contenu | Exposition |
 |---|---|---|
 | 8080 | `/marche/v1/...` | Routé par l'ALB |
+| 8081 | `/interne/v1/...` (« réserver », second serveur HTTP) | Jamais routé ; Service `ClusterIP`, joignable par Transactions seul (politique réseau) |
 | 9090 | `GET /sante` (vivant), `GET /disponibilite` (base joignable ; ni Keycloak ni le broker interrogés) | Jamais routé ; sondes Kubernetes |
 
 ## Catalogue public (US-010, US-023)
 
 Sans jeton : `GET /marche/v1/articles?categorie&page&taille` (du plus récemment publié au plus ancien) et `GET /marche/v1/articles/{id}`. Seuls les articles `publie` sont lus ; un article inexistant ou non publié répond le même 404. Aucune donnée du vendeur n'est exposée. Paramètre répété, vide ou hors bornes : 400 ; catégorie inconnue : 400 `categorie_inconnue`. Liste lue en transaction `READ ONLY` `REPEATABLE READ` (total et page cohérents), fiche en lecture directe ; index partiels `etat = 'publie'` (migration 00004).
+
+Chaque entrée et la fiche portent `reserve` (US-030 AC3) : `true` si `reserve_jusqu_a > now()`, lu à l'horloge de la base. Un article réservé reste au catalogue, à sa place, et n'est plus réservable ; la réservation ne touche pas `modifie_le`.
+
+## Réserver (US-030)
+
+`POST /interne/v1/articles/{id}/reservations`, servi par un second serveur HTTP sur `ADRESSE_INTERNE` (8081), jamais par le serveur public : le chemin n'existe pas sur 8080. Aucun corps n'est lu. Contrôles dans l'ordre de [D06](../../docs/decisions/D06-authentification-autorisation.md) (MA6), chaque échec sans détail :
+
+1. `Authorization: Bearer <jeton de service>` : vérification complète (RS256, `iss`, `exp`, `typ` = `Bearer`, `aud` contient `place-de-marche`), `azp` = `RESERVATION_CLIENT_AUTORISE` (`transactions`), `scope` contient `reserver`. Absent ou refusé (dont un jeton d'utilisateur) : 401.
+2. `X-Collector-User-Token: <jeton de l'acheteur>` (jeton brut, une seule occurrence) : vérification complète et indépendante, `azp` = `OIDC_CLIENT_AUTORISE` (`collector-web`), rôle `acheteur`. Absent, répété, refusé (dont un jeton de service) ou sans le rôle : 403. L'acheteur est le `sub` de ce jeton.
+
+Dans une transaction (D07 Q3, option R1) : `pg_advisory_xact_lock(hashtextextended(<acheteur>, 0))` ; réservation active de l'acheteur sur un autre article → 409 `reservation-deja-active` ; puis `UPDATE` conditionnel de l'article (`etat = 'publie'`, non vendu, prix renseigné, vendeur différent de l'acheteur, libre, expiré ou déjà tenu par cet acheteur) qui garde `reservation_id` et `reserve_jusqu_a` si l'acheteur tient déjà l'article, sinon en tire de nouveaux (`now() + durée`). Aucune ligne : article inexistant, non publié, vendu ou mis en vente par l'acheteur lui-même → 422 `article-non-reservable`, réponse identique dans tous ces cas (un vendeur ne réserve jamais son propre article, décision de Martin, 2026-11-16, US-030) ; sinon réservé par un autre → 409 `article-deja-reserve`. Identifiant mal formé dans le chemin : 404. Chaque réservation est journalisée dans la table `reservation` (`INSERT … ON CONFLICT (id) DO NOTHING`) : 201 pour une réservation nouvelle, 200 pour le nouvel essai, même réservation et même échéance. Journal Info `reservations.article_reserve` (`reservation_id`, `article_id`, `acheteur_id`, `nouvelle`).
+
+Réponse : `reservationId`, `articleId`, `echeance` (UTC), `prix` et `fraisDePort` (`montantCentimes`, `devise`) lus dans l'article, frais de port à 0 s'ils ne sont pas renseignés. Échéance : `min(RESERVATION_DUREE, RESERVATION_DUREE_MAX)`, horloge de la base ; aucune expiration planifiée, « réservé » se lit sur l'échéance. Le refus de modifier un article réservé et la concurrence sont l'objet d'US-031. Le jeton de l'acheteur n'est jamais journalisé (en-tête absent des journaux d'accès, clé `x-collector-user-token` masquée).
 
 ## Cycle de soumission (US-013)
 
@@ -121,7 +135,11 @@ Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après
 | `LIMITE_DEBIT_TIR_PAR_MINUTE` | `serve` | `6000` | Débit relevé pour l'adresse de tir, en requêtes par minute |
 | `LIMITE_DEBIT_TIR_RAFALE` | `serve` | `200` | Rafale relevée pour l'adresse de tir |
 | `ADRESSE_API` | `serve` | `:8080` | Écoute de l'API |
+| `ADRESSE_INTERNE` | `serve` | `:8081` | Écoute de l'API interne (« réserver ») |
 | `ADRESSE_GESTION` | `serve` | `:9090` | Écoute de la santé |
+| `RESERVATION_DUREE` | `serve` | `10m` | Durée d'une réservation (`time.ParseDuration`, > 0) ; courte pour la démonstration |
+| `RESERVATION_DUREE_MAX` | `serve` | `30m` | Plafond : l'échéance vaut `now() + min(RESERVATION_DUREE, RESERVATION_DUREE_MAX)` |
+| `RESERVATION_CLIENT_AUTORISE` | `serve` | `transactions` | Valeur exigée de `azp` dans le jeton de service de « réserver » |
 | `JOURNAL_NIVEAU` | toutes | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
 
 ## Rôles PostgreSQL attendus
@@ -129,7 +147,7 @@ Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après
 Créés par l'amorçage de la base `marche`, avant toute migration ([D07](../../docs/decisions/D07-donnees.md), MD1, MD2) :
 
 - `marche_migration` : propriétaire de la base et du schéma `public`, seul à exécuter du DDL ; secret livré au seul Job de migration.
-- `marche_execution` : `NOSUPERUSER NOCREATEDB NOCREATEROLE`, propriétaire d'aucun objet, sans `CREATE` sur `public` ; nom fixe, car la première migration lui accorde `SELECT`, `INSERT`, `UPDATE` sur les tables et `USAGE`, `SELECT` sur les séquences par `ALTER DEFAULT PRIVILEGES`. Aucun `DELETE`, aucun droit sur la table de version de `goose`. Le relais garde sa transaction ouverte pendant la publication : `idle_in_transaction_session_timeout` est à poser sur ce rôle.
+- `marche_execution` : `NOSUPERUSER NOCREATEDB NOCREATEROLE`, propriétaire d'aucun objet, sans `CREATE` sur `public` ; nom fixe, car la première migration lui accorde `SELECT`, `INSERT`, `UPDATE` sur les tables et `USAGE`, `SELECT` sur les séquences par `ALTER DEFAULT PRIVILEGES`. Aucun `DELETE`, aucun droit sur la table de version de `goose`. Ni `UPDATE` sur `decision_admin`, `compte` et `reservation` (journaux). Le relais garde sa transaction ouverte pendant la publication : `idle_in_transaction_session_timeout` est à poser sur ce rôle.
 
 Une migration exécutée sans que `marche_execution` existe échoue.
 

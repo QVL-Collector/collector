@@ -1,0 +1,172 @@
+openapi: 3.0.3
+info:
+  title: Place de marché, API interne v1
+  version: 1.0.0
+  description: >-
+    API servie sur le port interne de la Place de marché (ADRESSE_INTERNE, 8081 par défaut), distinct du port public :
+    jamais routée par l'ALB, joignable par Transactions seul (politique réseau). Erreurs au format Problem Details
+    (RFC 9457, application/problem+json), sans détail sur le jeton refusé. Deux en-têtes obligatoires, vérifiés dans
+    cet ordre (D06, MA6) : Authorization porte le jeton de service de Transactions (signature RS256, émetteur exact,
+    expiration, type Bearer, audience place-de-marche, portée reserver, client autorisé transactions), puis
+    X-Collector-User-Token porte le jeton d'accès de l'acheteur, revérifié en entier (audience place-de-marche, client
+    autorisé collector-web, rôle de realm acheteur). L'acheteur est le sujet de ce second jeton ; aucun corps n'est lu.
+servers:
+  - url: /interne/v1
+tags:
+  - name: Réservation
+paths:
+  /articles/{id}/reservations:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Réservation]
+      operationId: reserverArticle
+      summary: >-
+        Réserver un article publié pour l'acheteur du jeton propagé, jusqu'à une échéance fixée par la Place de marché
+        (durée configurée, plafonnée). Une transaction : verrou consultatif sur l'acheteur, refus si l'acheteur a une
+        réservation active sur un autre article, puis mise à jour conditionnelle de l'article. Le nouvel essai du même
+        acheteur sur le même article renvoie la même réservation, avec la même échéance (200).
+      security:
+        - jetonDeService: []
+          jetonAcheteur: []
+      responses:
+        "200":
+          description: Réservation déjà en cours pour cet acheteur et cet article, renvoyée telle quelle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "201":
+          description: Réservation créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "422":
+          $ref: "#/components/responses/NonReservable"
+        "409":
+          $ref: "#/components/responses/Indisponible"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+components:
+  securitySchemes:
+    jetonDeService:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    jetonAcheteur:
+      type: apiKey
+      in: header
+      name: X-Collector-User-Token
+      description: Jeton d'accès brut de l'acheteur, sans préfixe Bearer
+  schemas:
+    Montant:
+      type: object
+      additionalProperties: false
+      required: [montantCentimes, devise]
+      properties:
+        montantCentimes:
+          type: integer
+          format: int64
+          minimum: 0
+        devise:
+          type: string
+          enum: [EUR]
+    Reservation:
+      type: object
+      additionalProperties: false
+      required: [reservationId, articleId, echeance, prix, fraisDePort]
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+          description: Identifiant de la réservation, une commande au plus par réservation côté Transactions
+        articleId:
+          type: string
+          format: uuid
+        echeance:
+          type: string
+          format: date-time
+          description: Échéance en UTC, fixée par l'horloge de la base de la Place de marché
+        prix:
+          $ref: "#/components/schemas/Montant"
+        fraisDePort:
+          description: Frais de port de l'article ; 0 si le vendeur ne les a pas renseignés
+          allOf:
+            - $ref: "#/components/schemas/Montant"
+    Probleme:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: >-
+            about:blank pour les erreurs génériques ; urn:collector:probleme:article-non-reservable pour un refus 422 ;
+            urn:collector:probleme:article-deja-reserve ou urn:collector:probleme:reservation-deja-active pour un
+            refus 409
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+  responses:
+    NonAuthentifie:
+      description: >-
+        Jeton de service absent, mal formé, expiré, mal signé, d'un autre émetteur, d'une autre audience, d'un autre
+        client ou sans la portée reserver (dont un jeton d'utilisateur présenté dans Authorization)
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonAutorise:
+      description: >-
+        Jeton de service valide, mais jeton de l'acheteur absent, répété, invalide, d'un autre client (dont un jeton de
+        service présenté dans X-Collector-User-Token) ou sans le rôle acheteur
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    Introuvable:
+      description: Identifiant d'article mal formé (autre chose qu'un UUID dans le chemin)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    NonReservable:
+      description: >-
+        Article inexistant, non publié, vendu, ou mis en vente par l'acheteur lui-même (sujet du jeton de l'acheteur = vendeur
+        de l'article) ; réponse identique dans tous les cas (urn:collector:probleme:article-non-reservable)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    Indisponible:
+      description: >-
+        Article réservé par un autre acheteur (urn:collector:probleme:article-deja-reserve), ou acheteur qui a déjà une
+        réservation active sur un autre article (urn:collector:probleme:reservation-deja-active)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    ErreurInterne:
+      description: Erreur interne, sans détail technique
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"

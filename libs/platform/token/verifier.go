@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -23,15 +24,20 @@ const (
 	keySetFetchTimeout    = 5 * time.Second
 	realmAccessClaim      = "realm_access"
 	rolesMember           = "roles"
+	scopeClaim            = "scope"
 )
 
-var ErrInvalidToken = errors.New("jeton refusé")
+var (
+	ErrInvalidToken = errors.New("jeton refusé")
+	errMissingScope = errors.New("portée exigée absente")
+)
 
 type Config struct {
 	Issuer          string
 	Audience        string
 	AuthorizedParty string
 	KeySetURL       string
+	Scope           string
 }
 
 func (c Config) validate() error {
@@ -61,6 +67,8 @@ func (c Claims) HasRole(role string) bool {
 }
 
 type Verifier struct {
+	config  Config
+	keys    jwk.Set
 	options []jwt.ParseOption
 }
 
@@ -73,12 +81,29 @@ func NewVerifier(ctx context.Context, cfg Config) (*Verifier, error) {
 	if err := cache.Register(cfg.KeySetURL, jwk.WithHTTPClient(client), jwk.WithMinRefreshInterval(keySetRefreshInterval)); err != nil {
 		return nil, fmt.Errorf("enregistrement du jeu de clés : %w", err)
 	}
-	keys := jwk.NewCachedSet(cache, cfg.KeySetURL)
-	return &Verifier{options: parseOptions(cfg, keys)}, nil
+	return newVerifier(cfg, jwk.NewCachedSet(cache, cfg.KeySetURL)), nil
+}
+
+func newVerifier(cfg Config, keys jwk.Set) *Verifier {
+	return &Verifier{config: cfg, keys: keys, options: parseOptions(cfg, keys)}
+}
+
+func (v *Verifier) ForService(authorizedParty, scope string) (*Verifier, error) {
+	cfg := v.config
+	cfg.AuthorizedParty = authorizedParty
+	cfg.Scope = scope
+	err := cfg.validate()
+	if scope == "" {
+		err = errors.Join(err, errors.New("portée absente"))
+	}
+	if err != nil {
+		return nil, fmt.Errorf("configuration de la vérification des jetons de service : %w", err)
+	}
+	return newVerifier(cfg, v.keys), nil
 }
 
 func parseOptions(cfg Config, keys jwk.Set) []jwt.ParseOption {
-	return []jwt.ParseOption{
+	options := []jwt.ParseOption{
 		jwt.WithKeySet(keys),
 		jwt.WithValidate(true),
 		jwt.WithIssuer(cfg.Issuer),
@@ -89,6 +114,24 @@ func parseOptions(cfg Config, keys jwk.Set) []jwt.ParseOption {
 		jwt.WithClaimValue("typ", expectedTypClaim),
 		jwt.WithClaimValue("azp", cfg.AuthorizedParty),
 	}
+	if cfg.Scope != "" {
+		options = append(options, jwt.WithValidator(requireScope(cfg.Scope)))
+	}
+	return options
+}
+
+func requireScope(scope string) jwt.Validator {
+	return jwt.ValidatorFunc(func(_ context.Context, parsed jwt.Token) jwt.ValidationError {
+		claim, found := parsed.Get(scopeClaim)
+		if !found {
+			return jwt.NewValidationError(errMissingScope)
+		}
+		granted, isText := claim.(string)
+		if !isText || !slices.Contains(strings.Fields(granted), scope) {
+			return jwt.NewValidationError(errMissingScope)
+		}
+		return nil
+	})
 }
 
 func (v *Verifier) Verify(ctx context.Context, raw string) (Claims, error) {

@@ -1,8 +1,10 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { catalogueQueryRoot } from '../api/catalogueQueryKeys';
 import { useCatalogueClient } from '../api/useCatalogueClient';
 import type { PublishedArticle } from '../domain/catalogue';
 
-const publishedArticleQueryKey = (id: string) => ['catalogue', 'published-article', id] as const;
+const publishedArticleQueryKey = (id: string) =>
+  [...catalogueQueryRoot, 'published-article', id] as const;
 
 export function usePublishedArticle(id: string): UseQueryResult<PublishedArticle> {
   const client = useCatalogueClient();
