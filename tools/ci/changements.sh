@@ -90,6 +90,12 @@ for f in "${FICHIERS[@]}"; do
   fi
 done
 
+for m in services/transactions services/interactions services/controle infra/identite infra/canal; do
+  if [[ -n "${MODULES_TOUCHES[$m]:-}" ]]; then
+    MODULES_TOUCHES["services/place-de-marche"]=1
+  fi
+done
+
 if [[ "$TOUT" == true ]]; then
   GLOBAL_GO=true; WEB=true; OUTILLAGE=true; ANALYSE=true
 fi
