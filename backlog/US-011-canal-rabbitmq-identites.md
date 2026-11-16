@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E2 Plateforme AWS |
-| Statut | À faire |
+| Statut | Livrée |
 | Sprint | 1 (J4) |
 | Engagement | Ferme (condition de WS-2 : verdict de XP02 concluant ; sinon WS-1 et report au sprint 2) |
 | Estimation | 3 points |
@@ -66,18 +66,18 @@ Mesures : MC1, MC3, MC4, MC5, MC8. Critères du bac à sable rejoués : XC2, XC7
 
 Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
-- [ ] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
-- [ ] Revue de code faite, retours traités.
-- [ ] Martin a testé et prononcé « je valide la livraison de la feature ».
-- [ ] Documentation touchée à jour.
-- [ ] Statut, date de validation et liens des rapports renseignés ci-dessous.
-- [ ] Aucune donnée sensible ni credential ajouté au dépôt.
+- [x] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
+- [x] Revue de code faite, retours traités.
+- [x] Martin a testé et prononcé « je valide la livraison de la feature ».
+- [x] Documentation touchée à jour.
+- [x] Statut, date de validation et liens des rapports renseignés ci-dessous.
+- [x] Aucune donnée sensible ni credential ajouté au dépôt.
 
 ## Suivi
 
 | Étape | Lien / date |
 |---|---|
-| Rapport de test | |
-| Rapport de revue de code | |
-| Validation Martin | AAAA-MM-JJ |
-| Livraison (PR / merge) | |
+| Rapport de test | Vérification `verifier.sh` : [infra/canal/README.md](../infra/canal/README.md) |
+| Rapport de revue de code | [US-011-revue-code.md](../docs/rapports/revues/US-011-revue-code.md) |
+| Validation Martin | 2026-10-26 |
+| Livraison (PR / merge) | https://github.com/QVL-Collector/collector/pull/19 |
