@@ -173,6 +173,8 @@ export const en: Translation = {
       locked: 'The listing cannot be submitted in its current state. It has just been reloaded.',
       failure: 'Submission failed. Check your connection, then try again.',
     },
+    reserved:
+      'This item is reserved by a buyer or already sold: it cannot be changed or submitted during the reservation, nor after the sale.',
   },
   notifications: {
     documentTitle: 'Notifications · Collector',
@@ -221,20 +223,39 @@ export const en: Translation = {
     },
   },
   orders: {
-    documentTitle: 'Item reserved · Collector',
     pendingDocumentTitle: 'Your order · Collector',
     pendingTitle: 'Your order',
-    title: 'Item reserved',
-    subtitle: 'Your order is recorded. The item is held for you until the payment deadline.',
     loading: 'Loading your order',
-    loaded: 'Reservation confirmed: order awaiting payment',
+    views: {
+      en_attente_paiement: {
+        documentTitle: 'Item reserved · Collector',
+        title: 'Item reserved',
+        subtitle: 'Your order is recorded. The item is held for you until the payment deadline.',
+        announcement: 'Reservation confirmed: order awaiting payment',
+      },
+      expiree: {
+        documentTitle: 'Reservation expired · Collector',
+        title: 'Reservation expired',
+        subtitle: 'The reservation has expired, the item is available again.',
+        announcement: 'Order expired: the reservation has expired, the item is available again',
+      },
+    },
     statusTitle: 'Order status',
     statuses: {
       en_attente_paiement: 'Awaiting payment',
+      expiree: 'Expired',
     },
     createdAt: 'Ordered on {{date}}',
-    paymentDue: 'Pay before',
-    paymentDueHint: 'Deadline set by the marketplace.',
+    deadlines: {
+      en_attente_paiement: {
+        title: 'Pay before',
+        hint: 'Deadline set by the marketplace.',
+      },
+      expiree: {
+        title: 'Deadline passed on',
+        hint: 'The item is no longer held for you: reserve it again from its page if it is still available.',
+      },
+    },
     amountsTitle: 'Amounts',
     price: 'Reference price',
     shippingCost: 'Shipping',

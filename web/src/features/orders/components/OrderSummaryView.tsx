@@ -4,11 +4,16 @@ import Stack from '@mui/material/Stack';
 import { useTranslation } from 'react-i18next';
 import { LinkButton } from '../../../ui/components/LinkButton';
 import { cataloguePath } from '../../catalogue/cataloguePaths';
-import type { Order } from '../domain/order';
+import type { Order, OrderStatus } from '../domain/order';
 import { useOrderSummary } from '../hooks/useOrderSummary';
 import { OrderAmountsCard } from './OrderAmountsCard';
 import { OrderCommissionCard } from './OrderCommissionCard';
 import { OrderStatusPanel } from './OrderStatusPanel';
+
+const articleLinkVariants: Readonly<Record<OrderStatus, 'contained' | 'outlined'>> = {
+  en_attente_paiement: 'outlined',
+  expiree: 'contained',
+};
 
 type OrderSummaryViewProps = {
   readonly order: Order;
@@ -33,7 +38,7 @@ export function OrderSummaryView({ order }: OrderSummaryViewProps) {
           to={summary.articlePath}
           label={t('orders.viewArticle')}
           icon={<VisibilityOutlined />}
-          variant="outlined"
+          variant={articleLinkVariants[summary.status]}
         />
         <LinkButton
           to={cataloguePath}

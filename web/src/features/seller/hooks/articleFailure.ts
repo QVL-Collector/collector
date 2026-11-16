@@ -6,13 +6,24 @@ export type ArticleFailure =
   | { readonly kind: 'invalid'; readonly errors: ArticleFieldErrors }
   | { readonly kind: 'conflict' }
   | { readonly kind: 'locked' }
+  | { readonly kind: 'reserved' }
   | { readonly kind: 'not-found' }
   | { readonly kind: 'unavailable' };
 
-const lockedProblemTypes: readonly string[] = [
-  sellerProblemTypes.notModifiable,
-  sellerProblemTypes.notSubmittable,
-];
+type ConflictKind = Extract<ArticleFailure['kind'], 'conflict' | 'locked' | 'reserved'>;
+
+const conflictKindsByProblemType: ReadonlyMap<string, ConflictKind> = new Map<string, ConflictKind>(
+  [
+    [sellerProblemTypes.notModifiable, 'locked'],
+    [sellerProblemTypes.notSubmittable, 'locked'],
+    [sellerProblemTypes.reserved, 'reserved'],
+  ],
+);
+
+function conflictKindOf(problemType: string | null): ConflictKind {
+  const kind = problemType === null ? undefined : conflictKindsByProblemType.get(problemType);
+  return kind ?? 'conflict';
+}
 
 export function toArticleFailure(error: unknown): ArticleFailure {
   if (!isApiError(error)) {
@@ -20,8 +31,7 @@ export function toArticleFailure(error: unknown): ArticleFailure {
   }
   const { status, problem } = error;
   if (status === httpStatuses.conflict) {
-    const isLocked = problem.type !== null && lockedProblemTypes.includes(problem.type);
-    return { kind: isLocked ? 'locked' : 'conflict' };
+    return { kind: conflictKindOf(problem.type) };
   }
   if (status === httpStatuses.notFound) {
     return { kind: 'not-found' };
