@@ -31,6 +31,7 @@ const (
 	fileEspionDeResultats = "test.espion-resultats-controle"
 	refusParLeBroker      = 406
 	dossierDuBroker       = "/etc/rabbitmq"
+	portDeGestion         = "15672/tcp"
 )
 
 var identitesDuCanal = []string{identiteMarche, identiteControle, "interactions", "keda", identiteAdmin}
@@ -151,7 +152,7 @@ func demarrerRabbitMQ(t *testing.T, alterations ...alteration) *canalDeTest {
 	conteneur, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        imageRabbitMQ,
-			ExposedPorts: []string{"5672/tcp"},
+			ExposedPorts: []string{"5672/tcp", portDeGestion},
 			Files: []testcontainers.ContainerFile{
 				copie(nil, dossierDuBroker+"/conf.d/10-defaults.conf"),
 				copie(fichierDuBroker(t, "conf.d/10-collector.conf"), dossierDuBroker+"/conf.d/10-collector.conf"),

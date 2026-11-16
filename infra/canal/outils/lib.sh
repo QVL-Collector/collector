@@ -36,6 +36,8 @@ fi
 journal() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*" >&2; }
 echec() { journal "ECHEC : $*"; exit 1; }
 
+mdp_aleatoire() { openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32; }
+
 chemin_hote() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
 }
