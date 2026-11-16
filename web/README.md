@@ -42,6 +42,7 @@ Un composant ne contient que du JSX ; état, effets et appels vivent dans un hoo
 | ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `marketplaceApiUrl`      | chemin de même origine, ex. `/marche`                                   | Préfixe de la Place de marché ; une URL absolue est refusée                        |
 | `interactionsApiUrl`     | chemin de même origine, défaut `/interactions`                          | Préfixe du service Interactions (notifications) ; une URL absolue est refusée      |
+| `transactionsApiUrl`     | chemin de même origine, défaut `/transactions`                          | Préfixe du service Transactions (commandes) ; une URL absolue est refusée          |
 | `catalogue.source`       | `api`, `demo`                                                           | Client HTTP réel ou adaptateur de démonstration (catalogue et espace vendeur)      |
 | `catalogue.demoScenario` | `nominal`, `empty`, `error`                                             | États du catalogue rejouables sans back                                            |
 | `oidc.authority`         | URL de l'émetteur, ex. `https://auth.<domaine>/realms/collector`        | HTTPS obligatoire (HTTP admis sur `localhost` seulement), sans requête ni fragment |

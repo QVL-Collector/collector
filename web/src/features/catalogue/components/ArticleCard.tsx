@@ -5,6 +5,7 @@ import { CardTitle } from '../../../ui/components/CardTitle';
 import { LinkCard } from '../../../ui/components/LinkCard';
 import type { CatalogueArticle } from '../domain/catalogue';
 import type { ArticleCardLink } from '../hooks/useArticleCardLink';
+import { ReservedChip } from './ReservedChip';
 
 type ArticleCardProps = {
   readonly article: CatalogueArticle;
@@ -17,7 +18,10 @@ export function ArticleCard({ article, priceLabel, link }: ArticleCardProps) {
     <LinkCard to={link.to} state={link.state}>
       <Stack spacing={2} padding={2.5} height="100%" justifyContent="space-between">
         <Stack spacing={1.5} alignItems="flex-start">
-          <Chip label={article.category.label} size="small" variant="outlined" color="primary" />
+          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
+            <Chip label={article.category.label} size="small" variant="outlined" color="primary" />
+            {article.reserved && <ReservedChip size="small" />}
+          </Stack>
           <CardTitle level="h2">{article.title}</CardTitle>
         </Stack>
         <Typography component="p" variant="subtitle1" color="primary">

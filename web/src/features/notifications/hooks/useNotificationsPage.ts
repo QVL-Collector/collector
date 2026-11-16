@@ -1,9 +1,9 @@
 import { useCallback, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useReconnect } from '../../../auth/useReconnect';
 import { usePageIdentity } from '../../../navigation/usePageIdentity';
 import { toNotificationsView, type NotificationsView } from './notificationsView';
 import { useNotificationsAnnouncement } from './useNotificationsAnnouncement';
-import { useReconnect } from './useReconnect';
 import { useSellerNotifications } from './useSellerNotifications';
 
 export type NotificationsPageModel = {

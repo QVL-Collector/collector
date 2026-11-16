@@ -7,6 +7,8 @@ import { createCatalogueClient } from '../features/catalogue/api/createCatalogue
 import type { CatalogueClient } from '../features/catalogue/domain/catalogue';
 import { createNotificationsClient } from '../features/notifications/api/createNotificationsClient';
 import type { NotificationsClient } from '../features/notifications/domain/sellerNotification';
+import { createOrdersClient } from '../features/orders/api/createOrdersClient';
+import type { OrdersClient } from '../features/orders/domain/order';
 import { createSellerClient } from '../features/seller/api/createSellerClient';
 import type { SellerClient } from '../features/seller/domain/sellerArticle';
 
@@ -15,31 +17,36 @@ export type AppServices = {
   readonly sellerClient: SellerClient;
   readonly adminClient?: AdminClient;
   readonly notificationsClient?: NotificationsClient;
+  readonly ordersClient?: OrdersClient;
   readonly authSession?: AuthSession;
 };
 
 export type AppServicesConfig = Pick<
   RuntimeConfig,
-  'marketplaceApiUrl' | 'interactionsApiUrl' | 'catalogue'
+  'marketplaceApiUrl' | 'interactionsApiUrl' | 'transactionsApiUrl' | 'catalogue'
 >;
 
 export async function createAppServices(
   config: AppServicesConfig,
   session: AuthSession = anonymousSession,
 ): Promise<AppServices> {
-  const marketplaceHttp = createHttpClient({
-    baseUrl: config.marketplaceApiUrl,
-    getAccessToken: session.getAccessToken,
-  });
-  const interactionsHttp = createHttpClient({
-    baseUrl: config.interactionsApiUrl,
-    getAccessToken: session.getAccessToken,
-  });
-  const [catalogueClient, sellerClient, adminClient, notificationsClient] = await Promise.all([
-    createCatalogueClient(config.catalogue, marketplaceHttp),
-    createSellerClient(config.catalogue, marketplaceHttp),
-    createAdminClient(config.catalogue, marketplaceHttp),
-    createNotificationsClient(config.catalogue, interactionsHttp),
-  ]);
-  return { catalogueClient, sellerClient, adminClient, notificationsClient, authSession: session };
+  const httpFor = (baseUrl: string) =>
+    createHttpClient({ baseUrl, getAccessToken: session.getAccessToken });
+  const marketplaceHttp = httpFor(config.marketplaceApiUrl);
+  const [catalogueClient, sellerClient, adminClient, notificationsClient, ordersClient] =
+    await Promise.all([
+      createCatalogueClient(config.catalogue, marketplaceHttp),
+      createSellerClient(config.catalogue, marketplaceHttp),
+      createAdminClient(config.catalogue, marketplaceHttp),
+      createNotificationsClient(config.catalogue, httpFor(config.interactionsApiUrl)),
+      createOrdersClient(config.catalogue, httpFor(config.transactionsApiUrl)),
+    ]);
+  return {
+    catalogueClient,
+    sellerClient,
+    adminClient,
+    notificationsClient,
+    ordersClient,
+    authSession: session,
+  };
 }

@@ -9,6 +9,7 @@ export type PublishedArticleSummary = {
   readonly categoryLabel: string;
   readonly categoryPath: string;
   readonly description: string | null;
+  readonly reserved: boolean;
 };
 
 export function usePublishedArticleSummary(article: PublishedArticle): PublishedArticleSummary {
@@ -24,5 +25,6 @@ export function usePublishedArticleSummary(article: PublishedArticle): Published
     categoryLabel: article.category.label,
     categoryPath: categoryCataloguePath(article.category.id),
     description: description === '' ? null : article.description,
+    reserved: article.reserved,
   };
 }

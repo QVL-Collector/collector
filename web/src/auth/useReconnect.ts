@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useLocation } from 'react-router';
-import { useAuthSession } from '../../../auth/useAuthSession';
-import { useLanguage } from '../../../i18n/useLanguage';
+import { useLanguage } from '../i18n/useLanguage';
+import { useAuthSession } from './useAuthSession';
 
 export type ReconnectModel = {
   readonly reconnect: () => void;

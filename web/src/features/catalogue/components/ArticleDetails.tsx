@@ -3,12 +3,14 @@ import type { PublishedArticle } from '../domain/catalogue';
 import { usePublishedArticleSummary } from '../hooks/usePublishedArticleSummary';
 import { ArticleDescription } from './ArticleDescription';
 import { ArticleSummaryCard } from './ArticleSummaryCard';
+import type { PurchaseActionRenderer } from './purchaseAction';
 
 type ArticleDetailsProps = {
   readonly article: PublishedArticle;
+  readonly purchaseAction: PurchaseActionRenderer;
 };
 
-export function ArticleDetails({ article }: ArticleDetailsProps) {
+export function ArticleDetails({ article, purchaseAction }: ArticleDetailsProps) {
   const summary = usePublishedArticleSummary(article);
   return (
     <Stack
@@ -22,7 +24,7 @@ export function ArticleDetails({ article }: ArticleDetailsProps) {
         position={{ md: 'sticky' }}
         top={{ md: '6rem' }}
       >
-        <ArticleSummaryCard summary={summary} />
+        <ArticleSummaryCard summary={summary} action={purchaseAction(article)} />
       </Stack>
       <ArticleDescription description={summary.description} />
     </Stack>

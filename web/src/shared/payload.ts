@@ -47,6 +47,13 @@ export function expectNonEmptyString(value: unknown, path: string): string {
   return text;
 }
 
+export function expectBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== 'boolean') {
+    throw new InvalidPayloadError(path);
+  }
+  return value;
+}
+
 export function expectInteger(value: unknown, path: string, minimum: number): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < minimum) {
     throw new InvalidPayloadError(path);

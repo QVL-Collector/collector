@@ -15,11 +15,14 @@ export type CatalogueConfig = {
 export type RuntimeConfig = {
   readonly marketplaceApiUrl: string;
   readonly interactionsApiUrl: string;
+  readonly transactionsApiUrl: string;
   readonly catalogue: CatalogueConfig;
   readonly oidc: OidcConfig;
 };
 
 export const defaultInteractionsApiUrl = '/interactions';
+
+export const defaultTransactionsApiUrl = '/transactions';
 
 const sameOriginPathPattern = /^(\/[A-Za-z0-9._~-]+)*$/;
 
@@ -29,6 +32,10 @@ function parseSameOriginPath(value: unknown, path: string): string {
     throw new InvalidPayloadError(path);
   }
   return url;
+}
+
+function parseOptionalSameOriginPath(value: unknown, path: string, fallback: string): string {
+  return value === undefined ? fallback : parseSameOriginPath(value, path);
 }
 
 function parseCatalogueConfig(value: unknown): CatalogueConfig {
@@ -46,10 +53,16 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfig {
   const root = expectRecord(value, 'config');
   return {
     marketplaceApiUrl: parseSameOriginPath(root.marketplaceApiUrl, 'marketplaceApiUrl'),
-    interactionsApiUrl:
-      root.interactionsApiUrl === undefined
-        ? defaultInteractionsApiUrl
-        : parseSameOriginPath(root.interactionsApiUrl, 'interactionsApiUrl'),
+    interactionsApiUrl: parseOptionalSameOriginPath(
+      root.interactionsApiUrl,
+      'interactionsApiUrl',
+      defaultInteractionsApiUrl,
+    ),
+    transactionsApiUrl: parseOptionalSameOriginPath(
+      root.transactionsApiUrl,
+      'transactionsApiUrl',
+      defaultTransactionsApiUrl,
+    ),
     catalogue: parseCatalogueConfig(root.catalogue),
     oidc: parseOidcConfig(root.oidc),
   };

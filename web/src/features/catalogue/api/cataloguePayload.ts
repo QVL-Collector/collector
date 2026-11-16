@@ -1,12 +1,17 @@
 import { parseCategory, parseMoney, parseNullable } from '../../../shared/marketplacePayload';
 import {
   expectArray,
+  expectBoolean,
   expectInteger,
   expectNonEmptyString,
   expectRecord,
   expectString,
 } from '../../../shared/payload';
 import type { CatalogueArticle, CataloguePage, PublishedArticle } from '../domain/catalogue';
+
+function parseReserved(value: unknown, path: string): boolean {
+  return value === undefined ? false : expectBoolean(value, path);
+}
 
 function parseArticle(value: unknown, path: string): CatalogueArticle {
   const article = expectRecord(value, path);
@@ -15,6 +20,7 @@ function parseArticle(value: unknown, path: string): CatalogueArticle {
     title: expectNonEmptyString(article.titre, `${path}.titre`),
     price: parseMoney(article.prix, `${path}.prix`),
     category: parseCategory(article.categorie, `${path}.categorie`),
+    reserved: parseReserved(article.reserve, `${path}.reserve`),
   };
 }
 

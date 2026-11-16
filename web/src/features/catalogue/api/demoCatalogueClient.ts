@@ -1,5 +1,6 @@
 import { ApiError } from '../../../api/ApiError';
 import { waitForDemoLatency } from '../../../api/demoLatency';
+import { isDemoArticleReserved } from '../../../api/demoReservations';
 import type { DemoScenario } from '../../../config/runtimeConfig';
 import { parseCategories } from '../../../shared/marketplacePayload';
 import type { CatalogueClient, CatalogueQuery } from '../domain/catalogue';
@@ -32,7 +33,11 @@ function filterByCategory(
 }
 
 function toEntry({ id, titre, prix, categorie }: DemoArticlePayload): unknown {
-  return { id, titre, prix, categorie };
+  return { id, titre, prix, categorie, reserve: isDemoArticleReserved(id) };
+}
+
+function toDetail(article: DemoArticlePayload): unknown {
+  return { ...article, reserve: isDemoArticleReserved(article.id) };
 }
 
 function toPagePayload(
@@ -72,7 +77,7 @@ export function createDemoCatalogueClient(scenario: DemoScenario): CatalogueClie
       if (article === undefined) {
         throw new ApiError(httpStatuses.notFound);
       }
-      return parsePublishedArticle(article);
+      return parsePublishedArticle(toDetail(article));
     },
   };
 }

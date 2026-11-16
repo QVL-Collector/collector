@@ -5,6 +5,7 @@ import { AuthSessionProvider } from '../auth/AuthSessionContext';
 import { AdminClientProvider } from '../features/admin/api/AdminClientContext';
 import { CatalogueClientProvider } from '../features/catalogue/api/CatalogueClientContext';
 import { NotificationsClientProvider } from '../features/notifications/api/NotificationsClientContext';
+import { OrdersClientProvider } from '../features/orders/api/OrdersClientContext';
 import { SellerClientProvider } from '../features/seller/api/SellerClientContext';
 import { AppThemeRoot } from './AppThemeRoot';
 import type { AppServices } from './createAppServices';
@@ -24,7 +25,9 @@ export function AppProviders({ services, queryClient, children }: AppProvidersPr
             <SellerClientProvider client={services.sellerClient}>
               <AdminClientProvider client={services.adminClient ?? null}>
                 <NotificationsClientProvider client={services.notificationsClient ?? null}>
-                  {children}
+                  <OrdersClientProvider client={services.ordersClient ?? null}>
+                    {children}
+                  </OrdersClientProvider>
                 </NotificationsClientProvider>
               </AdminClientProvider>
             </SellerClientProvider>
