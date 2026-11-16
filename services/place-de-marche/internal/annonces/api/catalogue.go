@@ -18,6 +18,7 @@ type catalogueEntryResponse struct {
 	Title    string           `json:"titre"`
 	Price    moneyResponse    `json:"prix"`
 	Category categoryResponse `json:"categorie"`
+	Reserved bool             `json:"reserve"`
 }
 
 type publishedArticleResponse struct {
@@ -82,6 +83,7 @@ func toCatalogueEntryResponse(entry annonces.CatalogueEntry) catalogueEntryRespo
 		Title:    entry.Title,
 		Price:    moneyResponseOf(entry.Price),
 		Category: categoryResponseOf(entry.Category),
+		Reserved: entry.Reserved,
 	}
 }
 

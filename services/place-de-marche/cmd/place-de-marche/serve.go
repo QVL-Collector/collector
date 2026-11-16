@@ -26,6 +26,9 @@ import (
 	"collector/services/place-de-marche/internal/annonces/stockage"
 	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/config"
+	"collector/services/place-de-marche/internal/reservations"
+	reservationsapi "collector/services/place-de-marche/internal/reservations/api"
+	reservationsstockage "collector/services/place-de-marche/internal/reservations/stockage"
 )
 
 const (
@@ -53,12 +56,17 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	delegation, err := reservationDelegation(verifier, cfg.Reservation)
+	if err != nil {
+		return err
+	}
 	validator, err := message.NewValidator(contracts.Messages, message.DefaultMaxSize)
 	if err != nil {
 		return err
 	}
 	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator), diffusion.NewDecisionEncoder(validator), comptesstockage.NewStore(pool))
 	service := annonces.NewService(store, store)
+	reservationService := reservations.NewService(reservationsstockage.NewStore(pool), cfg.Reservation.Term)
 	guard := ratelimit.NewGuard(cfg.RateLimit, logger, time.Now)
 	safeguard, err := controle.NewSafeguard(store, productionSafeguardTiming, logger)
 	if err != nil {
@@ -68,6 +76,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	group.Go(func() error {
 		return httpserver.Run(groupCtx, logger,
 			httpserver.New(cfg.APIAddress, publicHandler(logger, service, verifier, guard)),
+			httpserver.New(cfg.InternalAddress, internalHandler(logger, reservationService, delegation)),
 			httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, pool.Ping)),
 		)
 	})
@@ -90,6 +99,20 @@ func publicHandler(logger *slog.Logger, service api.ArticleService, authenticato
 	mux := http.NewServeMux()
 	api.Register(mux, service, authenticator, limiter, logger)
 	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
+}
+
+func internalHandler(logger *slog.Logger, reserver reservationsapi.Reserver, authenticator reservationsapi.Authenticator) http.Handler {
+	mux := http.NewServeMux()
+	reservationsapi.Register(mux, reserver, authenticator, logger)
+	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
+}
+
+func reservationDelegation(users *token.Verifier, reservation config.Reservation) (token.Delegation, error) {
+	service, err := users.ForService(reservation.Caller, reservations.Scope)
+	if err != nil {
+		return token.Delegation{}, err
+	}
+	return token.Delegation{Service: service, User: users, UserRole: reservations.BuyerRole}, nil
 }
 
 func relayOutbox(ctx context.Context, logger *slog.Logger, channel config.Channel, pool *pgxpool.Pool) error {

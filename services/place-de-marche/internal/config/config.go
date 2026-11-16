@@ -1,22 +1,33 @@
 package config
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"collector/libs/platform/broker"
 	"collector/libs/platform/database"
 	"collector/libs/platform/ratelimit"
 	"collector/libs/platform/token"
+	"collector/services/place-de-marche/internal/reservations"
 )
 
 const (
-	envAPIAddress            = "ADRESSE_API"
-	envManagementAddress     = "ADRESSE_GESTION"
-	envResultPublisher       = "CANAL_EMETTEUR_ATTENDU"
-	defaultResultPublisher   = "controle"
-	defaultAPIAddress        = ":8080"
-	defaultManagementAddress = ":9090"
-	defaultAudience          = "place-de-marche"
+	envAPIAddress              = "ADRESSE_API"
+	envInternalAddress         = "ADRESSE_INTERNE"
+	envManagementAddress       = "ADRESSE_GESTION"
+	envResultPublisher         = "CANAL_EMETTEUR_ATTENDU"
+	envReservationDuration     = "RESERVATION_DUREE"
+	envReservationCeiling      = "RESERVATION_DUREE_MAX"
+	envReservationCaller       = "RESERVATION_CLIENT_AUTORISE"
+	defaultResultPublisher     = "controle"
+	defaultAPIAddress          = ":8080"
+	defaultInternalAddress     = ":8081"
+	defaultManagementAddress   = ":9090"
+	defaultAudience            = "place-de-marche"
+	defaultReservationDuration = 10 * time.Minute
+	defaultReservationCeiling  = 30 * time.Minute
+	defaultReservationCaller   = "transactions"
 )
 
 type Lookup func(name string) string
@@ -26,13 +37,20 @@ type Channel struct {
 	ResultPublisher string
 }
 
+type Reservation struct {
+	Term   reservations.Term
+	Caller string
+}
+
 type Server struct {
 	APIAddress        string
+	InternalAddress   string
 	ManagementAddress string
 	Database          database.Config
 	Token             token.Config
 	Channel           Channel
 	RateLimit         ratelimit.Policy
+	Reservation       Reservation
 }
 
 func LoadServer(lookup Lookup) (Server, error) {
@@ -52,8 +70,13 @@ func LoadServer(lookup Lookup) (Server, error) {
 	if err != nil {
 		return Server{}, err
 	}
+	reservation, err := loadReservation(lookup)
+	if err != nil {
+		return Server{}, err
+	}
 	return Server{
 		APIAddress:        valueOrDefault(lookup(envAPIAddress), defaultAPIAddress),
+		InternalAddress:   valueOrDefault(lookup(envInternalAddress), defaultInternalAddress),
 		ManagementAddress: valueOrDefault(lookup(envManagementAddress), defaultManagementAddress),
 		Database:          databaseConfig,
 		Token:             tokenConfig,
@@ -61,8 +84,36 @@ func LoadServer(lookup Lookup) (Server, error) {
 			Endpoint:        endpoint,
 			ResultPublisher: valueOrDefault(lookup(envResultPublisher), defaultResultPublisher),
 		},
-		RateLimit: rateLimit,
+		RateLimit:   rateLimit,
+		Reservation: reservation,
 	}, nil
+}
+
+func loadReservation(lookup Lookup) (Reservation, error) {
+	requested, err := positiveDuration(lookup(envReservationDuration), envReservationDuration, defaultReservationDuration)
+	if err != nil {
+		return Reservation{}, err
+	}
+	ceiling, err := positiveDuration(lookup(envReservationCeiling), envReservationCeiling, defaultReservationCeiling)
+	if err != nil {
+		return Reservation{}, err
+	}
+	return Reservation{
+		Term:   reservations.Term{Requested: requested, Ceiling: ceiling},
+		Caller: valueOrDefault(lookup(envReservationCaller), defaultReservationCaller),
+	}, nil
+}
+
+func positiveDuration(raw, name string, fallback time.Duration) (time.Duration, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return fallback, nil
+	}
+	value, err := time.ParseDuration(trimmed)
+	if err != nil || value <= 0 {
+		return 0, fmt.Errorf("%s : durée strictement positive attendue (ex. 10m)", name)
+	}
+	return value, nil
 }
 
 func valueOrDefault(raw, fallback string) string {

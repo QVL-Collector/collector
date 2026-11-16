@@ -17,6 +17,7 @@ type CatalogueEntry struct {
 	Title    string
 	Category Category
 	Price    Money
+	Reserved bool
 }
 
 type PublishedArticle struct {
