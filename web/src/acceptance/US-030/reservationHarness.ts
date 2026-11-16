@@ -23,7 +23,7 @@ export type PublishedArticle = {
 export type OrderWire = {
   readonly id: string;
   readonly articleId: string;
-  readonly statut: 'en_attente_paiement';
+  readonly statut: 'en_attente_paiement' | 'expiree';
   readonly prix: Amount;
   readonly fraisDePort: Amount;
   readonly totalPaye: Amount;

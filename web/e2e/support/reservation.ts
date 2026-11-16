@@ -16,7 +16,7 @@ export type ArticleEnVente = {
 export type CommandeEmise = {
   readonly id: string;
   readonly articleId: string;
-  readonly statut: 'en_attente_paiement';
+  readonly statut: 'en_attente_paiement' | 'expiree';
   readonly prix: Montant;
   readonly fraisDePort: Montant;
   readonly totalPaye: Montant;

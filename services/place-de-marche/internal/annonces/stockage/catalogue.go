@@ -9,9 +9,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"collector/services/place-de-marche/internal/annonces"
+	"collector/services/place-de-marche/internal/disponibilite"
 )
 
-const catalogueEntryColumns = `a.id, a.titre, c.id, c.libelle, a.prix_centimes, coalesce(a.reserve_jusqu_a > now(), false)`
+const catalogueEntryColumns = `a.id, a.titre, c.id, c.libelle, a.prix_centimes, coalesce(a.` + disponibilite.ReservedNow + `, false)`
 
 const publishedArticles = `
 FROM article AS a JOIN categorie AS c ON c.id = a.categorie_id

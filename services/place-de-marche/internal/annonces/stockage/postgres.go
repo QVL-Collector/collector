@@ -13,6 +13,7 @@ import (
 	"collector/libs/platform/outbox"
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/comptes"
+	"collector/services/place-de-marche/internal/disponibilite"
 )
 
 const articleColumns = `a.id, a.vendeur_id, a.etat, a.revision, a.titre, a.description,
@@ -29,11 +30,15 @@ FROM cree AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 
 const contentAssignments = `titre = $5, description = $6, categorie_id = $7, prix_centimes = $8, frais_port_centimes = $9`
 
+const reservedOrSold = `(vendu OR coalesce(` + disponibilite.ReservedNow + `, false))`
+
+const sellerWritable = `id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4) AND NOT ` + reservedOrSold
+
 const updateDraftQuery = `
 WITH modifie AS (
 	UPDATE article
 	SET ` + contentAssignments + `, revision = revision + 1, modifie_le = now()
-	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
+	WHERE ` + sellerWritable + `
 	RETURNING *
 )
 SELECT ` + articleColumns + `
@@ -45,7 +50,7 @@ const reviseQuery = `
 WITH revise AS (
 	UPDATE article
 	SET ` + contentAssignments + `, etat = $10, motif = NULL, revision = revision + 1, modifie_le = now(), ` + reviewRequestedAssignments + `
-	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
+	WHERE ` + sellerWritable + `
 	RETURNING *
 )
 SELECT ` + articleColumns + `
@@ -55,7 +60,7 @@ const submitQuery = `
 WITH soumis AS (
 	UPDATE article
 	SET etat = $5, motif = NULL, revision = revision + 1, modifie_le = now(), ` + reviewRequestedAssignments + `
-	WHERE id = $1 AND vendeur_id = $2 AND revision = $3 AND etat = ANY($4)
+	WHERE ` + sellerWritable + `
 	RETURNING *
 )
 SELECT ` + articleColumns + `
@@ -132,7 +137,7 @@ VALUES ($1, $2, $3, $4, $5)`
 const (
 	articleStateQuery   = `SELECT etat, revision FROM article WHERE id = $1`
 	countOwnedQuery     = `SELECT count(*) FROM article WHERE vendeur_id = $1`
-	ownedStateQuery     = `SELECT etat, revision FROM article WHERE id = $1 AND vendeur_id = $2`
+	ownedStateQuery     = `SELECT etat, revision, ` + reservedOrSold + ` FROM article WHERE id = $1 AND vendeur_id = $2`
 	lockedStateQuery    = ownedStateQuery + ` FOR UPDATE`
 	listCategoriesQuery = `SELECT id, libelle FROM categorie ORDER BY libelle, id`
 	categoryExistsQuery = `SELECT EXISTS (SELECT 1 FROM categorie WHERE id = $1)`
@@ -212,11 +217,11 @@ func (s *Store) UpdateDraft(ctx context.Context, seller annonces.SellerID, id an
 }
 
 func lockEditable(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Status, error) {
-	status, current, err := ownedState(ctx, tx, lockedStateQuery, seller, id)
+	state, err := ownedState(ctx, tx, lockedStateQuery, seller, id)
 	if err != nil {
 		return "", err
 	}
-	return status, annonces.VerifyEditable(status, current, expected)
+	return state.Status, state.VerifyEditable(expected)
 }
 
 func updateDraftInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
@@ -253,7 +258,7 @@ func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonce
 		return s.requestReview(ctx, tx, submitted)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return annonces.Article{}, s.explainRefusal(ctx, seller, id, annonces.Status.Submittable, annonces.ErrArticleNotSubmittable)
+		return annonces.Article{}, s.explainSubmitRefusal(ctx, seller, id, expected)
 	}
 	if err != nil {
 		return annonces.Article{}, fmt.Errorf("soumission de l'article : %w", err)
@@ -399,13 +404,13 @@ func scanResentReview(row pgx.Row) (annonces.ResentReview, error) {
 	}, nil
 }
 
-func (s *Store) explainRefusal(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, allowed func(annonces.Status) bool, notAllowed error) error {
-	status, _, err := ownedState(ctx, s.pool, ownedStateQuery, seller, id)
+func (s *Store) explainSubmitRefusal(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) error {
+	state, err := ownedState(ctx, s.pool, ownedStateQuery, seller, id)
 	if err != nil {
 		return err
 	}
-	if !allowed(status) {
-		return notAllowed
+	if err = state.VerifySubmittable(expected); err != nil {
+		return err
 	}
 	return annonces.ErrStaleRevision
 }
@@ -414,19 +419,24 @@ type rowQuerier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-func ownedState(ctx context.Context, querier rowQuerier, query string, seller annonces.SellerID, id annonces.ArticleID) (annonces.Status, annonces.Revision, error) {
+func ownedState(ctx context.Context, querier rowQuerier, query string, seller annonces.SellerID, id annonces.ArticleID) (annonces.ArticleState, error) {
 	var (
 		status   string
 		revision int
+		reserved bool
 	)
-	err := querier.QueryRow(ctx, query, uuid.UUID(id), uuid.UUID(seller)).Scan(&status, &revision)
+	err := querier.QueryRow(ctx, query, uuid.UUID(id), uuid.UUID(seller)).Scan(&status, &revision, &reserved)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", 0, annonces.ErrArticleNotFound
+		return annonces.ArticleState{}, annonces.ErrArticleNotFound
 	}
 	if err != nil {
-		return "", 0, fmt.Errorf("lecture de l'état de l'article : %w", err)
+		return annonces.ArticleState{}, fmt.Errorf("lecture de l'état de l'article : %w", err)
 	}
-	return annonces.Status(status), annonces.Revision(revision), nil
+	return annonces.ArticleState{
+		Status:   annonces.Status(status),
+		Revision: annonces.Revision(revision),
+		Reserved: reserved,
+	}, nil
 }
 
 func (s *Store) FindOwned(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID) (annonces.Article, error) {

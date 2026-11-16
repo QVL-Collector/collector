@@ -73,7 +73,7 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, isolé dans `src/feat
 | `/vendeur/articles/:id`     | Modification (`PUT`, révision lue envoyée), « Soumettre au contrôle » (`POST …/soumission`), état suivi |
 
 - Erreurs `application/problem+json` lues par `src/api/problemDetails.ts` : `erreurs[].champ` est rattaché au champ du formulaire (message par `code`, focus sur le premier champ en erreur, résumé en `role="alert"`).
-- 409 `revision-perimee` : rien n'est écrasé, l'écran explique le conflit et propose de recharger la dernière version ; 409 `article-non-modifiable` ou `article-non-soumettable` : l'article est relu.
+- 409 `revision-perimee` : rien n'est écrasé, l'écran explique le conflit et propose de recharger la dernière version ; 409 `article-non-modifiable` ou `article-non-soumettable` : l'article est relu ; 409 `article-reserve` (modification ou soumission d'un article réservé ou vendu, US-031) : message « Cet article est réservé par un acheteur… », saisie conservée, pas de relecture.
 - Soumission bloquée tant que des modifications ne sont pas enregistrées. Pendant `en_controle`, l'article est relu toutes les 2 s ; chaque changement d'état est annoncé dans une zone `role="status"` (AC10 de US-013).
 - Démonstration (`source: demo`) : faux client vendeur en mémoire, contrôle simulé en 2,5 s (incomplet → refusé, catégorie « Objets divers » → à vérifier, sinon publié), et un brouillon « Album de timbres » qui répond 409 à la première écriture pour rejouer le conflit.
 

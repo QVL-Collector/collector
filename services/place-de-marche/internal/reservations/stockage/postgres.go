@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"collector/services/place-de-marche/internal/annonces"
+	"collector/services/place-de-marche/internal/disponibilite"
 	"collector/services/place-de-marche/internal/reservations"
 )
 
@@ -19,10 +20,10 @@ const lockBuyerQuery = `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`
 const activeElsewhereQuery = `
 SELECT EXISTS (
 	SELECT 1 FROM article
-	WHERE reserve_par = $1 AND reserve_jusqu_a > now() AND id <> $2
+	WHERE reserve_par = $1 AND ` + disponibilite.ReservedNow + ` AND id <> $2
 )`
 
-const heldByBuyer = `reserve_par = $2 AND reserve_jusqu_a > now()`
+const heldByBuyer = `reserve_par = $2 AND ` + disponibilite.ReservedNow
 
 const reserveQuery = `
 UPDATE article

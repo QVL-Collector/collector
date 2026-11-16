@@ -34,12 +34,14 @@ export function useOrderConfirmationText(view: OrderConfirmationView): OrderConf
         documentTitle: t('orders.notFound.documentTitle'),
         announcement: t('orders.notFound.title'),
       };
-    case 'ready':
+    case 'ready': {
+      const { status } = view.order;
       return {
-        title: t('orders.title'),
-        subtitle: t('orders.subtitle'),
-        documentTitle: t('orders.documentTitle'),
-        announcement: t('orders.loaded'),
+        title: t(`orders.views.${status}.title`),
+        subtitle: t(`orders.views.${status}.subtitle`),
+        documentTitle: t(`orders.views.${status}.documentTitle`),
+        announcement: t(`orders.views.${status}.announcement`),
       };
+    }
   }
 }

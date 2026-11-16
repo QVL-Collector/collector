@@ -7,6 +7,8 @@ import type { Order, OrderStatus } from '../domain/order';
 export type OrderSummary = {
   readonly status: OrderStatus;
   readonly statusLabel: string;
+  readonly deadlineTitle: string;
+  readonly deadlineHint: string;
   readonly paymentDueLabel: string;
   readonly paymentDueDateTime: string;
   readonly createdLabel: string;
@@ -26,6 +28,8 @@ export function useOrderSummary(order: Order): OrderSummary {
   return {
     status: order.status,
     statusLabel: t(`orders.statuses.${order.status}`),
+    deadlineTitle: t(`orders.deadlines.${order.status}.title`),
+    deadlineHint: t(`orders.deadlines.${order.status}.hint`),
     paymentDueLabel: formatDateTime(order.paymentDueAt),
     paymentDueDateTime: order.paymentDueAt.toISOString(),
     createdLabel: t('orders.createdAt', { date: formatDateTime(order.createdAt) }),

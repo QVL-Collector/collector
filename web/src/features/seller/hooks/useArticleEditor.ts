@@ -87,6 +87,9 @@ export function useArticleEditor({
         lockNotice?.show('not-modifiable');
         void fetchLatest?.();
         return;
+      case 'reserved':
+        lockNotice?.show('reserved');
+        return;
       case 'not-found':
       case 'unavailable':
         setFeedback({ kind: 'unavailable' });

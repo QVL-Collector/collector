@@ -3,6 +3,7 @@ export const sellerProblemTypes = {
   staleRevision: 'urn:collector:probleme:revision-perimee',
   notModifiable: 'urn:collector:probleme:article-non-modifiable',
   notSubmittable: 'urn:collector:probleme:article-non-soumettable',
+  reserved: 'urn:collector:probleme:article-reserve',
 } as const;
 
 export const fieldProblemCodes = [

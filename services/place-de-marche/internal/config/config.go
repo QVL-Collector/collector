@@ -28,6 +28,7 @@ const (
 	defaultReservationDuration = 10 * time.Minute
 	defaultReservationCeiling  = 30 * time.Minute
 	defaultReservationCaller   = "transactions"
+	minimumReservationDuration = time.Second
 )
 
 type Lookup func(name string) string
@@ -90,11 +91,11 @@ func LoadServer(lookup Lookup) (Server, error) {
 }
 
 func loadReservation(lookup Lookup) (Reservation, error) {
-	requested, err := positiveDuration(lookup(envReservationDuration), envReservationDuration, defaultReservationDuration)
+	requested, err := reservationDuration(lookup(envReservationDuration), envReservationDuration, defaultReservationDuration)
 	if err != nil {
 		return Reservation{}, err
 	}
-	ceiling, err := positiveDuration(lookup(envReservationCeiling), envReservationCeiling, defaultReservationCeiling)
+	ceiling, err := reservationDuration(lookup(envReservationCeiling), envReservationCeiling, defaultReservationCeiling)
 	if err != nil {
 		return Reservation{}, err
 	}
@@ -104,14 +105,14 @@ func loadReservation(lookup Lookup) (Reservation, error) {
 	}, nil
 }
 
-func positiveDuration(raw, name string, fallback time.Duration) (time.Duration, error) {
+func reservationDuration(raw, name string, fallback time.Duration) (time.Duration, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
 		return fallback, nil
 	}
 	value, err := time.ParseDuration(trimmed)
-	if err != nil || value <= 0 {
-		return 0, fmt.Errorf("%s : durée strictement positive attendue (ex. 10m)", name)
+	if err != nil || value < minimumReservationDuration {
+		return 0, fmt.Errorf("%s : durée d'au moins %s attendue (ex. 10m, 5s)", name, minimumReservationDuration)
 	}
 	return value, nil
 }

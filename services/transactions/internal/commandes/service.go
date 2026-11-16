@@ -3,6 +3,7 @@ package commandes
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"collector/libs/platform/token"
 	"collector/services/transactions/internal/montants"
@@ -17,13 +18,16 @@ type Orders interface {
 	FindOwned(ctx context.Context, buyer BuyerID, id ID) (Order, error)
 }
 
+type Clock func() time.Time
+
 type Service struct {
 	marketplace Marketplace
 	orders      Orders
+	now         Clock
 }
 
-func NewService(marketplace Marketplace, orders Orders) *Service {
-	return &Service{marketplace: marketplace, orders: orders}
+func NewService(marketplace Marketplace, orders Orders, now Clock) *Service {
+	return &Service{marketplace: marketplace, orders: orders, now: now}
 }
 
 func (s *Service) Place(ctx context.Context, buyer BuyerID, credential token.Credential, article ArticleID) (Recorded, error) {
@@ -38,9 +42,18 @@ func (s *Service) Place(ctx context.Context, buyer BuyerID, credential token.Cre
 	if err != nil {
 		return Recorded{}, fmt.Errorf("%w : montants de la réservation %s inexploitables : %w", ErrMarketplaceUnavailable, reservation.ID, err)
 	}
-	return s.orders.Record(ctx, Placement{Buyer: buyer, Reservation: reservation, Amounts: amounts})
+	recorded, err := s.orders.Record(ctx, Placement{Buyer: buyer, Reservation: reservation, Amounts: amounts})
+	if err != nil {
+		return Recorded{}, err
+	}
+	recorded.Order = recorded.Order.AsOf(s.now())
+	return recorded, nil
 }
 
 func (s *Service) OwnOrder(ctx context.Context, buyer BuyerID, id ID) (Order, error) {
-	return s.orders.FindOwned(ctx, buyer, id)
+	order, err := s.orders.FindOwned(ctx, buyer, id)
+	if err != nil {
+		return Order{}, err
+	}
+	return order.AsOf(s.now()), nil
 }

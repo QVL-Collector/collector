@@ -1,6 +1,6 @@
 import type { Money } from '../../../shared/Money';
 
-export const orderStatuses = ['en_attente_paiement'] as const;
+export const orderStatuses = ['en_attente_paiement', 'expiree'] as const;
 
 export type OrderStatus = (typeof orderStatuses)[number];
 

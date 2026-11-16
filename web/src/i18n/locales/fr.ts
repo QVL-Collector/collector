@@ -174,6 +174,8 @@ export const fr = {
         'L’annonce ne peut pas être soumise dans son état actuel. Elle vient d’être rechargée.',
       failure: 'La soumission a échoué. Vérifiez votre connexion, puis réessayez.',
     },
+    reserved:
+      'Cet article est réservé par un acheteur ou déjà vendu : il ne peut être ni modifié ni soumis pendant la réservation, ni après la vente.',
   },
   notifications: {
     documentTitle: 'Notifications · Collector',
@@ -222,21 +224,41 @@ export const fr = {
     },
   },
   orders: {
-    documentTitle: 'Article réservé · Collector',
     pendingDocumentTitle: 'Votre commande · Collector',
     pendingTitle: 'Votre commande',
-    title: 'Article réservé',
-    subtitle:
-      'Votre commande est enregistrée. L’article vous est garanti jusqu’à l’échéance de paiement.',
     loading: 'Chargement de votre commande en cours',
-    loaded: 'Réservation confirmée : commande en attente de paiement',
+    views: {
+      en_attente_paiement: {
+        documentTitle: 'Article réservé · Collector',
+        title: 'Article réservé',
+        subtitle:
+          'Votre commande est enregistrée. L’article vous est garanti jusqu’à l’échéance de paiement.',
+        announcement: 'Réservation confirmée : commande en attente de paiement',
+      },
+      expiree: {
+        documentTitle: 'Réservation expirée · Collector',
+        title: 'Réservation expirée',
+        subtitle: 'La réservation a expiré, l’article est de nouveau disponible.',
+        announcement:
+          'Commande expirée : la réservation a expiré, l’article est de nouveau disponible',
+      },
+    },
     statusTitle: 'Statut de la commande',
     statuses: {
       en_attente_paiement: 'En attente de paiement',
+      expiree: 'Expirée',
     },
     createdAt: 'Commande passée le {{date}}',
-    paymentDue: 'À régler avant le',
-    paymentDueHint: 'Échéance fixée par la place de marché.',
+    deadlines: {
+      en_attente_paiement: {
+        title: 'À régler avant le',
+        hint: 'Échéance fixée par la place de marché.',
+      },
+      expiree: {
+        title: 'Échéance dépassée le',
+        hint: 'L’article n’est plus réservé à votre nom : réservez-le de nouveau depuis sa fiche s’il est toujours disponible.',
+      },
+    },
     amountsTitle: 'Montants',
     price: 'Prix de référence',
     shippingCost: 'Frais de port',

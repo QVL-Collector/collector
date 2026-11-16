@@ -177,7 +177,8 @@ paths:
         Remplacer le contenu d'un article ; la révision lue est exigée et augmente de 1. Brouillon ou refusé : l'état
         ne change pas. Publié, en_controle ou a_verifier : l'article passe en_controle, son motif est effacé, il quitte
         le catalogue et la nouvelle révision est soumise au contrôle, quel que soit le champ modifié ; toute issue
-        portant sur une révision antérieure est ignorée
+        portant sur une révision antérieure est ignorée. Article réservé ou vendu : 409 article-reserve, rien n'est
+        modifié ; c'est aussi le refus du retrait, qui passe par cette modification (aucune route de retrait)
       security:
         - jetonKeycloak: []
       requestBody:
@@ -225,7 +226,8 @@ paths:
       summary: >-
         Soumettre un article brouillon ou refusé au contrôle de publication ; la révision lue est exigée et augmente
         de 1. L'article passe en_controle, son motif est effacé, et l'issue arrive de façon asynchrone : publie,
-        refuse ou a_verifier, avec le motif de l'issue, à relire par GET /vendeur/articles/{id}
+        refuse ou a_verifier, avec le motif de l'issue, à relire par GET /vendeur/articles/{id}. Article réservé ou
+        vendu : 409 article-reserve, rien n'est modifié
       security:
         - jetonKeycloak: []
       requestBody:
@@ -749,8 +751,8 @@ components:
           description: >-
             about:blank pour les erreurs génériques ; sinon urn:collector:probleme:saisie-invalide,
             urn:collector:probleme:corps-invalide, urn:collector:probleme:revision-perimee,
-            urn:collector:probleme:article-non-modifiable, urn:collector:probleme:article-non-soumettable ou
-            urn:collector:probleme:article-non-a-verifier
+            urn:collector:probleme:article-non-modifiable, urn:collector:probleme:article-non-soumettable,
+            urn:collector:probleme:article-reserve ou urn:collector:probleme:article-non-a-verifier
         title:
           type: string
         status:
@@ -793,7 +795,12 @@ components:
           schema:
             $ref: "#/components/schemas/Probleme"
     Conflit:
-      description: Révision périmée, ou article non modifiable ou non soumettable dans son état
+      description: >-
+        Article réservé (réservation en cours) ou vendu (urn:collector:probleme:article-reserve, prioritaire, sans
+        autre détail : ni acheteur ni échéance) ; sinon révision périmée (urn:collector:probleme:revision-perimee), ou
+        article non modifiable (urn:collector:probleme:article-non-modifiable) ou non soumettable
+        (urn:collector:probleme:article-non-soumettable) dans son état. Rien n'est écrit : contenu, prix, frais de port
+        et révision inchangés
       content:
         application/problem+json:
           schema:

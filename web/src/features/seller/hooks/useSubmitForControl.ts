@@ -34,13 +34,22 @@ export function useSubmitForControl(
   });
   const showFailure = (error: unknown) => {
     const { kind } = toArticleFailure(error);
-    if (kind === 'locked') {
-      lockNotice.show('not-submittable');
-    } else {
-      setFailure(kind === 'conflict' ? 'conflict' : 'unavailable');
-    }
-    if (kind === 'conflict' || kind === 'locked') {
-      void fetchLatest();
+    switch (kind) {
+      case 'reserved':
+        lockNotice.show('reserved');
+        return;
+      case 'locked':
+        lockNotice.show('not-submittable');
+        void fetchLatest();
+        return;
+      case 'conflict':
+        setFailure('conflict');
+        void fetchLatest();
+        return;
+      case 'invalid':
+      case 'not-found':
+      case 'unavailable':
+        setFailure('unavailable');
     }
   };
   const submit = () => {

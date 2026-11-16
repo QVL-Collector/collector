@@ -70,7 +70,7 @@ func nouveauBancDuService() *bancDuService {
 		marche:   &placeDeMarcheSimulee{reservations: map[commandes.ArticleID]commandes.Reservation{}},
 		registre: &registreSimule{parReservation: map[commandes.ReservationID]commandes.Order{}},
 	}
-	b.service = commandes.NewService(b.marche, b.registre)
+	b.service = commandes.NewService(b.marche, b.registre, func() time.Time { return time.Date(2026, 11, 16, 10, 15, 0, 0, time.UTC) })
 	return b
 }
 
