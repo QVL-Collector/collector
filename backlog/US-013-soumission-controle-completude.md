@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E3 Mise en vente contrôlée |
-| Statut | À faire |
+| Statut | Livrée |
 | Sprint | 1 (J4) |
 | Engagement | Ferme — clôt le walking skeleton WS-2 |
 | Estimation | 5 points |
@@ -69,18 +69,18 @@ Mesures : MC2, MC6, MC9. Frontière : canal (FC11).
 
 Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
-- [ ] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
-- [ ] Revue de code faite, retours traités.
-- [ ] Martin a testé et prononcé « je valide la livraison de la feature ».
-- [ ] Documentation touchée à jour.
-- [ ] Statut, date de validation et liens des rapports renseignés ci-dessous.
-- [ ] Aucune donnée sensible ni credential ajouté au dépôt.
+- [x] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
+- [x] Revue de code faite, retours traités.
+- [x] Martin a testé et prononcé « je valide la livraison de la feature ».
+- [x] Documentation touchée à jour.
+- [x] Statut, date de validation et liens des rapports renseignés ci-dessous.
+- [x] Aucune donnée sensible ni credential ajouté au dépôt.
 
 ## Suivi
 
 | Étape | Lien / date |
 |---|---|
-| Rapport de test | |
-| Rapport de revue de code | |
-| Validation Martin | AAAA-MM-JJ |
-| Livraison (PR / merge) | |
+| Rapport de test | [US-013-rapport-tests.md](../docs/rapports/tests/US-013-rapport-tests.md) |
+| Rapport de revue de code | [US-013-revue-code.md](../docs/rapports/revues/US-013-revue-code.md) |
+| Validation Martin | 2026-10-28 |
+| Livraison (PR / merge) | https://github.com/QVL-Collector/collector/pull/21 |
