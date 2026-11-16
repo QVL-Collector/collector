@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E6 Réservation |
-| Statut | À faire |
+| Statut | En revue |
 | Sprint | 3 (J5 bis) |
 | Engagement | Ferme |
 | Estimation | 5 points |
@@ -33,7 +33,7 @@ En tant qu'acheteur, je veux réserver un objet publié, afin qu'il me soit gara
 - **AC6 (Sécurité)** — Given un prix ou un montant envoyé dans la requête de l'acheteur, When la commande est créée, Then il est ignoré : les montants sont recalculés côté serveur.
 - **AC7 (Sécurité, exposition)** — Given l'environnement allumé, When « réserver » est appelée depuis Internet, Then elle échoue faute de route (absente de l'ALB) ; depuis un pod autre que Transactions, Then la politique réseau la refuse.
 - **AC8 (Sécurité, données)** — Given le compte de base de Transactions, When il tente de lire la base `marche`, Then la base refuse ; et réciproquement.
-- **AC9 (Autorisation)** — Given le jeton de service de Transactions, When il est présenté sur une route d'acheteur, Then la réponse est 403.
+- **AC9 (Autorisation)** — Given le jeton de service de Transactions, When il est présenté sur une route d'acheteur, Then la réponse est 401 ou 403.
 
 ## Sécurité
 
@@ -80,7 +80,7 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
 | Étape | Lien / date |
 |---|---|
-| Rapport de test | |
-| Rapport de revue de code | |
+| Rapport de test | [US-030-rapport-tests.md](../docs/rapports/tests/US-030-rapport-tests.md) |
+| Rapport de revue de code | [US-030-revue-code.md](../docs/rapports/revues/US-030-revue-code.md) |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |

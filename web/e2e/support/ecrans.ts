@@ -2,6 +2,13 @@ import { expect } from '@playwright/test';
 import { articlesAVerifierDemo, articlesDemo, type Collector } from './collector';
 import { acheteur, administrateur } from './fournisseurIdentite';
 import { delaiEchecMs, InteractionsSimulees, notificationEmise } from './interactions';
+import {
+  articleEnVente,
+  commandeEmise,
+  identifiantArticle,
+  identifiantCommande,
+  ReservationSimulee,
+} from './reservation';
 
 export type Ecran = {
   readonly nom: string;
@@ -216,6 +223,27 @@ export const ecrans: readonly Ecran[] = [
       await expect(
         collector.page.getByRole('heading', { name: collector.textes.accesReserve }),
       ).toBeVisible();
+    },
+  },
+  {
+    nom: 'fiche d’un article réservé',
+    ouvrir: async (collector) => {
+      const simulation = new ReservationSimulee();
+      simulation.articles = [articleEnVente(1, true)];
+      await simulation.brancher(collector);
+      await collector.ouvrir(`/articles/${identifiantArticle(1)}`);
+      await expect(collector.page.getByText(collector.textes.articleDejaReserve)).toBeVisible();
+    },
+  },
+  {
+    nom: 'acheteur, confirmation de commande',
+    ouvrir: async (collector) => {
+      const simulation = new ReservationSimulee();
+      simulation.commandes = [commandeEmise(1, identifiantArticle(1))];
+      await simulation.brancher(collector);
+      collector.seConnecterEn(acheteur);
+      await collector.ouvrirEspaceProtege(`/acheteur/commandes/${identifiantCommande(1)}`);
+      await titreAffiche(collector, collector.textes.articleReserveTitre);
     },
   },
   {

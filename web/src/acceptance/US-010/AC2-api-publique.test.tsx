@@ -6,6 +6,7 @@ import { renderApp } from './catalogueHarness';
 const publicApiConfig = {
   marketplaceApiUrl: '/marche',
   interactionsApiUrl: '/interactions',
+  transactionsApiUrl: '/transactions',
   catalogue: { source: 'api', demoScenario: 'nominal' },
 } as const;
 

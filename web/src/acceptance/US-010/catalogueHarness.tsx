@@ -73,6 +73,7 @@ export function publishedArticle(
     title,
     price: { amountInCents: 1000 + index * 125, currency: 'EUR' },
     category: { id: `categorie-${String(index % 3)}`, label: `Catégorie ${String(index % 3)}` },
+    reserved: false,
   };
 }
 

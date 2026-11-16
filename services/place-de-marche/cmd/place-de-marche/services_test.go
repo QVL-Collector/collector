@@ -61,6 +61,7 @@ func lancerPlaceDeMarche(t *testing.T, canal *canalDeTest, adresseBase string, e
 	variables["CANAL_EMETTEUR_ATTENDU"] = identiteControle
 	variables["ADRESSE_API"] = api
 	variables["ADRESSE_GESTION"] = gestion
+	variables["ADRESSE_INTERNE"] = adresseLibre(t)
 	variables["LIMITE_DEBIT_PAR_MINUTE"] = "6000000"
 	variables["LIMITE_DEBIT_RAFALE"] = "100000"
 	for nom, valeur := range variables {

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -32,9 +33,10 @@ const (
 )
 
 type keycloakDeTest struct {
-	base       string
-	ctx        context.Context
-	jetonAdmin string
+	base               string
+	ctx                context.Context
+	jetonAdmin         string
+	secretTransactions string
 }
 
 type utilisateurDeTest struct {
@@ -56,6 +58,7 @@ func demarrerKeycloak(t *testing.T) *keycloakDeTest {
 		t.Fatalf("chemin du realm : %v", err)
 	}
 	secretDAmorce := valeurAleatoire()
+	secretTransactions := valeurAleatoire()
 	conteneur, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        ImageKeycloak,
@@ -64,6 +67,7 @@ func demarrerKeycloak(t *testing.T) *keycloakDeTest {
 			Env: map[string]string{
 				"KC_BOOTSTRAP_ADMIN_USERNAME": compteDAmorce,
 				"KC_BOOTSTRAP_ADMIN_PASSWORD": secretDAmorce,
+				VariableSecretTransactions:    secretTransactions,
 			},
 			Files: []testcontainers.ContainerFile{
 				{HostFilePath: realm, ContainerFilePath: dossierDImport + FichierDuRealm, FileMode: 0o644},
@@ -80,9 +84,28 @@ func demarrerKeycloak(t *testing.T) *keycloakDeTest {
 	if err != nil {
 		t.Fatalf("adresse de Keycloak : %v", err)
 	}
-	kc := &keycloakDeTest{base: point, ctx: ctx}
+	kc := &keycloakDeTest{base: point, ctx: ctx, secretTransactions: secretTransactions}
 	kc.jetonAdmin = kc.obtenirJetonAdmin(t, secretDAmorce)
+	kc.exigerSecretTransactionsImporte(t)
 	return kc
+}
+
+func (kc *keycloakDeTest) exigerSecretTransactionsImporte(t *testing.T) {
+	t.Helper()
+	var clients []struct {
+		ID string `json:"id"`
+	}
+	kc.envoyer(t, http.MethodGet, cheminAdminDuRealm+"/clients?clientId="+ClientTransactions, "", nil, kc.jetonAdmin, http.StatusOK, &clients)
+	if len(clients) != 1 {
+		t.Fatalf("client %s : %d trouvé(s), 1 attendu", ClientTransactions, len(clients))
+	}
+	var secret struct {
+		Value string `json:"value"`
+	}
+	kc.envoyer(t, http.MethodGet, cheminAdminDuRealm+"/clients/"+clients[0].ID+"/client-secret", "", nil, kc.jetonAdmin, http.StatusOK, &secret)
+	if secret.Value != kc.secretTransactions {
+		t.Fatalf("secret du client %s différent de %s : emplacement non substitué à l'import", ClientTransactions, VariableSecretTransactions)
+	}
 }
 
 func (kc *keycloakDeTest) obtenirJetonAdmin(t *testing.T, secretDAmorce string) string {
@@ -100,7 +123,7 @@ func (kc *keycloakDeTest) obtenirJetonAdmin(t *testing.T, secretDAmorce string) 
 	return reponse.AccessToken
 }
 
-func (kc *keycloakDeTest) creerUtilisateur(t *testing.T, nom, role string) utilisateurDeTest {
+func (kc *keycloakDeTest) creerUtilisateur(t *testing.T, nom string, roles ...string) utilisateurDeTest {
 	t.Helper()
 	secret := valeurAleatoire()
 	corps, err := json.Marshal(map[string]any{
@@ -117,11 +140,23 @@ func (kc *keycloakDeTest) creerUtilisateur(t *testing.T, nom, role string) utili
 	}
 	reponse := kc.envoyer(t, http.MethodPost, cheminAdminDuRealm+"/users", "application/json", bytes.NewReader(corps), kc.jetonAdmin, http.StatusCreated, nil)
 	identifiant := path.Base(reponse.Get("Location"))
-	var representation json.RawMessage
-	kc.envoyer(t, http.MethodGet, cheminAdminDuRealm+"/roles/"+role, "", nil, kc.jetonAdmin, http.StatusOK, &representation)
-	attribution := append(append([]byte("["), representation...), ']')
+	attribution, err := json.Marshal(kc.representationsDesRoles(t, append([]string{RoleAcheteur}, roles...)))
+	if err != nil {
+		t.Fatalf("rôles de %s : %v", nom, err)
+	}
 	kc.envoyer(t, http.MethodPost, cheminAdminDuRealm+"/users/"+identifiant+"/role-mappings/realm", "application/json", bytes.NewReader(attribution), kc.jetonAdmin, http.StatusNoContent, nil)
 	return utilisateurDeTest{nom: nom, secret: secret}
+}
+
+func (kc *keycloakDeTest) representationsDesRoles(t *testing.T, roles []string) []json.RawMessage {
+	t.Helper()
+	representations := make([]json.RawMessage, 0, len(roles))
+	for _, role := range slices.Compact(slices.Sorted(slices.Values(roles))) {
+		var representation json.RawMessage
+		kc.envoyer(t, http.MethodGet, cheminAdminDuRealm+"/roles/"+role, "", nil, kc.jetonAdmin, http.StatusOK, &representation)
+		representations = append(representations, representation)
+	}
+	return representations
 }
 
 func (kc *keycloakDeTest) envoyer(t *testing.T, methode, chemin, typeDeContenu string, corps io.Reader, jeton string, attendu int, sortie any) http.Header {

@@ -24,8 +24,8 @@ const (
 )
 
 var (
-	clesDUneEntree  = []string{"id", "titre", "prix", "categorie"}
-	clesDUneFiche   = []string{"id", "titre", "prix", "categorie", "description", "fraisDePort"}
+	clesDUneEntree  = []string{"id", "titre", "prix", "categorie", "reserve"}
+	clesDUneFiche   = []string{"id", "titre", "prix", "categorie", "reserve", "description", "fraisDePort"}
 	etatsNonPublies = []string{etatBrouillon, etatEnControle, etatRefuse, etatAVerifier}
 )
 

@@ -21,6 +21,7 @@ export type LectureNotifications = {
 const configurationApi = {
   marketplaceApiUrl: '/marche',
   interactionsApiUrl: '/interactions',
+  transactionsApiUrl: '/transactions',
   catalogue: { source: 'api', demoScenario: 'nominal' },
   oidc: { authority: autoriteE2e, clientId: clientIdE2e, scope: 'openid profile' },
 };
