@@ -37,7 +37,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 		return err
 	}
 	marketplace := marche.NewClient(serviceclient.New(ctx, cfg.ServiceCredentials, marketplaceTimeout), cfg.MarketplaceURL)
-	service := commandes.NewService(marketplace, stockage.NewStore(pool))
+	service := commandes.NewService(marketplace, stockage.NewStore(pool), time.Now)
 	guard := ratelimit.NewGuard(cfg.RateLimit, logger, time.Now)
 	return httpserver.Run(ctx, logger,
 		httpserver.New(cfg.APIAddress, publicHandler(logger, service, verifier, guard)),

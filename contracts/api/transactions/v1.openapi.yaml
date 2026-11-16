@@ -22,7 +22,8 @@ paths:
         Réserver un article publié et créer la commande en attente de paiement. Transactions obtient un jeton de service,
         appelle « réserver » de la Place de marché en propageant le jeton de l'acheteur, puis enregistre la commande (une
         seule par réservation). Le nouvel essai du même acheteur sur le même article, réservation encore en cours, renvoie
-        la commande existante (200).
+        la commande existante (200) ; après l'échéance, l'article redevenu libre, il obtient une nouvelle réservation et
+        crée une nouvelle commande (201), l'ancienne restant expiree.
       security:
         - jetonKeycloak: []
       requestBody:
@@ -142,7 +143,11 @@ components:
           format: uuid
         statut:
           type: string
-          enum: [en_attente_paiement]
+          enum: [en_attente_paiement, expiree]
+          description: >-
+            Dérivé à la lecture, rien n'est stocké : expiree dès que echeance est atteinte (echeance <= maintenant),
+            en_attente_paiement avant. Une commande expirée n'est jamais réactivée : un nouvel essai après l'échéance
+            porte sur une nouvelle réservation, donc une nouvelle commande
         prix:
           description: Prix de référence lu par la Place de marché dans ses propres données
           allOf:

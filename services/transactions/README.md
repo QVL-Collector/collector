@@ -55,6 +55,10 @@ Corps `{"articleId": "<uuid>"}`. Seul `articleId` est lu : tout autre champ (pri
 
 Commande dont l'acheteur est le sujet du jeton ; sinon 404, comme une commande inexistante ou un identifiant mal formé.
 
+### Expiration (US-031)
+
+`statut` vaut `expiree` dès que `echeance <= maintenant`, `en_attente_paiement` avant. Rien n'est stocké ni planifié : la colonne `statut` garde `en_attente_paiement` et le statut est dérivé à chaque lecture (`Order.AsOf`), sur `GET /commandes/{id}` comme sur la réponse de `POST /commandes`. « Maintenant » est l'horloge du service, injectée dans `commandes.NewService` (`time.Now` en production, horloge fixe en test) ; l'échéance vient de l'horloge de la base `marche`, un écart d'horloge de quelques millisecondes entre les deux est sans effet visible. Après l'échéance, un nouvel essai sur le même article reçoit de la Place de marché un nouveau `reservationId` (si l'article est toujours libre), donc une nouvelle commande (201) ; l'ancienne reste lisible, `expiree`.
+
 ## Montants et arrondi (EF-24, ENF-01)
 
 Règle unique, dans `internal/montants` (`Compute`), en centimes entiers (`int64`, jamais de flottant) :
@@ -99,7 +103,7 @@ GRANT CONNECT ON DATABASE transactions TO transactions_migration, transactions_e
 Puis, connecté en `transactions_migration` sur `transactions` : `REVOKE CREATE ON SCHEMA public FROM PUBLIC`. Les bases `marche` et `interactions` portent le même `REVOKE CONNECT … FROM PUBLIC` : `transactions_execution` ne s'y connecte pas, et réciproquement.
 
 - `transactions_migration` : propriétaire de la base et du schéma, seul à exécuter du DDL ; secret livré au seul Job de migration.
-- `transactions_execution` : propriétaire d'aucun objet ; nom fixe, la première migration lui accorde `SELECT` et `INSERT` sur les tables (`ALTER DEFAULT PRIVILEGES`). Ni `UPDATE`, ni `DELETE` : une commande ne change pas encore d'état dans le POC (l'état « expirée » se lit sur l'échéance, US-031 et US-032).
+- `transactions_execution` : propriétaire d'aucun objet ; nom fixe, la première migration lui accorde `SELECT` et `INSERT` sur les tables (`ALTER DEFAULT PRIVILEGES`). Ni `UPDATE`, ni `DELETE` : une commande ne change pas d'état en base dans le POC (« expirée » se lit sur l'échéance, voir « Expiration »).
 
 Table `commande` (migration 00001) : `reservation_id` unique (`commande_une_par_reservation`), montants en centimes `bigint`, devise `EUR`, `CHECK` sur `total_paye = prix + frais_port` et `commission + montant_vendeur = total_paye`.
 

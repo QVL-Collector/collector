@@ -76,7 +76,10 @@ func (id ReservationID) String() string {
 
 type Status string
 
-const StatusAwaitingPayment Status = "en_attente_paiement"
+const (
+	StatusAwaitingPayment Status = "en_attente_paiement"
+	StatusExpired         Status = "expiree"
+)
 
 type Reservation struct {
 	ID          ReservationID
@@ -101,6 +104,13 @@ type Order struct {
 	Amounts     montants.Breakdown
 	ExpiresAt   time.Time
 	CreatedAt   time.Time
+}
+
+func (o Order) AsOf(now time.Time) Order {
+	if o.Status == StatusAwaitingPayment && !now.Before(o.ExpiresAt) {
+		o.Status = StatusExpired
+	}
+	return o
 }
 
 type Recorded struct {
