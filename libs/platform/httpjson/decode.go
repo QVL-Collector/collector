@@ -62,7 +62,22 @@ var rejectionDetails = map[Reason]string{
 	ReasonInvalidType:  "Un champ du corps n'a pas le type attendu.",
 }
 
+type unknownFields int
+
+const (
+	unknownFieldsRefused unknownFields = iota
+	unknownFieldsIgnored
+)
+
 func Decode(w http.ResponseWriter, r *http.Request, limit int64, target any) error {
+	return decode(w, r, limit, target, unknownFieldsRefused)
+}
+
+func DecodeIgnoringUnknownFields(w http.ResponseWriter, r *http.Request, limit int64, target any) error {
+	return decode(w, r, limit, target, unknownFieldsIgnored)
+}
+
+func decode(w http.ResponseWriter, r *http.Request, limit int64, target any, unknown unknownFields) error {
 	if !acceptsMediaType(r.Header.Get("Content-Type")) {
 		return reject(ReasonUnsupportedMediaType)
 	}
@@ -70,14 +85,17 @@ func Decode(w http.ResponseWriter, r *http.Request, limit int64, target any) err
 	if err != nil {
 		return err
 	}
-	if err := checkStructure(body, keyPolicy(target)); err != nil {
+	if err := checkStructure(body, keyPolicy(target, unknown)); err != nil {
 		return err
 	}
-	return decodeStrict(body, target)
+	return decodeBody(body, target, unknown)
 }
 
-func keyPolicy(target any) jsonscan.Policy {
+func keyPolicy(target any, unknown unknownFields) jsonscan.Policy {
 	policy := jsonscan.Policy{Normalize: jsonscan.CaseFoldedKeys}
+	if unknown == unknownFieldsIgnored {
+		return policy
+	}
 	if names, exact := exactFieldNames(target); exact {
 		policy.Accept = names.contains
 	}
@@ -122,9 +140,11 @@ var scanReasons = map[jsonscan.Kind]Reason{
 	jsonscan.UnexpectedKey: ReasonUnknownField,
 }
 
-func decodeStrict(body []byte, target any) error {
+func decodeBody(body []byte, target any, unknown unknownFields) error {
 	decoder := json.NewDecoder(bytes.NewReader(body))
-	decoder.DisallowUnknownFields()
+	if unknown == unknownFieldsRefused {
+		decoder.DisallowUnknownFields()
+	}
 	err := decoder.Decode(target)
 	if err == nil {
 		return nil

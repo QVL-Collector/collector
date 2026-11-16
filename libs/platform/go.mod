@@ -11,6 +11,7 @@ require (
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/rabbitmq/amqp091-go v1.16.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
+	golang.org/x/oauth2 v0.38.0
 )
 
 require (
