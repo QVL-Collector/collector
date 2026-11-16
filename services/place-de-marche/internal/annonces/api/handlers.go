@@ -40,6 +40,9 @@ var notEditable = problem.Typed("urn:collector:probleme:article-non-modifiable",
 var notSubmittable = problem.Typed("urn:collector:probleme:article-non-soumettable", "Article non soumettable",
 	http.StatusConflict, "L'article ne peut pas être soumis au contrôle dans son état actuel.")
 
+var reservedOrSold = problem.Typed("urn:collector:probleme:article-reserve", "Article réservé",
+	http.StatusConflict, "L'article est réservé ou vendu : il ne peut être ni modifié ni soumis.")
+
 var notToVerify = problem.Typed("urn:collector:probleme:article-non-a-verifier", "Article non à vérifier",
 	http.StatusConflict, "L'article n'est plus à vérifier.")
 
@@ -322,6 +325,8 @@ func (h handlers) writeError(w http.ResponseWriter, r *http.Request, err error) 
 		problem.Write(w, notEditable)
 	case errors.Is(err, annonces.ErrArticleNotSubmittable):
 		problem.Write(w, notSubmittable)
+	case errors.Is(err, annonces.ErrArticleReserved):
+		problem.Write(w, reservedOrSold)
 	case errors.Is(err, annonces.ErrArticleNotToVerify):
 		problem.Write(w, notToVerify)
 	default:

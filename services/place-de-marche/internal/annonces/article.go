@@ -14,6 +14,7 @@ var (
 	ErrStaleRevision         = errors.New("révision périmée")
 	ErrArticleNotEditable    = errors.New("article non modifiable dans son état")
 	ErrArticleNotSubmittable = errors.New("article non soumettable dans son état")
+	ErrArticleReserved       = errors.New("article réservé ou vendu")
 )
 
 type ArticleID uuid.UUID
@@ -79,18 +80,35 @@ func (s Status) ReviewedOnEdit() bool {
 	return slices.Contains(reviewOnEditStatuses, s)
 }
 
-func VerifyEditable(status Status, current, expected Revision) error {
-	if !status.Editable() {
-		return ErrArticleNotEditable
+func (s Status) Submittable() bool {
+	return slices.Contains(sellerHeldStatuses, s)
+}
+
+type ArticleState struct {
+	Status   Status
+	Revision Revision
+	Reserved bool
+}
+
+func (s ArticleState) VerifyEditable(expected Revision) error {
+	return s.verify(Status.Editable, ErrArticleNotEditable, expected)
+}
+
+func (s ArticleState) VerifySubmittable(expected Revision) error {
+	return s.verify(Status.Submittable, ErrArticleNotSubmittable, expected)
+}
+
+func (s ArticleState) verify(allowed func(Status) bool, notAllowed error, expected Revision) error {
+	if s.Reserved {
+		return ErrArticleReserved
 	}
-	if current != expected {
+	if !allowed(s.Status) {
+		return notAllowed
+	}
+	if s.Revision != expected {
 		return ErrStaleRevision
 	}
 	return nil
-}
-
-func (s Status) Submittable() bool {
-	return slices.Contains(sellerHeldStatuses, s)
 }
 
 type Currency string

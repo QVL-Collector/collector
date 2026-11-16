@@ -32,7 +32,13 @@ Chaque entrée et la fiche portent `reserve` (US-030 AC3) : `true` si `reserve_j
 
 Dans une transaction (D07 Q3, option R1) : `pg_advisory_xact_lock(hashtextextended(<acheteur>, 0))` ; réservation active de l'acheteur sur un autre article → 409 `reservation-deja-active` ; puis `UPDATE` conditionnel de l'article (`etat = 'publie'`, non vendu, prix renseigné, vendeur différent de l'acheteur, libre, expiré ou déjà tenu par cet acheteur) qui garde `reservation_id` et `reserve_jusqu_a` si l'acheteur tient déjà l'article, sinon en tire de nouveaux (`now() + durée`). Aucune ligne : article inexistant, non publié, vendu ou mis en vente par l'acheteur lui-même → 422 `article-non-reservable`, réponse identique dans tous ces cas (un vendeur ne réserve jamais son propre article, décision de Martin, 2026-11-16, US-030) ; sinon réservé par un autre → 409 `article-deja-reserve`. Identifiant mal formé dans le chemin : 404. Chaque réservation est journalisée dans la table `reservation` (`INSERT … ON CONFLICT (id) DO NOTHING`) : 201 pour une réservation nouvelle, 200 pour le nouvel essai, même réservation et même échéance. Journal Info `reservations.article_reserve` (`reservation_id`, `article_id`, `acheteur_id`, `nouvelle`).
 
-Réponse : `reservationId`, `articleId`, `echeance` (UTC), `prix` et `fraisDePort` (`montantCentimes`, `devise`) lus dans l'article, frais de port à 0 s'ils ne sont pas renseignés. Échéance : `min(RESERVATION_DUREE, RESERVATION_DUREE_MAX)`, horloge de la base ; aucune expiration planifiée, « réservé » se lit sur l'échéance. Le refus de modifier un article réservé et la concurrence sont l'objet d'US-031. Le jeton de l'acheteur n'est jamais journalisé (en-tête absent des journaux d'accès, clé `x-collector-user-token` masquée).
+Réponse : `reservationId`, `articleId`, `echeance` (UTC), `prix` et `fraisDePort` (`montantCentimes`, `devise`) lus dans l'article, frais de port à 0 s'ils ne sont pas renseignés. Échéance : `min(RESERVATION_DUREE, RESERVATION_DUREE_MAX)`, horloge de la base ; aucune expiration planifiée, « réservé » se lit sur l'échéance. Après l'échéance, l'article redevient disponible (`reserve` faux au catalogue) et un nouvel essai, du même acheteur ou d'un autre, tire un nouveau `reservationId` et une nouvelle échéance (201). Le jeton de l'acheteur n'est jamais journalisé (en-tête absent des journaux d'accès, clé `x-collector-user-token` masquée).
+
+## Garanties de la réservation (US-031)
+
+- **Concurrence** : deux acheteurs sur le même article sont ordonnés par le verrou de ligne de l'`UPDATE` conditionnel, qui relit sa condition après l'attente : un seul obtient la ligne, l'autre reçoit 409 `article-deja-reserve`. Deux demandes d'un même acheteur (double clic, deux articles) sont sérialisées par le verrou consultatif : la seconde voit la première validée, renvoie la même réservation (200) ou 409 `reservation-deja-active`.
+- **Article réservé figé** : tant que `reserve_jusqu_a > now()`, ou si l'article est `vendu`, `PUT /marche/v1/vendeur/articles/{id}` et `POST …/{id}/soumission` répondent 409 `urn:collector:probleme:article-reserve`, sans détail (ni acheteur ni échéance), avant tout autre conflit ; contenu, prix, frais de port et révision inchangés. Le contrôle est atomique avec l'écriture : la modification lit l'état sous `SELECT … FOR UPDATE`, et les trois `UPDATE` vendeur (brouillon, recontrôle, soumission) portent la condition `NOT (vendu OR reserve_jusqu_a > now())`, comme le prévoit D07 Q3. Aucune route « retirer » dans le POC : le retrait passe par une modification qui renvoie l'article au contrôle (US-021), donc le refus de la modification couvre le retrait (décision du 2026-11-16, US-031).
+- **Décision d'admin et résultat du contrôle** : ils ne s'appliquent qu'à un article `a_verifier` ou `en_controle` ; un article réservé est `publie` et n'en sort que par une modification, refusée. Ils ne peuvent donc pas dépublier un article réservé.
 
 ## Cycle de soumission (US-013)
 
@@ -137,8 +143,8 @@ Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après
 | `ADRESSE_API` | `serve` | `:8080` | Écoute de l'API |
 | `ADRESSE_INTERNE` | `serve` | `:8081` | Écoute de l'API interne (« réserver ») |
 | `ADRESSE_GESTION` | `serve` | `:9090` | Écoute de la santé |
-| `RESERVATION_DUREE` | `serve` | `10m` | Durée d'une réservation (`time.ParseDuration`, > 0) ; courte pour la démonstration |
-| `RESERVATION_DUREE_MAX` | `serve` | `30m` | Plafond : l'échéance vaut `now() + min(RESERVATION_DUREE, RESERVATION_DUREE_MAX)` |
+| `RESERVATION_DUREE` | `serve` | `10m` | Durée d'une réservation (`time.ParseDuration`, au moins `1s`) ; quelques secondes (ex. `5s`) pour la démonstration et les tests d'expiration |
+| `RESERVATION_DUREE_MAX` | `serve` | `30m` | Plafond, au moins `1s` : l'échéance vaut `now() + min(RESERVATION_DUREE, RESERVATION_DUREE_MAX)` |
 | `RESERVATION_CLIENT_AUTORISE` | `serve` | `transactions` | Valeur exigée de `azp` dans le jeton de service de « réserver » |
 | `JOURNAL_NIVEAU` | toutes | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
 
