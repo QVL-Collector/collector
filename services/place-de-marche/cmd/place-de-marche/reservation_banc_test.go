@@ -240,7 +240,7 @@ func lancerTransactions(t *testing.T, binaire string, base basePostgreSQL, kc *f
 	return p
 }
 
-func lancerPlaceDeMarcheSurKeycloak(t *testing.T, canal *canalDeTest, adresseBase string, kc *fournisseurKeycloak) (string, string, *journalPartage) {
+func lancerPlaceDeMarcheSurKeycloak(t *testing.T, canal *canalDeTest, adresseBase string, kc *fournisseurKeycloak, duree, plafond time.Duration) (string, string, *journalPartage) {
 	t.Helper()
 	api, gestion, interne := adresseLibre(t), adresseLibre(t), adresseLibre(t)
 	variables := canal.environnementDeService(identiteMarche)
@@ -252,8 +252,8 @@ func lancerPlaceDeMarcheSurKeycloak(t *testing.T, canal *canalDeTest, adresseBas
 	variables["ADRESSE_API"] = api
 	variables["ADRESSE_GESTION"] = gestion
 	variables["ADRESSE_INTERNE"] = interne
-	variables["RESERVATION_DUREE"] = dureeDeReservation.String()
-	variables["RESERVATION_DUREE_MAX"] = plafondDeReservation.String()
+	variables["RESERVATION_DUREE"] = duree.String()
+	variables["RESERVATION_DUREE_MAX"] = plafond.String()
 	variables["LIMITE_DEBIT_PAR_MINUTE"] = "6000000"
 	variables["LIMITE_DEBIT_RAFALE"] = "100000"
 	for nom, valeur := range variables {
@@ -286,6 +286,11 @@ func lancerPlaceDeMarcheSurKeycloak(t *testing.T, canal *canalDeTest, adresseBas
 
 func demarrerBancReservation(t *testing.T) *bancReservation {
 	t.Helper()
+	return demarrerBancReservationAvec(t, dureeDeReservation, plafondDeReservation)
+}
+
+func demarrerBancReservationAvec(t *testing.T, duree, plafond time.Duration) *bancReservation {
+	t.Helper()
 	ctx := contexteBorne(t, 10*time.Minute)
 	kc := demarrerKeycloakDuRealm(t)
 	adresseMaitre := demarrerPostgreSQL(t)
@@ -297,7 +302,7 @@ func demarrerBancReservation(t *testing.T) *bancReservation {
 	binaire := construireBinaire(t, filepath.Join("..", "..", "..", "transactions", "cmd", "transactions"), "transactions")
 	migrerTransactions(t, binaire, transactions)
 	canal := demarrerRabbitMQ(t)
-	public, interne, journal := lancerPlaceDeMarcheSurKeycloak(t, canal, marche.execution, kc)
+	public, interne, journal := lancerPlaceDeMarcheSurKeycloak(t, canal, marche.execution, kc, duree, plafond)
 	lancerControle(t, construireControle(t), canal)
 	relais := demarrerRelaisEspion(t, interne)
 	b := &bancReservation{

@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E6 Réservation |
-| Statut | À faire |
+| Statut | En revue |
 | Sprint | 3 (J5 bis) |
 | Engagement | Ferme |
 | Estimation | 3 points |
@@ -69,7 +69,7 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
 | Étape | Lien / date |
 |---|---|
-| Rapport de test | |
-| Rapport de revue de code | |
+| Rapport de test | [US-031-rapport-tests.md](../docs/rapports/tests/US-031-rapport-tests.md) |
+| Rapport de revue de code | [US-031-revue-code.md](../docs/rapports/revues/US-031-revue-code.md) |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |
