@@ -1,0 +1,47 @@
+Contrôle après déploiement, session 20261120T1146Z, 2026-11-20T12:33:05Z
+
+[ok] TLS redirection-80 : 301 vers https
+[ok] TLS tls1 : refus
+[ok] TLS tls1_1 : refus
+[ok] TLS tls1_2 : accepte
+[ok] TLS certificat : chaîne valide, expiration à plus de 30 jours
+[ok] TLS hsts : max-age=31536000; includeSubDomains
+[ok] TLS hsts-404 : présent sur la réponse fixe 404
+[ok] X17 adresses-publiques : 2 de l'ALB, 1 de la NAT, aucune autre
+[ok] X17 balayage-alb : <ip> : seuls 443 et 80 (301) répondent
+[ok] X17 balayage-alb : <ip> : seuls 443 et 80 (301) répondent
+[ok] X17 balayage-nat : <ip> : aucun port ouvert
+[ok] X17 api-plage : publicAccessCidrs limité au /32 du poste, point privé actif (MS1)
+[ok] X17 rds-privee : PubliclyAccessible false
+[ok] X17 noeuds-prives : aucune instance avec adresse publique
+[ok] X17 hors-plage : api-eks : delai depuis une adresse AWS hors plage
+[ok] X17 hors-plage : rds : delai depuis une adresse AWS hors plage
+[ok] X17 hors-plage : alb-443-<ip> : delai depuis une adresse AWS hors plage
+[ok] X17 hors-plage : alb-80-<ip> : delai depuis une adresse AWS hors plage
+[ok] X17 hors-plage : alb-443-<ip> : delai depuis une adresse AWS hors plage
+[ok] X17 hors-plage : alb-80-<ip> : delai depuis une adresse AWS hors plage
+[ok] X17 hors-plage : nat-22-<ip> : delai depuis une adresse AWS hors plage
+[ok] X17 load-balancers : un seul : collector
+[ok] X17 services-lb : aucun Service LoadBalancer
+[ok] X17 nodeports : seul le NodePort 30080 du front est publié (MS5)
+[ok] X17 ecouteurs : 80 et 443
+[ok] X17 ecouteur-80 : redirection 301 seule
+[ok] X17 ecouteur-443 : TLS 1.2 minimum, 404 par défaut
+[ok] X17 regles-alb : seules les règles de l'IaC (liste blanche)
+[ok] X17 groupe-alb : 80 et 443 depuis le poste seul (ME5)
+[ok] XE4 liste-blanche : 24 chemins interdits : 404 hors front ; page statique, 400 ou 404 sur le front
+[ok] X17 sortie-sans-imds : politique de sortie sans <ip>/32 dans chaque namespace applicatif
+[info] X20 valeurs : 1 valeur(s) de secret de session cherchée(s), jamais affichées
+[ok] X20 etat-ephemere : aucune occurrence
+[ok] X20 etat-persistant : aucune occurrence
+[ok] X20 releases-helm : aucune occurrence
+[ok] X20 objets-cluster : aucune occurrence
+[ok] X20 journaux-poste : aucune occurrence
+[ok] X20 journaux-ci : aucune occurrence
+[ok] X20 cles-sensibles-etat : aucune clé password, secret_string, private_key renseignée (MI4)
+[ok] X20 montages : chaque pod ne monte que ses Secrets (infra/k8s/secrets-autorises.txt)
+[ko] X20 analyse-image : docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e : constat bloquant (rapports/i6-trivy-controle-image-1.json)
+[ok] X20 analyse-iac : Trivy config infra : aucun constat critique ou élevé
+[ok] X20 ami : AMI des nœuds 1.35.9-20261119, la recommandée (MS9)
+
+Verdict : ROUGE
