@@ -77,6 +77,8 @@ Epics : E1 Chaîne de livraison · E2 Plateforme AWS · E3 Mise en vente contrô
 
 Les identifiants suivent l'ordre de rédaction ; le **rang** fait foi pour l'engagement.
 
+La colonne « Sprint » est le plan initial. Les US qui demandent AWS (US-004 à US-007, US-014 à US-017, US-020, US-026) ont été reportées au sprint 3, faute de verdicts XP avant le 2026-11-20 : bilan dans [sprint-1.md](sprints/sprint-1.md) et [sprint-2.md](sprints/sprint-2.md), plan des sessions dans [sprint-3.md](sprints/sprint-3.md).
+
 ## 4. Chemin critique
 
 ```mermaid

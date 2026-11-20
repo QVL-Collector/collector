@@ -4,7 +4,7 @@
 |---|---|
 | Epic | E4 Exploitation, charge et disponibilité |
 | Statut | À faire |
-| Sprint | 2 (J5) |
+| Sprint | 2 (J5), reportée au sprint 3 (session AWS 3, [sprint-3.md](sprints/sprint-3.md)) |
 | Engagement | Ferme |
 | Estimation | 5 points |
 | Dépend de | US-010, US-015 |

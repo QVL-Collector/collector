@@ -4,7 +4,7 @@
 |---|---|
 | Epic | E4 Exploitation, charge et disponibilité |
 | Statut | Livrée |
-| Sprint | 2 (J5), ou 3 si reportée |
+| Sprint | 2 (J5) |
 | Engagement | Coupable (ordre de coupe S2 n° 1 : premier élément repoussé au sprint 3) |
 | Estimation | 2 points |
 | Dépend de | US-016 |

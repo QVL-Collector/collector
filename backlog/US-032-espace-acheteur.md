@@ -69,4 +69,4 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 | Rapport de test | [US-032-rapport-tests.md](../docs/rapports/tests/US-032-rapport-tests.md) |
 | Rapport de revue de code | [US-032-revue-code.md](../docs/rapports/revues/US-032-revue-code.md) |
 | Validation Martin | 2026-11-20 |
-| Livraison (PR / merge) | [PR #47](https://github.com/QVL-Collector/collector/pull/47) |
+| Livraison (PR / merge) | https://github.com/QVL-Collector/collector/pull/47 |

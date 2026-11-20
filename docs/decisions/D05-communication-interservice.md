@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Candidate (XP en D14) |
+| Statut | Confirmée (XP02, 2026-11-20) |
 | Date | 2026-10-26 |
 | Décideur | Martin |
 | Dépend de | [D02](D02-decoupage-applicatif.md), [D03](D03-hebergement-orchestration.md), [D04](D04-stack.md) |
@@ -345,6 +345,8 @@ Date : 2026-10-26
 ## Conséquences
 
 La recommandation est retenue ; ses conséquences :
+
+> **Verdict du 2026-11-20 (XP02)** : option A **confirmée, avec réserves** : RabbitMQ retenu sur EKS. Réserves : demande CPU du broker portée à 500m (XC8) ; client `go/` à passer à `Reject(true)` au lieu de `Nack`. Détail : [XP02](../experimentations/XP02-canal-rabbitmq.md).
 
 - **Statut et expérimentation** : D05 passe en `Candidate (XPnn)` ; l'expérimentation du canal (XC1 à XC8) est mutualisée avec celle de l'orchestrateur et précède J4 (condition de WS-2).
 - **D06** : jeton de service de Transactions et revérification du jeton de l'acheteur sur « réserver » ; authentification du service appelé ; en-têtes de transport des deux jetons. À trancher avant le sprint 3.

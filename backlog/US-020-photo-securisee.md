@@ -4,7 +4,7 @@
 |---|---|
 | Epic | E3 Mise en vente contrôlée |
 | Statut | À faire |
-| Sprint | 2 (J5) |
+| Sprint | 2 (J5), reportée au sprint 3 (session AWS 3, [sprint-3.md](sprints/sprint-3.md)) |
 | Engagement | Ferme (ordre de coupe S2 n° 4 : une seule photo par article) |
 | Estimation | 5 points |
 | Dépend de | US-013 ; X6 validé par XP01 |

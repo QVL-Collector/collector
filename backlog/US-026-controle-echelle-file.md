@@ -4,7 +4,7 @@
 |---|---|
 | Epic | E4 Exploitation, charge et disponibilité |
 | Statut | À faire |
-| Sprint | 2 (J5) |
+| Sprint | 2 (J5), reportée au sprint 3 (session AWS 3, [sprint-3.md](sprints/sprint-3.md)) |
 | Engagement | Coupable (ordre de coupe S2 n° 2, D01 : vague de soumissions en premier) |
 | Estimation | 3 points |
 | Dépend de | US-016, US-024 ; X8 validé par XP01 |

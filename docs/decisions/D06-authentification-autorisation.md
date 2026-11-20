@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Candidate (XP en D14) |
+| Statut | Confirmée (XP03, 2026-11-20) |
 | Date | 2026-10-26 |
 | Décideur | Martin |
 | Dépend de | [D03](D03-hebergement-orchestration.md), [D04](D04-stack.md) |
@@ -356,6 +356,8 @@ Date : 2026-10-26
 ## Conséquences
 
 L'option A est retenue ; ses conséquences :
+
+> **Verdict du 2026-11-20 (XP03)** : option A **confirmée** : Keycloak retenu sur EKS. K1 mesuré au repos seulement, à rejouer au pic dans US-016. Détail : [XP03](../experimentations/XP03-identite-exposition.md).
 
 - **Expérimentation (D14)** : D02 prévoit l'appel synchrone authentifié dans l'expérimentation du serveur d'autorisation ou du canal. Critères candidats, à figer dans le protocole :
   - mémoire au repos et au pic de Keycloak sur EKS ; démarrage sur base neuve avec import du realm ;
