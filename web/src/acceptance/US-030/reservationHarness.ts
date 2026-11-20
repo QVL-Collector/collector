@@ -23,6 +23,7 @@ export type PublishedArticle = {
 export type OrderWire = {
   readonly id: string;
   readonly articleId: string;
+  readonly titre: string;
   readonly statut: 'en_attente_paiement' | 'expiree';
   readonly prix: Amount;
   readonly fraisDePort: Amount;
@@ -36,6 +37,7 @@ export type OrderWire = {
 export type TransactionsRequest = {
   readonly method: string;
   readonly path: string;
+  readonly query: URLSearchParams;
   readonly authorization: string | null;
   readonly contentType: string | null;
   readonly body: string;
@@ -49,6 +51,7 @@ export type FakeBackends = {
   nextOrder: OrderWire | null;
   reservationAnswer: Answer | null;
   orderReadAnswer: Answer | null;
+  listAnswer: Answer | null;
   reserveOnSuccess: boolean;
   creationStatus: 200 | 201;
   readonly transactions: TransactionsRequest[];
@@ -74,13 +77,17 @@ export function euros(cents: number): Amount {
   return { montantCentimes: cents, devise: 'EUR' };
 }
 
+export function titleOfArticle(id: string): string {
+  return `Figurine de collection ${String(Number(id.slice(-12)))}`;
+}
+
 export function publishedArticle(
   rank: number,
   overrides: Partial<PublishedArticle> = {},
 ): PublishedArticle {
   return {
     id: articleId(rank),
-    titre: `Figurine de collection ${String(rank)}`,
+    titre: titleOfArticle(articleId(rank)),
     prix: euros(12000),
     fraisDePort: euros(590),
     categorie: { id: 'figurines', libelle: 'Figurines' },
@@ -101,6 +108,7 @@ export function order(
   return {
     id: orderId(rank),
     articleId: article,
+    titre: titleOfArticle(article),
     statut: 'en_attente_paiement',
     prix: euros(amounts.prix),
     fraisDePort: euros(amounts.frais),
@@ -192,7 +200,24 @@ function readOrder(backends: FakeBackends, path: string): Response {
   return found === undefined ? json(404, problem(404).body) : json(200, found);
 }
 
+function listOrders(backends: FakeBackends, query: URLSearchParams): Response {
+  if (backends.listAnswer !== null) {
+    return json(backends.listAnswer.status, backends.listAnswer.body);
+  }
+  const page = Number(query.get('page') ?? '1');
+  const size = Number(query.get('taille') ?? '20');
+  return json(200, {
+    elements: backends.orders.slice((page - 1) * size, page * size),
+    page,
+    taille: size,
+    total: backends.orders.length,
+  });
+}
+
 function answerTransactions(backends: FakeBackends, request: TransactionsRequest): Response {
+  if (request.method === 'GET' && request.path === ordersPath) {
+    return listOrders(backends, request.query);
+  }
   if (request.method === 'POST' && request.path === ordersPath) {
     return createOrder(backends, request.body);
   }
@@ -223,6 +248,7 @@ beforeEach(() => {
     nextOrder: null,
     reservationAnswer: null,
     orderReadAnswer: null,
+    listAnswer: null,
     reserveOnSuccess: true,
     creationStatus: 201,
     transactions: [],
@@ -244,6 +270,7 @@ beforeEach(() => {
       const request: TransactionsRequest = {
         method: (init?.method ?? source?.method ?? 'GET').toUpperCase(),
         path: url.pathname,
+        query: url.searchParams,
         authorization: headers.get('Authorization'),
         contentType: headers.get('Content-Type'),
         body: await bodyOf(input, init),
@@ -283,6 +310,16 @@ export function reservationAnswers(status: number, type?: string): void {
 
 export function orderReadAnswers(status: number): void {
   backends().orderReadAnswer = problem(status);
+}
+
+export function listAnswers(status: number): void {
+  backends().listAnswer = problem(status);
+}
+
+export function listRequests(): TransactionsRequest[] {
+  return backends().transactions.filter(
+    (request) => request.method === 'GET' && request.path === ordersPath,
+  );
 }
 
 export function reservationRequests(): TransactionsRequest[] {

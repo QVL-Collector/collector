@@ -8,6 +8,7 @@ import {
   identifiantArticle,
   identifiantCommande,
   ReservationSimulee,
+  titreDeLArticle,
 } from './reservation';
 
 export type Ecran = {
@@ -244,6 +245,24 @@ export const ecrans: readonly Ecran[] = [
       collector.seConnecterEn(acheteur);
       await collector.ouvrirEspaceProtege(`/acheteur/commandes/${identifiantCommande(1)}`);
       await titreAffiche(collector, collector.textes.articleReserveTitre);
+    },
+  },
+  {
+    nom: 'acheteur, mes réservations',
+    ouvrir: async (collector) => {
+      const simulation = new ReservationSimulee();
+      simulation.commandes = [
+        commandeEmise(1, identifiantArticle(1)),
+        { ...commandeEmise(2, identifiantArticle(2)), statut: 'expiree' },
+      ];
+      await simulation.brancher(collector);
+      collector.seConnecterEn(acheteur);
+      await collector.ouvrirEspaceProtege('/acheteur');
+      await expect(
+        collector.page
+          .getByRole('listitem')
+          .filter({ hasText: titreDeLArticle(identifiantArticle(2)) }),
+      ).toBeVisible();
     },
   },
   {

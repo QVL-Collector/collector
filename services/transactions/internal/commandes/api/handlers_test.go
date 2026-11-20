@@ -96,12 +96,20 @@ type appelPlace struct {
 	article    commandes.ArticleID
 }
 
+type appelListe struct {
+	acheteur commandes.BuyerID
+	page     commandes.PageRequest
+}
+
 type commandesSimulees struct {
-	mu        sync.Mutex
-	appels    []appelPlace
-	resultat  commandes.Recorded
-	erreur    error
-	commandes map[commandes.ID]commandes.Order
+	mu          sync.Mutex
+	appels      []appelPlace
+	listes      []appelListe
+	resultat    commandes.Recorded
+	erreur      error
+	commandes   map[commandes.ID]commandes.Order
+	page        commandes.OrderPage
+	erreurListe error
 }
 
 func (c *commandesSimulees) Place(_ context.Context, acheteur commandes.BuyerID, credential token.Credential, article commandes.ArticleID) (commandes.Recorded, error) {
@@ -117,6 +125,13 @@ func (c *commandesSimulees) OwnOrder(_ context.Context, acheteur commandes.Buyer
 		return commandes.Order{}, commandes.ErrOrderNotFound
 	}
 	return commande, nil
+}
+
+func (c *commandesSimulees) OwnOrders(_ context.Context, acheteur commandes.BuyerID, page commandes.PageRequest) (commandes.OrderPage, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.listes = append(c.listes, appelListe{acheteur: acheteur, page: page})
+	return c.page, c.erreurListe
 }
 
 type limiteur struct {
@@ -182,7 +197,7 @@ func commandeDe(t *testing.T, acheteur commandes.BuyerID, article commandes.Arti
 	id, _ := commandes.ParseID(uuid.NewString())
 	reservation, _ := commandes.ParseReservationID(uuid.NewString())
 	return commandes.Order{
-		ID: id, Article: article, Buyer: acheteur, Reservation: reservation, Status: commandes.StatusAwaitingPayment, Amounts: detail,
+		ID: id, Article: article, Title: "Figurine de collection", Buyer: acheteur, Reservation: reservation, Status: commandes.StatusAwaitingPayment, Amounts: detail,
 		ExpiresAt: time.Date(2026, 11, 16, 10, 25, 0, 123456000, time.UTC), CreatedAt: time.Date(2026, 11, 16, 10, 15, 0, 0, time.UTC),
 	}
 }
@@ -195,6 +210,7 @@ type montantRecu struct {
 type commandeRecue struct {
 	ID             string      `json:"id"`
 	ArticleID      string      `json:"articleId"`
+	Titre          string      `json:"titre"`
 	Statut         string      `json:"statut"`
 	Prix           montantRecu `json:"prix"`
 	FraisDePort    montantRecu `json:"fraisDePort"`

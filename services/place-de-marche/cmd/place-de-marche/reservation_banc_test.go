@@ -69,6 +69,7 @@ type processusTransactions struct {
 type commandeRecue struct {
 	ID             string   `json:"id"`
 	ArticleID      string   `json:"articleId"`
+	Titre          string   `json:"titre"`
 	Statut         string   `json:"statut"`
 	Prix           *montant `json:"prix"`
 	FraisDePort    *montant `json:"fraisDePort"`
@@ -82,6 +83,7 @@ type commandeRecue struct {
 type reservationRecue struct {
 	ReservationID string   `json:"reservationId"`
 	ArticleID     string   `json:"articleId"`
+	Titre         string   `json:"titre"`
 	Echeance      string   `json:"echeance"`
 	Prix          *montant `json:"prix"`
 	FraisDePort   *montant `json:"fraisDePort"`

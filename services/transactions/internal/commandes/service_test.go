@@ -1,8 +1,10 @@
 package commandes_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -32,6 +34,7 @@ type registreSimule struct {
 	mu              sync.Mutex
 	parReservation  map[commandes.ReservationID]commandes.Order
 	enregistrements []commandes.Placement
+	listes          []listeDemandee
 }
 
 func (r *registreSimule) Record(_ context.Context, placement commandes.Placement) (commandes.Recorded, error) {
@@ -43,7 +46,7 @@ func (r *registreSimule) Record(_ context.Context, placement commandes.Placement
 	}
 	id, _ := commandes.ParseID(uuid.NewString())
 	commande := commandes.Order{
-		ID: id, Article: placement.Reservation.Article, Buyer: placement.Buyer, Reservation: placement.Reservation.ID,
+		ID: id, Article: placement.Reservation.Article, Title: placement.Reservation.Title, Buyer: placement.Buyer, Reservation: placement.Reservation.ID,
 		Status: commandes.StatusAwaitingPayment, Amounts: placement.Amounts, ExpiresAt: placement.Reservation.ExpiresAt, CreatedAt: time.Now(),
 	}
 	r.parReservation[placement.Reservation.ID] = commande
@@ -57,6 +60,34 @@ func (r *registreSimule) FindOwned(_ context.Context, acheteur commandes.BuyerID
 		}
 	}
 	return commandes.Order{}, commandes.ErrOrderNotFound
+}
+
+func (r *registreSimule) ListOwned(_ context.Context, acheteur commandes.BuyerID, page commandes.PageRequest) (commandes.OrderPage, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.listes = append(r.listes, listeDemandee{acheteur: acheteur, page: page})
+	var siennes []commandes.Order
+	for _, c := range r.parReservation {
+		if c.Buyer == acheteur {
+			siennes = append(siennes, c)
+		}
+	}
+	slices.SortFunc(siennes, plusRecenteDAbord)
+	debut := min(page.Offset(), len(siennes))
+	fin := min(debut+page.Size, len(siennes))
+	return commandes.OrderPage{Orders: siennes[debut:fin], Total: len(siennes)}, nil
+}
+
+func plusRecenteDAbord(a, b commandes.Order) int {
+	if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
+		return c
+	}
+	return bytes.Compare(b.ID[:], a.ID[:])
+}
+
+type listeDemandee struct {
+	acheteur commandes.BuyerID
+	page     commandes.PageRequest
 }
 
 type bancDuService struct {
