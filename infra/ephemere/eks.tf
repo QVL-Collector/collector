@@ -1,6 +1,4 @@
 resource "aws_eks_cluster" "principal" {
-  count = local.eks ? 1 : 0
-
   name                          = local.nom
   version                       = var.version_eks
   role_arn                      = local.lab_role_arn
@@ -22,33 +20,39 @@ resource "aws_eks_cluster" "principal" {
     public_access_cidrs     = [var.ip_admin]
   }
 
+  encryption_config {
+    resources = ["secrets"]
+
+    provider {
+      key_arn = data.aws_kms_alias.secrets_eks.target_key_arn
+    }
+  }
+
   enabled_cluster_log_types = var.journaux_plan_controle
 
   depends_on = [aws_cloudwatch_log_group.plan_controle]
 }
 
 resource "aws_cloudwatch_log_group" "plan_controle" {
-  count = local.eks && length(var.journaux_plan_controle) > 0 ? 1 : 0
+  count = length(var.journaux_plan_controle) > 0 ? 1 : 0
 
   name              = local.nom_journaux
   retention_in_days = var.retention_journaux_jours
 }
 
 resource "aws_vpc_security_group_ingress_rule" "rds_noeuds" {
-  count = local.eks ? 1 : 0
-
   security_group_id            = aws_security_group.rds.id
   description                  = "PostgreSQL depuis les noeuds EKS, pods filtres par politique reseau"
-  referenced_security_group_id = aws_eks_cluster.principal[0].vpc_config[0].cluster_security_group_id
+  referenced_security_group_id = aws_eks_cluster.principal.vpc_config[0].cluster_security_group_id
   ip_protocol                  = "tcp"
   from_port                    = 5432
   to_port                      = 5432
 }
 
 resource "aws_eks_addon" "avant_noeuds" {
-  for_each = local.eks ? toset(["vpc-cni", "kube-proxy"]) : toset([])
+  for_each = toset(["vpc-cni", "kube-proxy"])
 
-  cluster_name                = aws_eks_cluster.principal[0].name
+  cluster_name                = aws_eks_cluster.principal.name
   addon_name                  = each.key
   addon_version               = var.versions_addons[each.key]
   resolve_conflicts_on_create = "OVERWRITE"
@@ -63,8 +67,6 @@ resource "aws_eks_addon" "avant_noeuds" {
 }
 
 resource "aws_launch_template" "noeuds" {
-  count = local.eks ? 1 : 0
-
   name                   = "${local.nom}-noeuds"
   update_default_version = true
 
@@ -97,15 +99,13 @@ resource "aws_launch_template" "noeuds" {
 }
 
 resource "aws_eks_node_group" "principal" {
-  count = local.eks ? 1 : 0
-
-  cluster_name    = aws_eks_cluster.principal[0].name
+  cluster_name    = aws_eks_cluster.principal.name
   node_group_name = "${local.nom}-noeuds"
   node_role_arn   = local.lab_role_arn
   subnet_ids      = aws_subnet.prive[*].id
   version         = var.version_eks
   ami_type        = "AL2023_x86_64_STANDARD"
-  release_version = data.aws_ssm_parameter.version_ami_eks[0].insecure_value
+  release_version = data.aws_ssm_parameter.version_ami_eks.insecure_value
   capacity_type   = "ON_DEMAND"
   instance_types  = [var.type_noeuds]
 
@@ -120,8 +120,8 @@ resource "aws_eks_node_group" "principal" {
   }
 
   launch_template {
-    id      = aws_launch_template.noeuds[0].id
-    version = aws_launch_template.noeuds[0].latest_version
+    id      = aws_launch_template.noeuds.id
+    version = aws_launch_template.noeuds.latest_version
   }
 
   labels = {
@@ -136,9 +136,9 @@ resource "aws_eks_node_group" "principal" {
 }
 
 resource "aws_eks_addon" "apres_noeuds" {
-  for_each = local.eks ? toset(["coredns", "metrics-server"]) : toset([])
+  for_each = toset(["coredns", "metrics-server"])
 
-  cluster_name                = aws_eks_cluster.principal[0].name
+  cluster_name                = aws_eks_cluster.principal.name
   addon_name                  = each.key
   addon_version               = var.versions_addons[each.key]
   resolve_conflicts_on_create = "OVERWRITE"
@@ -148,10 +148,8 @@ resource "aws_eks_addon" "apres_noeuds" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "noeuds_nodeport" {
-  count = local.eks ? 1 : 0
-
-  security_group_id            = aws_eks_cluster.principal[0].vpc_config[0].cluster_security_group_id
-  description                  = "NodePort du front depuis l'ALB seul (MS2)"
+  security_group_id            = aws_eks_cluster.principal.vpc_config[0].cluster_security_group_id
+  description                  = "NodePort du front depuis le seul ALB (MS2)"
   referenced_security_group_id = aws_security_group.alb.id
   ip_protocol                  = "tcp"
   from_port                    = var.nodeport_front
@@ -159,8 +157,6 @@ resource "aws_vpc_security_group_ingress_rule" "noeuds_nodeport" {
 }
 
 resource "aws_autoscaling_attachment" "noeuds" {
-  count = local.eks ? 1 : 0
-
-  autoscaling_group_name = aws_eks_node_group.principal[0].resources[0].autoscaling_groups[0].name
+  autoscaling_group_name = aws_eks_node_group.principal.resources[0].autoscaling_groups[0].name
   lb_target_group_arn    = aws_lb_target_group.front.arn
 }

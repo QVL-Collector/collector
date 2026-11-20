@@ -1,7 +1,3 @@
-output "orchestrateur" {
-  value = var.orchestrateur
-}
-
 output "url" {
   value = "https://${var.domaine}${var.chemin_sante}"
 }
@@ -26,6 +22,51 @@ output "arn_alb" {
   value = aws_lb.public.arn
 }
 
+output "nom_alb" {
+  value = aws_lb.public.name
+}
+
+output "dns_alb" {
+  value = aws_lb.public.dns_name
+}
+
+output "arn_ecouteur_https" {
+  value = aws_lb_listener.https.arn
+}
+
+output "arn_ecouteur_http" {
+  value = aws_lb_listener.http.arn
+}
+
+output "arns_regles_https" {
+  description = "Règles de la liste blanche de l'écouteur 443, seules admises par le contrôle après déploiement (XE4)."
+  value       = [aws_lb_listener_rule.front.arn]
+}
+
+output "id_groupe_securite_alb" {
+  value = aws_security_group.alb.id
+}
+
+output "alb_ouvert" {
+  value = var.alb_ouvert
+}
+
+output "nodeport_front" {
+  value = var.nodeport_front
+}
+
+output "adresse_rds" {
+  value = aws_db_instance.principale.address
+}
+
+output "point_api_eks" {
+  value = aws_eks_cluster.principal.endpoint
+}
+
+output "version_ami_noeuds" {
+  value = data.aws_ssm_parameter.version_ami_eks.insecure_value
+}
+
 output "arn_groupe_cible_front" {
   value = aws_lb_target_group.front.arn
 }
@@ -35,17 +76,9 @@ output "id_rds" {
 }
 
 output "nom_cluster_eks" {
-  value = local.eks ? aws_eks_cluster.principal[0].name : ""
+  value = aws_eks_cluster.principal.name
 }
 
 output "nom_node_group" {
-  value = local.eks ? aws_eks_node_group.principal[0].node_group_name : ""
-}
-
-output "nom_cluster_ecs" {
-  value = local.ecs ? aws_ecs_cluster.principal[0].name : ""
-}
-
-output "groupe_securite_front_ecs" {
-  value = local.ecs ? aws_security_group.front_ecs[0].id : ""
+  value = aws_eks_node_group.principal.node_group_name
 }

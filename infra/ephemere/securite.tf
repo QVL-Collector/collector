@@ -15,6 +15,13 @@ resource "aws_vpc_security_group_ingress_rule" "alb" {
   ip_protocol       = "tcp"
   from_port         = tonumber(each.value[0])
   to_port           = tonumber(each.value[0])
+
+  lifecycle {
+    precondition {
+      condition     = !var.alb_ouvert || var.preuve_controle == var.session
+      error_message = "Ouverture de l'ALB refusée : contrôle après déploiement non vert pour cette session (US-004 AC10). Passer par tools/alb.sh ouvrir."
+    }
+  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_cibles" {
@@ -22,8 +29,8 @@ resource "aws_vpc_security_group_egress_rule" "alb_cibles" {
   description       = "Vers les cibles du VPC"
   cidr_ipv4         = var.cidr_vpc
   ip_protocol       = "tcp"
-  from_port         = local.port_cible
-  to_port           = local.port_cible
+  from_port         = var.nodeport_front
+  to_port           = var.nodeport_front
 }
 
 resource "aws_security_group" "rds" {

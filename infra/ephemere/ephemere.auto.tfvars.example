@@ -1,6 +1,6 @@
 # Copier en ephemere.auto.tfvars (ignoré par git) pour surcharger les valeurs par défaut.
-# orchestrateur, session et ip_admin sont fournis par tools/up.sh : ne pas les mettre ici.
-# alb_ouvert reste false tant que X17, X20, ME4 et ME8 ne sont pas verts (US-004 AC10).
+# session et ip_admin sont fournis par tools/up.sh : ne pas les mettre ici.
+# alb_ouvert et preuve_controle : jamais ici. up.sh force alb_ouvert à false, seul tools/alb.sh ouvrir le pose (US-004 AC10).
 
 # Repli MS3 si le filtre réseau d'IMDS échoue en XP01 (G4) : IMDS fermé aux pods.
 # imds_limite_sauts = 1

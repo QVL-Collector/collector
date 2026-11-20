@@ -7,6 +7,10 @@ data "aws_route53_zone" "collector" {
   private_zone = false
 }
 
+data "aws_kms_alias" "secrets_eks" {
+  name = var.alias_cle_secrets_eks
+}
+
 data "aws_acm_certificate" "collector" {
   domain      = var.domaine
   statuses    = ["ISSUED"]
@@ -14,11 +18,9 @@ data "aws_acm_certificate" "collector" {
 }
 
 data "aws_ssm_parameter" "ami_eks" {
-  count = local.eks ? 1 : 0
-  name  = "/aws/service/eks/optimized-ami/${var.version_eks}/amazon-linux-2023/x86_64/standard/recommended/image_id"
+  name = "/aws/service/eks/optimized-ami/${var.version_eks}/amazon-linux-2023/x86_64/standard/recommended/image_id"
 }
 
 data "aws_ssm_parameter" "version_ami_eks" {
-  count = local.eks ? 1 : 0
-  name  = "/aws/service/eks/optimized-ami/${var.version_eks}/amazon-linux-2023/x86_64/standard/recommended/release_version"
+  name = "/aws/service/eks/optimized-ami/${var.version_eks}/amazon-linux-2023/x86_64/standard/recommended/release_version"
 }

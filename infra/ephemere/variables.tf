@@ -1,13 +1,3 @@
-variable "orchestrateur" {
-  description = "Orchestrateur retenu par le verdict XP01 (2026-11-02) : eks (D03, candidate) ou ecs (repli Fargate)."
-  type        = string
-
-  validation {
-    condition     = contains(["eks", "ecs"], var.orchestrateur)
-    error_message = "orchestrateur vaut eks ou ecs."
-  }
-}
-
 variable "region" {
   description = "Région du Learner Lab."
   type        = string
@@ -40,9 +30,15 @@ variable "ip_admin" {
 }
 
 variable "alb_ouvert" {
-  description = "Ouverture de l'ALB à Internet (ME5). Interdite tant que X17, X20, ME4 et ME8 ne sont pas verts (US-004 AC10) : tools/up.sh ne la pose jamais."
+  description = "Ouverture de l'ALB à Internet (ME5). Interdite tant que le contrôle après déploiement n'est pas vert (US-004 AC10) : tools/up.sh la force à false, seul tools/alb.sh ouvrir la pose."
   type        = bool
   default     = false
+}
+
+variable "preuve_controle" {
+  description = "Session dont le contrôle après déploiement est vert, fournie par tools/alb.sh ; exigée égale à session pour ouvrir l'ALB (AC10)."
+  type        = string
+  default     = ""
 }
 
 variable "zones" {
@@ -66,6 +62,12 @@ variable "domaine" {
   description = "Zone Route 53 et certificat ACM de la couche persistante, lus en data."
   type        = string
   default     = "collector.qvl-project.com"
+}
+
+variable "alias_cle_secrets_eks" {
+  description = "Alias de la clé KMS des Secrets EKS de la couche persistante, lu en data (AWS-0039)."
+  type        = string
+  default     = "alias/collector-secrets-eks"
 }
 
 variable "politique_tls" {
@@ -153,7 +155,7 @@ variable "imds_limite_sauts" {
 }
 
 variable "nodeport_front" {
-  description = "NodePort fixe du Service du front nginx (cible de l'ALB, EKS)."
+  description = "NodePort fixe du Service du front nginx (cible de l'ALB)."
   type        = number
   default     = 30080
 
@@ -161,12 +163,6 @@ variable "nodeport_front" {
     condition     = var.nodeport_front >= 30000 && var.nodeport_front <= 32767
     error_message = "NodePort entre 30000 et 32767."
   }
-}
-
-variable "port_front" {
-  description = "Port du conteneur du front nginx-unprivileged (ECS)."
-  type        = number
-  default     = 8080
 }
 
 variable "version_postgres" {

@@ -15,8 +15,8 @@ resource "aws_lb_target_group" "front" {
   name                 = "${local.nom}-front"
   vpc_id               = aws_vpc.principal.id
   protocol             = "HTTP"
-  port                 = local.port_cible
-  target_type          = local.eks ? "instance" : "ip"
+  port                 = var.nodeport_front
+  target_type          = "instance"
   deregistration_delay = 10
 
   health_check {

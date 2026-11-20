@@ -1,7 +1,5 @@
 locals {
   nom = "collector"
-  eks = var.orchestrateur == "eks"
-  ecs = var.orchestrateur == "ecs"
 
   etiquettes = {
     projet  = "collector"
@@ -15,7 +13,6 @@ locals {
   cidr_publics = [for i in range(2) : cidrsubnet(var.cidr_vpc, 8, i)]
   cidr_prives  = [for i in range(2) : cidrsubnet(var.cidr_vpc, 4, i + 1)]
 
-  port_cible   = local.eks ? var.nodeport_front : var.port_front
   sources_alb  = var.alb_ouvert ? ["0.0.0.0/0"] : [var.ip_admin]
   hsts         = "max-age=31536000; includeSubDomains"
   nom_journaux = "/aws/eks/${local.nom}/cluster"
