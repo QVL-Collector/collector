@@ -1,0 +1,223 @@
+horodatage_utc;xp;session;plateforme;critere;etape;valeur;unite;seuil;atteint;commentaire
+2026-11-20T11:06:47Z;XP02;EKS2;eks;XC7;reseau;ferme;port;ferme;oui;ns-intrus -> rabbitmq.collector-canal.svc:5672
+2026-11-20T11:06:47Z;XP02;EKS2;eks;XC7;reseau;ferme;port;ferme;oui;ns-intrus -> rabbitmq.collector-canal.svc:15672
+2026-11-20T11:06:48Z;XP02;EKS2;eks;XC9;reseau;ferme;port;ferme;oui;ns-intrus -> rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:4369
+2026-11-20T11:06:48Z;XP02;EKS2;eks;XC9;reseau;ferme;port;ferme;oui;ns-intrus -> rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:25672
+2026-11-20T11:06:48Z;XP02;EKS2;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;pdm-test -> rabbitmq.collector-canal.svc:5672
+2026-11-20T11:06:48Z;XP02;EKS2;eks;XC7;reseau;ferme;port;ferme;oui;pdm-test -> rabbitmq.collector-canal.svc:15672
+2026-11-20T11:06:48Z;XP02;EKS2;eks;XC7;reseau;ferme;port;ferme;oui;pdm-test -> rabbitmq.collector-canal.svc:15692
+2026-11-20T11:06:48Z;XP02;EKS2;eks;XC9;reseau;ferme;port;ferme;oui;pdm-test -> rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:4369
+2026-11-20T11:06:48Z;XP02;EKS2;eks;XC9;reseau;ferme;port;ferme;oui;pdm-test -> rabbitmq-0.rabbitmq-noeuds.collector-canal.svc:25672
+2026-11-20T11:06:50Z;XP02;EKS2;eks;TEMOIN;reseau;True;Ready;True;oui;KEDA -> 15672 (ScaledObject)
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm publication-echange-autre:controle.resultats
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm lecture-file-autre:controle.demandes
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm declaration-file
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm declaration-echange
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-controle publication-echange-autre:controle.demandes
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-controle lecture-file-autre:pdm.resultats-controle
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-controle declaration-file
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-controle declaration-echange
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-interactions publication-echange-autre:pdm.evenements
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-interactions lecture-file-autre:test.publication-decidee
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-interactions declaration-file
+2026-11-20T11:08:00Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-interactions declaration-echange
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-test publication-echange-autre:pdm.evenements
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-test lecture-file-autre:interactions.publication-decidee
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-test declaration-file
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-test declaration-echange
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm publication-cle-non-accordee:publication.annulee.v1
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm liaison-file:pdm.resultats-controle->pdm.evenements#
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm purge-file-autre:controle.demandes
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-pdm suppression-file-autre:controle.demandes
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-controle liaison-file:controle.demandes->pdm.evenements#
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-controle purge-file-autre:pdm.resultats-controle
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-controle suppression-file-autre:pdm.resultats-controle
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-interactions liaison-file:interactions.publication-decidee->pdm.evenements#
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-interactions purge-file-autre:test.publication-decidee
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-interactions suppression-file-autre:test.publication-decidee
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-test liaison-file:test.publication-decidee->pdm.evenements#
+2026-11-20T11:08:01Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-test purge-file-autre:interactions.publication-decidee
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;svc-test suppression-file-autre:interactions.publication-decidee
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;keda-monitoring lecture-file:controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC2;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;keda-monitoring publication:controle.demandes/v1
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED;resultat;403;oui;keda-monitoring purge-file:controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;406 PRECONDITION_FAILED;resultat;406;oui;svc-pdm user-id-usurpe:svc-controle
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;406 PRECONDITION_FAILED;resultat;406;oui;svc-controle user-id-usurpe:svc-pdm
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;403 ACCESS_REFUSED (authentification);resultat;403;oui;guest connexion-guest
+2026-11-20T11:08:02Z;XP02;EKS2;eks;TEMOIN;sonde-refus;OK;resultat;OK;oui;svc-pdm publication-autorisee:controle.demandes/v1
+2026-11-20T11:08:02Z;XP02;EKS2;eks;TEMOIN;sonde-refus;OK;resultat;OK;oui;svc-controle lecture-autorisee:controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;401;resultat;401;oui;svc-pdm api-gestion:/api/queues/collector/controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;401;resultat;401;oui;svc-controle api-gestion:/api/queues/collector/controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;401;resultat;401;oui;svc-interactions api-gestion:/api/queues/collector/controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;XC9;sonde-refus;401;resultat;401;oui;svc-test api-gestion:/api/queues/collector/controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;TEMOIN;sonde-refus;200;resultat;200;oui;keda-monitoring api-gestion:/api/queues/collector/controle.demandes
+2026-11-20T11:08:02Z;XP02;EKS2;eks;TEMOIN;sonde-refus;200;resultat;200;oui;admin-canal api-gestion:/api/queues/collector/controle.demandes
+2026-11-20T11:09:11Z;XP02;EKS2;eks;XC4;sonde-ecartes;OK;resultat;OK;oui;svc-pdm publication:message-rejete-et-suivant
+2026-11-20T11:09:11Z;XP02;EKS2;eks;XC4;sonde-ecartes;6;resultat;6;oui;svc-controle livraisons-avant-mise-a-l-ecart
+2026-11-20T11:09:11Z;XP02;EKS2;eks;XC4;sonde-ecartes;oui;resultat;oui;oui;svc-controle message-suivant-non-bloque
+2026-11-20T11:09:11Z;XP02;EKS2;eks;XC4;sonde-ecartes;oui;resultat;oui;oui;admin-canal present-dans:controle.demandes.ecartes
+2026-11-20T11:11:52Z;XP02;EKS2;eks;XC6;montee;25;s;<=60;oui;seuil 5 messages -> 2 consommateurs
+2026-11-20T11:11:52Z;XP02;EKS2;eks;XC6;retour;62;s;retour a 1;oui;file vide -> 1 consommateur
+2026-11-20T11:12:47Z;XP02;EKS2;eks;XC5;conteneur:pret;18;s;-;-;delai coupure -> broker pret
+2026-11-20T11:12:47Z;XP02;EKS2;eks;XC5;conteneur:reconnexion;9;s;<=60;oui;identites : svc-controle
+2026-11-20T11:14:10Z;XP02;EKS2;eks;XC5;pod:pret;18;s;-;-;delai coupure -> broker pret
+2026-11-20T11:14:10Z;XP02;EKS2;eks;XC5;pod:reconnexion;17;s;<=60;oui;identites : svc-controle
+2026-11-20T11:20:42Z;XP02;EKS2;eks;XC8;repos;190;Mio;<=512 demande, <=1024 limite;oui;max de 3 releves
+2026-11-20T11:20:42Z;XP02;EKS2;eks;XC8;vague;201;Mio;<=1024 limite;oui;200 msg/s pendant 300 s, PerfTest
+2026-11-20T11:20:44Z;XP02;EKS2;eks;XC8;noeuds;2 -> 2;noeuds;aucun ajout;oui;avant repos -> fin de vague
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;demandes;1000;messages;;;controle.demandes / v1
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;publies_confirmes;1000;messages;;;controle.demandes / v1
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;lots_refuses;0;lots;;;nack du broker, lot republié
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;retournes_non_routes;0;messages;;;basic.return, mandatory
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;confirmation_p50;99.399;ms;;;1000 échantillons
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;confirmation_p95;111.729;ms;;;1000 échantillons
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;confirmation_p99;114.950;ms;;;1000 échantillons
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;confirmation_max;114.950;ms;;;1000 échantillons
+2026-11-20T11:22:54Z;XP02;EKS2;eks;XC1;debit_publication;364.238;msg/s;;;1000 messages en 2.745s
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;livraisons;1000;messages;;;controle.demandes
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;uniques;1000;messages;;;controle.demandes
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;doublons;0;messages;;;controle.demandes
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;relivraisons;0;messages;;;controle.demandes
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;non_conformes;0;messages;;;controle.demandes
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;emetteur_refuse;0;messages;;;controle.demandes
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p50;3953.603;ms;;;1000 échantillons
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p95;7439.882;ms;;;1000 échantillons
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p99;7758.124;ms;;;1000 échantillons
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_max;7850.599;ms;;;1000 échantillons
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;debit_reception;103.016;msg/s;;;1000 messages en 9.707s
+2026-11-20T11:23:21Z;XP02;EKS2;eks;XC1;uniques_cumules;1000;messages;;;controle.demandes, journal memory
+2026-11-20T11:24:00Z;XP02;EKS2;eks;XC1;decisions_ecrites;1000;transactions;;;décision et événement d'outbox dans la même transaction
+2026-11-20T11:24:00Z;XP02;EKS2;eks;XC1;transaction_outbox_p50;3.183;ms;;;1000 échantillons
+2026-11-20T11:24:00Z;XP02;EKS2;eks;XC1;transaction_outbox_p95;3.890;ms;;;1000 échantillons
+2026-11-20T11:24:00Z;XP02;EKS2;eks;XC1;transaction_outbox_p99;4.954;ms;;;1000 échantillons
+2026-11-20T11:24:00Z;XP02;EKS2;eks;XC1;transaction_outbox_max;13.883;ms;;;1000 échantillons
+2026-11-20T11:24:00Z;XP02;EKS2;eks;XC1;debit_ecriture_outbox;300.277;msg/s;;;1000 messages en 3.33s
+2026-11-20T11:24:14Z;XP02;EKS2;eks;XC1;relayes_confirmes;1000;messages;;;publiés avec confirmation puis marqués
+2026-11-20T11:24:14Z;XP02;EKS2;eks;XC1;retard_outbox_p50;4081.491;ms;;;1000 échantillons
+2026-11-20T11:24:14Z;XP02;EKS2;eks;XC1;retard_outbox_p95;4658.485;ms;;;1000 échantillons
+2026-11-20T11:24:14Z;XP02;EKS2;eks;XC1;retard_outbox_p99;4751.721;ms;;;1000 échantillons
+2026-11-20T11:24:14Z;XP02;EKS2;eks;XC1;retard_outbox_max;4794.915;ms;;;1000 échantillons
+2026-11-20T11:24:14Z;XP02;EKS2;eks;XC1;en_attente;0;messages;;;lignes non publiées
+2026-11-20T11:24:14Z;XP02;EKS2;eks;XC1;plus_ancienne_en_attente;0.000;s;;;
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;livraisons;1000;messages;;;interactions.publication-decidee
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;uniques;1000;messages;;;interactions.publication-decidee
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;doublons;0;messages;;;interactions.publication-decidee
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;relivraisons;0;messages;;;interactions.publication-decidee
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;non_conformes;0;messages;;;interactions.publication-decidee
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;emetteur_refuse;0;messages;;;interactions.publication-decidee
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p50;8440.737;ms;;;1000 échantillons
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p95;11468.185;ms;;;1000 échantillons
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p99;11721.017;ms;;;1000 échantillons
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_max;11787.712;ms;;;1000 échantillons
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;debit_reception;93.695;msg/s;;;1000 messages en 10.673s
+2026-11-20T11:24:37Z;XP02;EKS2;eks;XC1;uniques_cumules;1000;messages;;;interactions.publication-decidee, journal postgres
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;livraisons;1000;messages;;;test.publication-decidee
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;uniques;1000;messages;;;test.publication-decidee
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;doublons;0;messages;;;test.publication-decidee
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;relivraisons;0;messages;;;test.publication-decidee
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;non_conformes;0;messages;;;test.publication-decidee
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;emetteur_refuse;0;messages;;;test.publication-decidee
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p50;8415.314;ms;;;1000 échantillons
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p95;11474.933;ms;;;1000 échantillons
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_p99;11732.107;ms;;;1000 échantillons
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;latence_bout_en_bout_max;11799.842;ms;;;1000 échantillons
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;debit_reception;93.686;msg/s;;;1000 messages en 10.674s
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;uniques_cumules;1000;messages;;;test.publication-decidee, journal postgres
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;outbox_total;1000;événements;;;depuis 2026-11-20T11:23:53Z
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;manquants;0;événements;;;absents du journal de réception de interactions.publication-decidee
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;outbox_total;1000;événements;;;depuis 2026-11-20T11:23:53Z
+2026-11-20T11:24:38Z;XP02;EKS2;eks;XC1;manquants;0;événements;;;absents du journal de réception de test.publication-decidee
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;demandes;1000;messages;;;controle.demandes / v1
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;publies_confirmes;1000;messages;;;controle.demandes / v1
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;lots_refuses;0;lots;;;nack du broker, lot republié
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;retournes_non_routes;0;messages;;;basic.return, mandatory
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;confirmation_p50;101.268;ms;;;1000 échantillons
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;confirmation_p95;182.924;ms;;;1000 échantillons
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;confirmation_p99;200.966;ms;;;1000 échantillons
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;confirmation_max;201.495;ms;;;1000 échantillons
+2026-11-20T11:25:14Z;XP02;EKS2;eks;XC3;debit_publication;52.327;msg/s;;;1000 messages en 19.11s
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;livraisons;678;messages;;;controle.demandes
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;uniques;678;messages;;;controle.demandes
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;doublons;0;messages;;;controle.demandes
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;relivraisons;10;messages;;;controle.demandes
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;non_conformes;0;messages;;;controle.demandes
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;emetteur_refuse;0;messages;;;controle.demandes
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;latence_bout_en_bout_p50;120407.067;ms;;;678 échantillons
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;latence_bout_en_bout_p95;123401.486;ms;;;678 échantillons
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;latence_bout_en_bout_p99;123900.883;ms;;;678 échantillons
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;latence_bout_en_bout_max;123913.113;ms;;;678 échantillons
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;debit_reception;99.200;msg/s;;;678 messages en 6.835s
+2026-11-20T11:27:32Z;XP02;EKS2;eks;XC3;uniques_cumules;1000;messages;;;controle.demandes, journal postgres
+2026-11-20T11:28:44Z;XP02;EKS2;eks;XC5;reconnexion;23.678;s;;;7 tentatives de connexion échouées
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;livraisons;972;messages;;;interactions.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;uniques;972;messages;;;interactions.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;doublons;0;messages;;;interactions.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;relivraisons;0;messages;;;interactions.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;non_conformes;0;messages;;;interactions.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;emetteur_refuse;0;messages;;;interactions.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p50;20935.376;ms;;;972 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p95;23853.252;ms;;;972 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p99;24081.219;ms;;;972 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_max;24138.114;ms;;;972 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;debit_reception;98.011;msg/s;;;972 messages en 9.917s
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;uniques_cumules;1972;messages;;;interactions.publication-decidee, journal postgres
+2026-11-20T11:28:35Z;XP02;EKS2;eks;XC5;reconnexion;14.971;s;;;6 tentatives de connexion échouées
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;livraisons;964;messages;;;test.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;uniques;964;messages;;;test.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;doublons;0;messages;;;test.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;relivraisons;0;messages;;;test.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;non_conformes;0;messages;;;test.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;emetteur_refuse;0;messages;;;test.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p50;21002.947;ms;;;964 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p95;23847.108;ms;;;964 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p99;24102.328;ms;;;964 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_max;24157.648;ms;;;964 échantillons
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;debit_reception;98.082;msg/s;;;964 messages en 9.828s
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;uniques_cumules;1964;messages;;;test.publication-decidee, journal postgres
+2026-11-20T11:28:09Z;XP02;EKS2;eks;XC5;decisions_ecrites;5000;transactions;;;décision et événement d'outbox dans la même transaction
+2026-11-20T11:28:09Z;XP02;EKS2;eks;XC5;transaction_outbox_p50;3.172;ms;;;5000 échantillons
+2026-11-20T11:28:09Z;XP02;EKS2;eks;XC5;transaction_outbox_p95;3.804;ms;;;5000 échantillons
+2026-11-20T11:28:09Z;XP02;EKS2;eks;XC5;transaction_outbox_p99;5.263;ms;;;5000 échantillons
+2026-11-20T11:28:09Z;XP02;EKS2;eks;XC5;transaction_outbox_max;8.892;ms;;;5000 échantillons
+2026-11-20T11:28:09Z;XP02;EKS2;eks;XC5;debit_ecriture_outbox;306.472;msg/s;;;5000 messages en 16.315s
+2026-11-20T11:28:37Z;XP02;EKS2;eks;XC5;reconnexion;17.203;s;;;7 tentatives de connexion échouées
+2026-11-20T11:29:17Z;XP02;EKS2;eks;XC5;relayes_confirmes;5000;messages;;;publiés avec confirmation puis marqués
+2026-11-20T11:29:17Z;XP02;EKS2;eks;XC5;retard_outbox_p50;12736.181;ms;;;5000 échantillons
+2026-11-20T11:29:17Z;XP02;EKS2;eks;XC5;retard_outbox_p95;16965.734;ms;;;5000 échantillons
+2026-11-20T11:29:17Z;XP02;EKS2;eks;XC5;retard_outbox_p99;17349.116;ms;;;5000 échantillons
+2026-11-20T11:29:17Z;XP02;EKS2;eks;XC5;retard_outbox_max;17515.263;ms;;;5000 échantillons
+2026-11-20T11:29:17Z;XP02;EKS2;eks;XC5;en_attente;0;messages;;;lignes non publiées
+2026-11-20T11:29:17Z;XP02;EKS2;eks;XC5;plus_ancienne_en_attente;0.000;s;;;
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;outbox_total;5000;événements;;;depuis 2026-11-20T11:27:52Z
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;manquants;4028;événements;;;absents du journal de réception de interactions.publication-decidee
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;outbox_total;5000;événements;;;depuis 2026-11-20T11:27:52Z
+2026-11-20T11:29:51Z;XP02;EKS2;eks;XC5;manquants;4036;événements;;;absents du journal de réception de test.publication-decidee
+2026-11-20T11:30:45Z;XP02;EKS2;eks;XC5;republies;5000;messages;;;fenêtre 2026-11-20T11:27:52Z → 2026-11-20T12:30:38+01:00, audit 21bc2830-4915-4501-b011-528e2c3ff518
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;livraisons;5000;messages;;;interactions.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;uniques;4028;messages;;;interactions.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;doublons;972;messages;;;interactions.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;relivraisons;0;messages;;;interactions.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;non_conformes;0;messages;;;interactions.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;emetteur_refuse;0;messages;;;interactions.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p50;186764.100;ms;;;4028 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p95;199610.715;ms;;;4028 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p99;200668.482;ms;;;4028 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_max;200934.483;ms;;;4028 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;debit_reception;96.900;msg/s;;;4028 messages en 41.569s
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;uniques_cumules;6000;messages;;;interactions.publication-decidee, journal postgres
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;livraisons;5000;messages;;;test.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;uniques;4036;messages;;;test.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;doublons;964;messages;;;test.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;relivraisons;0;messages;;;test.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;non_conformes;0;messages;;;test.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;emetteur_refuse;0;messages;;;test.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p50;186791.470;ms;;;4036 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p95;199641.078;ms;;;4036 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_p99;200736.250;ms;;;4036 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;latence_bout_en_bout_max;201026.961;ms;;;4036 échantillons
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;debit_reception;96.739;msg/s;;;4036 messages en 41.721s
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;uniques_cumules;6000;messages;;;test.publication-decidee, journal postgres
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;outbox_total;5000;événements;;;depuis 2026-11-20T11:27:52Z
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;manquants;0;événements;;;absents du journal de réception de interactions.publication-decidee
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;outbox_total;5000;événements;;;depuis 2026-11-20T11:27:52Z
+2026-11-20T11:32:01Z;XP02;EKS2;eks;XC5;manquants;0;événements;;;absents du journal de réception de test.publication-decidee

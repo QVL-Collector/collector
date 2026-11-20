@@ -1,0 +1,4 @@
+XC4|publication:message-rejete-et-suivant|svc-pdm|OK|OK|oui
+XC4|livraisons-avant-mise-a-l-ecart|svc-controle|6|6|oui
+XC4|message-suivant-non-bloque|svc-controle|oui|oui|oui
+XC4|present-dans:controle.demandes.ecartes|admin-canal|oui|oui|oui

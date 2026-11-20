@@ -1,0 +1,12 @@
+{
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordBlacklist(mots-de-passe-interdits.txt)",
+  "browserFlow": "navigateur-collector"
+}

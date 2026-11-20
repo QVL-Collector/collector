@@ -14,3 +14,167 @@ horodatage_utc;xp;point;commande;resultat;code_erreur;politique_citee;decision
 2026-10-28T10:03:26Z;XP03;K3 k3d;PLATEFORME=k3d scripts/verifier.sh k3 (appelant de transactions-test);5 x 401, 1 x 200 ; MA3 et MA5 conformes ; 9/9;401 x5 / 200;D06 audience;atteint
 2026-10-28T10:03:30Z;XP03;K1 k3d (indicatif);kubectl top pod;Keycloak 671 Mio et 20m CPU au repos, RabbitMQ 230 Mio, PostgreSQL 69 Mio, sur un cluster k3d sans contrainte de nœud;;;indicatif, K1 reporte a la session EKS
 2026-10-28T10:04:00Z;XP03;XE1 XE2 XE4 EKS K1 K2 EKS K3 EKS G7-4 EKS XE3 MA12 EKS MX2;session EKS 2;;;;reporte a la session EKS (2026-10-31)
+2026-11-20T11:05:34Z;XP03;20261120;eks;XE4;/realms/collector/.well-known/openid-configuration;200;resultat;200;oui;liste blanche
+2026-11-20T11:05:35Z;XP03;20261120;eks;XE4;/realms/collector/protocol/openid-connect/certs;200;resultat;200;oui;liste blanche
+2026-11-20T11:05:58Z;XP03;20261120;eks;XE4;page de connexion (auth, PKCE);000;resultat;200;non;liste blanche
+2026-11-20T11:06:02Z;XP03;20261120;eks;ME8;/admin/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:02Z;XP03;20261120;eks;ME8;/admin/master/console/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:02Z;XP03;20261120;eks;ME8;/realms/master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:03Z;XP03;20261120;eks;ME8;/realms/master/protocol/openid-connect/certs;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:03Z;XP03;20261120;eks;ME8;/realms/collector/account;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:04Z;XP03;20261120;eks;ME8;/realms/collector/account/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:04Z;XP03;20261120;eks;ME8;/realms/collector/../master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:05Z;XP03;20261120;eks;ME8;/realms/collector/%2e%2e/master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:05Z;XP03;20261120;eks;ME8;/%2e%2e/admin/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:05Z;XP03;20261120;eks;ME8;/%2E%2E/admin/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:06Z;XP03;20261120;eks;ME8;/realms%2fmaster/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:06Z;XP03;20261120;eks;ME8;/realms%2Fmaster/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:07Z;XP03;20261120;eks;ME8;/ADMIN/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:07Z;XP03;20261120;eks;ME8;/Realms/Master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:08Z;XP03;20261120;eks;ME8;/resources/../admin/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:08Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect/../../../master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:08Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect/%2e%2e/%2e%2e/%2e%2e/master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:09Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect%2f..%2f..%2f..%2fmaster/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:09Z;XP03;20261120;eks;ME8;/resources/..%2f..%2fadmin/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:10Z;XP03;20261120;eks;ME8;/resources/%2e%2e/%2e%2e/admin/master/console/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:10Z;XP03;20261120;eks;ME8;/realms/collector/login-actions/../../master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:11Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect\..\..\..\master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:11Z;XP03;20261120;eks;ME8;/realms/collector/clients-registrations/openid-connect;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:12Z;XP03;20261120;eks;ME8;/realms/collector/broker/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:12Z;XP03;20261120;eks;ME8;/metrics;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:12Z;XP03;20261120;eks;ME8;/health/ready;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:19Z;XP03;20261120;eks;XE4;front /reserver;404;resultat;404;oui;reserver jamais route
+2026-11-20T11:06:24Z;XP03;20261120;eks;XE4;port 9000;000;resultat;000;oui;refus ou delai expire
+2026-11-20T11:06:24Z;XP03;20261120;eks;XE3;http -> https (indicatif);301;resultat;301;oui;redirection 80
+2026-11-20T11:06:46Z;XP03;20261120;eks;XE4;/realms/collector/.well-known/openid-configuration;200;resultat;200;oui;liste blanche
+2026-11-20T11:06:47Z;XP03;20261120;eks;XE4;/realms/collector/protocol/openid-connect/certs;200;resultat;200;oui;liste blanche
+2026-11-20T11:06:47Z;XP03;20261120;eks;XE4;page de connexion (auth, PKCE);200;resultat;200;oui;liste blanche
+2026-11-20T11:06:48Z;XP03;20261120;eks;ME8;/admin/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:48Z;XP03;20261120;eks;ME8;/admin/master/console/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:49Z;XP03;20261120;eks;ME8;/realms/master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:49Z;XP03;20261120;eks;ME8;/realms/master/protocol/openid-connect/certs;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:50Z;XP03;20261120;eks;ME8;/realms/collector/account;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:50Z;XP03;20261120;eks;ME8;/realms/collector/account/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:50Z;XP03;20261120;eks;ME8;/realms/collector/../master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:51Z;XP03;20261120;eks;ME8;/realms/collector/%2e%2e/master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:51Z;XP03;20261120;eks;ME8;/%2e%2e/admin/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:52Z;XP03;20261120;eks;ME8;/%2E%2E/admin/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:52Z;XP03;20261120;eks;ME8;/realms%2fmaster/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:53Z;XP03;20261120;eks;ME8;/realms%2Fmaster/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:53Z;XP03;20261120;eks;ME8;/ADMIN/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:53Z;XP03;20261120;eks;ME8;/Realms/Master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:54Z;XP03;20261120;eks;ME8;/resources/../admin/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:54Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect/../../../master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:55Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect/%2e%2e/%2e%2e/%2e%2e/master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:55Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect%2f..%2f..%2f..%2fmaster/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:56Z;XP03;20261120;eks;ME8;/resources/..%2f..%2fadmin/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:56Z;XP03;20261120;eks;ME8;/resources/%2e%2e/%2e%2e/admin/master/console/;400;resultat;404;non;chemin interdit
+2026-11-20T11:06:56Z;XP03;20261120;eks;ME8;/realms/collector/login-actions/../../master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:57Z;XP03;20261120;eks;ME8;/realms/collector/protocol/openid-connect\..\..\..\master/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:57Z;XP03;20261120;eks;ME8;/realms/collector/clients-registrations/openid-connect;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:58Z;XP03;20261120;eks;ME8;/realms/collector/broker/;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:58Z;XP03;20261120;eks;ME8;/metrics;404;resultat;404;oui;chemin interdit
+2026-11-20T11:06:58Z;XP03;20261120;eks;ME8;/health/ready;404;resultat;404;oui;chemin interdit
+2026-11-20T11:07:02Z;XP03;20261120;eks;XE4;front /reserver;404;resultat;404;oui;reserver jamais route
+2026-11-20T11:07:07Z;XP03;20261120;eks;XE4;port 9000;000;resultat;000;oui;refus ou delai expire
+2026-11-20T11:07:07Z;XP03;20261120;eks;XE3;http -> https (indicatif);301;resultat;301;oui;redirection 80
+2026-11-20T11:07:11Z;XP03;20261120;eks;XE3;http://collector.qvl-project.com/ -> 301;301;resultat;301;oui;redirection : https://collector.qvl-project.com:443/
+2026-11-20T11:07:12Z;XP03;20261120;eks;XE3;http://auth.collector.qvl-project.com/ -> 301;301;resultat;301;oui;redirection : https://auth.collector.qvl-project.com:443/
+2026-11-20T11:07:12Z;XP03;20261120;eks;XE3;HSTS collector.qvl-project.com/;oui;resultat;oui;oui;en-tete Strict-Transport-Security
+2026-11-20T11:07:13Z;XP03;20261120;eks;XE3;HSTS auth.collector.qvl-project.com/realms/collector/.well-known/openid-configuration;oui;resultat;oui;oui;en-tete Strict-Transport-Security
+2026-11-20T11:07:19Z;XP03;20261120;eks;XE3;hote inconnu (inconnu.collector.qvl-project.com);404;resultat;404;oui;action par defaut de l'ecouteur
+2026-11-20T11:09:28Z;XP03;20261120;eks;XE3;protocoles < TLS 1.2 offerts (collector.qvl-project.com);0;resultat;0;oui;testssl.sh, detail : 20261120T110719Z-eks-testssl-collector.qvl-project.com.txt
+2026-11-20T11:11:02Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:8080
+2026-11-20T11:11:02Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:9000
+2026-11-20T11:11:02Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> verificateur.pdm-test.svc:8081
+2026-11-20T11:11:03Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> postgres.identite-test.svc:5432
+2026-11-20T11:11:03Z;XP03;20261120;eks;G7-4;reseau;bad port '30081';port;ferme;non;ns-intrus -> nc:
+2026-11-20T11:11:03Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.21.24:30081
+2026-11-20T11:11:03Z;XP03;20261120;eks;G7-4;reseau;bad port '30081';port;ferme;non;ns-intrus -> nc:
+2026-11-20T11:11:03Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.40.248:30081
+2026-11-20T11:11:03Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> keycloak.identite-test.svc:8080
+2026-11-20T11:11:03Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> keycloak.identite-test.svc:9000
+2026-11-20T11:11:03Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> verificateur.pdm-test.svc:8081
+2026-11-20T11:11:03Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> postgres.identite-test.svc:5432
+2026-11-20T11:11:06Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;transactions-test -> page de connexion
+2026-11-20T11:11:06Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;poste -> ALB -> page de connexion
+2026-11-20T11:11:30Z;XP03;20261120;eks;XE3;protocoles < TLS 1.2 offerts (auth.collector.qvl-project.com);0;resultat;0;oui;testssl.sh, detail : 20261120T110928Z-eks-testssl-auth.collector.qvl-project.com.txt
+2026-11-20T11:12:09Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:8080
+2026-11-20T11:12:09Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:9000
+2026-11-20T11:12:09Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> verificateur.pdm-test.svc:8081
+2026-11-20T11:12:09Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> postgres.identite-test.svc:5432
+2026-11-20T11:12:09Z;XP03;20261120;eks;G7-4;reseau;bad port '30081';port;ferme;non;ns-intrus -> nc:
+2026-11-20T11:12:09Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.21.24:30081
+2026-11-20T11:12:09Z;XP03;20261120;eks;G7-4;reseau;bad port '30081';port;ferme;non;ns-intrus -> nc:
+2026-11-20T11:12:10Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.40.248:30081
+2026-11-20T11:12:10Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> keycloak.identite-test.svc:8080
+2026-11-20T11:12:10Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> keycloak.identite-test.svc:9000
+2026-11-20T11:12:10Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> verificateur.pdm-test.svc:8081
+2026-11-20T11:12:10Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> postgres.identite-test.svc:5432
+2026-11-20T11:12:12Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;transactions-test -> page de connexion
+2026-11-20T11:12:13Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;poste -> ALB -> page de connexion
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:8080
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:9000
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> verificateur.pdm-test.svc:8081
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> postgres.identite-test.svc:5432
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;bad port '30081';port;ferme;non;ns-intrus -> nc:
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.21.24:30081
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;bad port '30081';port;ferme;non;ns-intrus -> nc:
+2026-11-20T11:14:07Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.40.248:30081
+2026-11-20T11:14:07Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> keycloak.identite-test.svc:8080
+2026-11-20T11:14:08Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> keycloak.identite-test.svc:9000
+2026-11-20T11:14:08Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> verificateur.pdm-test.svc:8081
+2026-11-20T11:14:08Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> postgres.identite-test.svc:5432
+2026-11-20T11:14:10Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;transactions-test -> page de connexion
+2026-11-20T11:14:11Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;poste -> ALB -> page de connexion
+2026-11-20T11:15:18Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:8080
+2026-11-20T11:15:18Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> keycloak.identite-test.svc:9000
+2026-11-20T11:15:18Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> verificateur.pdm-test.svc:8081
+2026-11-20T11:15:18Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> postgres.identite-test.svc:5432
+2026-11-20T11:15:18Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.21.24:30081
+2026-11-20T11:15:18Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;ns-intrus -> 10.40.40.248:30081
+2026-11-20T11:15:18Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> keycloak.identite-test.svc:8080
+2026-11-20T11:15:18Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> keycloak.identite-test.svc:9000
+2026-11-20T11:15:19Z;XP03;20261120;eks;TEMOIN;reseau;ouvert;port;ouvert;oui;transactions-test -> verificateur.pdm-test.svc:8081
+2026-11-20T11:15:19Z;XP03;20261120;eks;G7-4;reseau;ferme;port;ferme;oui;transactions-test -> postgres.identite-test.svc:5432
+2026-11-20T11:15:21Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;transactions-test -> page de connexion
+2026-11-20T11:15:22Z;XP03;20261120;eks;TEMOIN;reseau;200;http;200;oui;poste -> ALB -> page de connexion
+2026-11-20T11:16:35Z;XP03;20261120;eks;K2;mesure 1;50;s;<=180;oui;creation du pod -> Ready (/health/ready 9000), base neuve (rds), import du realm (eks)
+2026-11-20T11:17:41Z;XP03;20261120;eks;K2;mesure 2;51;s;<=180;oui;creation du pod -> Ready (/health/ready 9000), base neuve (rds), import du realm (eks)
+2026-11-20T11:19:02Z;XP03;20261120;eks;K3;sans jeton;401;resultat;401;oui;reserver
+2026-11-20T11:19:04Z;XP03;20261120;eks;K3;jeton d'utilisateur (acheteur, PKCE);401;resultat;401;oui;reserver
+2026-11-20T11:19:07Z;XP03;20261120;eks;K3;jeton d'un autre client (xp03-autre, aud place-de-marche);401;resultat;401;oui;reserver
+2026-11-20T11:19:09Z;XP03;20261120;eks;K3;jeton d'une autre audience (xp03-autre, aud interactions);401;resultat;401;oui;reserver
+2026-11-20T11:19:11Z;XP03;20261120;eks;K3;jeton de transactions;200;resultat;200;oui;reserver
+2026-11-20T11:19:14Z;XP03;20261120;eks;MA5;jeton de transactions sur route d'acheteur;401;resultat;401;oui;achat
+2026-11-20T11:19:16Z;XP03;20261120;eks;MA5;temoin : jeton d'acheteur sur route d'acheteur;200;resultat;200;oui;achat
+2026-11-20T11:19:16Z;XP03;20261120;eks;MA3;portee reserver absente du jeton d'acheteur;absente;resultat;absente;oui;collector-web
+2026-11-20T11:22:21Z;XP03;20261120;eks;XE1;resolution DoH 8.8.8.8 et 1.1.1.1;adresses de l'ALB;resultat;nom DNS de l'ALB resolu;oui;les deux alias resolvent vers les adresses de collector-xp01
+2026-11-20T11:22:21Z;XP03;20261120;eks;XE2;openssl s_client deux noms;CN collector.qvl-project.com + SAN *.collector.qvl-project.com;resultat;certificat ACM pour les deux noms;oui;ACM ISSUED, politique ELBSecurityPolicy-TLS13-1-2-Res-2021-06, TLS 1.3
+2026-11-20T11:22:28Z;XP03;20261120;eks;MA12;OTP demande a l'admin de test;oui;resultat;oui;oui;flux conditionnel role admin
+2026-11-20T11:22:28Z;XP03;20261120;eks;MA12;connexion admin aboutie avec OTP;oui;resultat;oui;oui;code TOTP de la graine de session
+2026-11-20T11:22:28Z;XP03;20261120;eks;MA12;roles du jeton admin;true;resultat;true;oui;admin present
+2026-11-20T11:22:31Z;XP03;20261120;eks;MA12;OTP demande au vendeur de test;non;resultat;non;oui;vendeur sans OTP
+2026-11-20T11:22:31Z;XP03;20261120;eks;MA12;connexion vendeur aboutie;oui;resultat;oui;oui;sans OTP
+2026-11-20T11:22:49Z;XP03;20261120;eks;MA1;valeurs sensibles en clair dans le realm versionne;0;resultat;0;oui;secret, value
+2026-11-20T11:22:52Z;XP03;20261120;eks;MA1;URI de redirection a joker (tous clients);0;resultat;0;oui;redirectUris, webOrigins
+2026-11-20T11:22:54Z;XP03;20261120;eks;MA1;flux implicite ou mot de passe actif (clients du realm);0;resultat;0;oui;MA1
+2026-11-20T11:22:57Z;XP03;20261120;eks;MA1;Full scope allowed actif;0;resultat;0;oui;MA1
+2026-11-20T11:22:57Z;XP03;20261120;eks;MA2;collector-web public + PKCE S256 + flux standard seul;true,S256,true,false;resultat;true,S256,true,false;oui;MA2
+2026-11-20T11:22:57Z;XP03;20261120;eks;MA2;transactions confidentiel, comptes de service seuls;false,false,true;resultat;false,false,true;oui;MA2
+2026-11-20T11:22:57Z;XP03;20261120;eks;MA2;flux mot de passe sur collector-web;unauthorized_client;resultat;unauthorized_client;oui;refuse
+2026-11-20T11:22:58Z;XP03;20261120;eks;MA2;flux implicite sur collector-web;unauthorized_client;resultat;unauthorized_client;oui;refuse
+2026-11-20T11:22:58Z;XP03;20261120;eks;MA2;code d'autorisation sans PKCE;invalid_request;resultat;invalid_request;oui;refuse
+2026-11-20T11:22:59Z;XP03;20261120;eks;MA2;URI de redirection etrangere;400;resultat;400;oui;refuse sans redirection
+2026-11-20T11:23:07Z;XP03;20261120;eks;MA3;reserver rattachee a collector-web;false,false;resultat;false,false;oui;par defaut, optionnelle
+2026-11-20T11:23:14Z;XP03;20261120;eks;MA5;roles de realm dans le jeton de transactions;0;resultat;0;oui;fullScopeAllowed=false , roles effectifs du compte : aucun
+2026-11-20T11:23:17Z;XP03;20261120;eks;MA9;roles de client composites du role admin;0;resultat;0;oui;realm-management
+2026-11-20T11:23:17Z;XP03;20261120;eks;MA11;jeton d'acces / session inactive / session max (s);300/1800/28800;resultat;300/1800/28800;oui;realm
+2026-11-20T11:23:17Z;XP03;20261120;eks;MA11;rotation du jeton de rafraichissement (revoke, reuse);true,0;resultat;true,0;oui;realm
+2026-11-20T11:23:17Z;XP03;20261120;eks;MA13;force brute active, verrouillage permanent inactif;true,false;resultat;true,false;oui;realm
+2026-11-20T11:23:17Z;XP03;20261120;eks;MA13;politique : longueur et liste interdite;true;resultat;true;oui;realm
+2026-11-20T11:23:21Z;XP03;20261120;eks;MA13;message identique compte existant / inexistant;oui;resultat;oui;oui;"Nom d&#39,utilisateur ou mot de passe invalide."
+2026-11-20T11:24:25Z;XP03;20261120;eks;K3;jeton expire (transactions, > 5 min);401;resultat;401;oui;reserver
+2026-11-20T11:29:11Z;XP03;20261120;eks;K1;repos : memoire max de Keycloak;560;Mio;<=1280;oui;kubectl top toutes les 30 s pendant 300 s
+2026-11-20T11:29:11Z;XP03;20261120;eks;K1;repos : conteneurs OOMKilled;0;conteneurs;0;oui;tous namespaces
+2026-11-20T11:29:11Z;XP03;20261120;eks;K1;repos : pods Pending (max);0;pods;0;oui;tous namespaces

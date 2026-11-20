@@ -1,0 +1,22 @@
+== XE1 (DoH 8.8.8.8 dns.google, 1.1.1.1 cloudflare-dns.com ; UDP 53 vers resolveurs publics bloque depuis le poste)
+collector.qvl-project.com google ["34.199.65.3","18.210.115.44"] cloudflare ["34.199.65.3","18.210.115.44"]
+auth.collector.qvl-project.com google ["18.210.115.44","34.199.65.3"] cloudflare ["18.210.115.44","34.199.65.3"]
+ALB collector-xp01 (nom DNS resolu) : Addresses: 18.210.115.44 34.199.65.3 
+== XE2
+-- collector.qvl-project.com
+subject=CN=collector.qvl-project.com
+issuer=C=US, O=Amazon, CN=Amazon RSA 2048 M01
+notBefore=Oct 26 00:00:00 2026 GMT
+notAfter=May 11 23:59:59 2027 GMT
+X509v3 Subject Alternative Name: 
+    DNS:collector.qvl-project.com, DNS:*.collector.qvl-project.com
+-- auth.collector.qvl-project.com
+subject=CN=collector.qvl-project.com
+issuer=C=US, O=Amazon, CN=Amazon RSA 2048 M01
+notBefore=Oct 26 00:00:00 2026 GMT
+notAfter=May 11 23:59:59 2027 GMT
+X509v3 Subject Alternative Name: 
+    DNS:collector.qvl-project.com, DNS:*.collector.qvl-project.com
+ecouteur 443 : ELBSecurityPolicy-TLS13-1-2-Res-2021-06 ; certificat ACM ISSUED (collector.qvl-project.com, *.collector.qvl-project.com)
+== Groupe cible collector-xp01-kc (NodePort 30081, externalTrafficPolicy Local)
+noeud du pod Keycloak healthy ; autre noeud unhealthy Target.Timeout (attendu : pas de point de terminaison local)
