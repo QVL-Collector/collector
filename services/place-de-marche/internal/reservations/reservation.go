@@ -60,6 +60,7 @@ type Request struct {
 type Reservation struct {
 	ID          ID
 	Article     annonces.ArticleID
+	Title       string
 	Buyer       BuyerID
 	ExpiresAt   time.Time
 	Price       annonces.Money

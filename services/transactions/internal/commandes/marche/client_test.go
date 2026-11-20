@@ -60,8 +60,14 @@ func simuler(t *testing.T, statut int, typeDeContenu, corps string) *placeDeMarc
 	return p
 }
 
+const titreDeReference = "Montre de gousset 1920"
+
 func reservationJSON(article, devise string) string {
-	return fmt.Sprintf(`{"reservationId":"6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b","articleId":%q,"echeance":"2026-11-16T10:25:00.123456Z","prix":{"montantCentimes":12000,"devise":%q},"fraisDePort":{"montantCentimes":590,"devise":"EUR"}}`, article, devise)
+	return reservationTitreeJSON(article, devise, titreDeReference)
+}
+
+func reservationTitreeJSON(article, devise, titre string) string {
+	return fmt.Sprintf(`{"reservationId":"6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b","articleId":%q,"titre":%q,"echeance":"2026-11-16T10:25:00.123456Z","prix":{"montantCentimes":12000,"devise":%q},"fraisDePort":{"montantCentimes":590,"devise":"EUR"}}`, article, titre, devise)
 }
 
 func probleme(urn string, statut int) string {
@@ -154,9 +160,9 @@ func TestRefusMetierTraduits(t *testing.T) {
 		"302":                      {http.StatusFound, "", commandes.ErrMarketplaceUnavailable},
 		"201 illisible":            {http.StatusCreated, `{"reservationId":`, commandes.ErrMarketplaceUnavailable},
 		"201 vide":                 {http.StatusCreated, ``, commandes.ErrMarketplaceUnavailable},
-		"201 sans échéance":        {http.StatusCreated, `{"reservationId":"6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b","articleId":"ART","prix":{"montantCentimes":1,"devise":"EUR"},"fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`, commandes.ErrMarketplaceUnavailable},
-		"201 sans prix":            {http.StatusCreated, `{"reservationId":"6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b","articleId":"ART","echeance":"2026-11-16T10:25:00Z","fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`, commandes.ErrMarketplaceUnavailable},
-		"201 réservation non UUID": {http.StatusCreated, `{"reservationId":"x","articleId":"ART","echeance":"2026-11-16T10:25:00Z","prix":{"montantCentimes":1,"devise":"EUR"},"fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`, commandes.ErrMarketplaceUnavailable},
+		"201 sans échéance":        {http.StatusCreated, `{"reservationId":"6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b","articleId":"ART","titre":"Montre","prix":{"montantCentimes":1,"devise":"EUR"},"fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`, commandes.ErrMarketplaceUnavailable},
+		"201 sans prix":            {http.StatusCreated, `{"reservationId":"6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b","articleId":"ART","titre":"Montre","echeance":"2026-11-16T10:25:00Z","fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`, commandes.ErrMarketplaceUnavailable},
+		"201 réservation non UUID": {http.StatusCreated, `{"reservationId":"x","articleId":"ART","titre":"Montre","echeance":"2026-11-16T10:25:00Z","prix":{"montantCentimes":1,"devise":"EUR"},"fraisDePort":{"montantCentimes":0,"devise":"EUR"}}`, commandes.ErrMarketplaceUnavailable},
 	}
 	for nom, c := range cas {
 		t.Run(nom, func(t *testing.T) {

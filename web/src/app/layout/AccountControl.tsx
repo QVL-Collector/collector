@@ -21,6 +21,7 @@ export function AccountControl() {
         <SignedInAccount
           identity={model.identity}
           labels={model.labels}
+          canOpenBuyerSpace={model.canOpenBuyerSpace}
           canOpenSellerSpace={model.canOpenSellerSpace}
           canOpenAdminSpace={model.canOpenAdminSpace}
           compact={model.compact}

@@ -1,6 +1,6 @@
 import type { HttpClient } from '../../../api/httpClient';
 import type { OrdersClient } from '../domain/order';
-import { parseOrder } from './orderPayload';
+import { parseOrder, parseOrderPage } from './orderPayload';
 
 const ordersPath = '/v1/commandes';
 
@@ -15,6 +15,13 @@ export function createHttpOrdersClient(http: HttpClient): OrdersClient {
     },
     async getOrder(id, signal) {
       return parseOrder(await http.getJson(orderPath(id), { signal }));
+    },
+    async listMyOrders({ page, pageSize }, signal) {
+      const payload = await http.getJson(ordersPath, {
+        query: { page: String(page), taille: String(pageSize) },
+        signal,
+      });
+      return parseOrderPage(payload);
     },
   };
 }

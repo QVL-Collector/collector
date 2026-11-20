@@ -15,6 +15,7 @@ type moneyResponse struct {
 type orderResponse struct {
 	ID           string        `json:"id"`
 	ArticleID    string        `json:"articleId"`
+	Title        string        `json:"titre"`
 	Status       string        `json:"statut"`
 	Price        moneyResponse `json:"prix"`
 	ShippingFee  moneyResponse `json:"fraisDePort"`
@@ -29,6 +30,7 @@ func toOrderResponse(order commandes.Order) orderResponse {
 	return orderResponse{
 		ID:           order.ID.String(),
 		ArticleID:    order.Article.String(),
+		Title:        order.Title,
 		Status:       string(order.Status),
 		Price:        moneyResponseOf(order.Amounts.Price),
 		ShippingFee:  moneyResponseOf(order.Amounts.ShippingFee),
@@ -38,6 +40,21 @@ func toOrderResponse(order commandes.Order) orderResponse {
 		ExpiresAt:    order.ExpiresAt.UTC(),
 		CreatedAt:    order.CreatedAt.UTC(),
 	}
+}
+
+type orderPageResponse struct {
+	Orders []orderResponse `json:"elements"`
+	Page   int             `json:"page"`
+	Size   int             `json:"taille"`
+	Total  int             `json:"total"`
+}
+
+func toOrderPageResponse(page commandes.OrderPage, request commandes.PageRequest) orderPageResponse {
+	orders := make([]orderResponse, 0, len(page.Orders))
+	for _, order := range page.Orders {
+		orders = append(orders, toOrderResponse(order))
+	}
+	return orderPageResponse{Orders: orders, Page: request.Number, Size: request.Size, Total: page.Total}
 }
 
 func moneyResponseOf(money montants.Money) moneyResponse {

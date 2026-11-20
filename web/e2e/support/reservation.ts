@@ -16,6 +16,7 @@ export type ArticleEnVente = {
 export type CommandeEmise = {
   readonly id: string;
   readonly articleId: string;
+  readonly titre: string;
   readonly statut: 'en_attente_paiement' | 'expiree';
   readonly prix: Montant;
   readonly fraisDePort: Montant;
@@ -57,10 +58,14 @@ export function identifiantCommande(rang: number): string {
   return `00000000-0000-4000-b000-${rang.toString().padStart(12, '0')}`;
 }
 
+export function titreDeLArticle(id: string): string {
+  return `Figurine de collection ${String(Number(id.slice(-12)))}`;
+}
+
 export function articleEnVente(rang: number, reserve = false): ArticleEnVente {
   return {
     id: identifiantArticle(rang),
-    titre: `Figurine de collection ${String(rang)}`,
+    titre: titreDeLArticle(identifiantArticle(rang)),
     prix: euros(12000),
     fraisDePort: euros(590),
     reserve,
@@ -91,6 +96,7 @@ export function commandeEmise(
   return {
     id: identifiantCommande(rang),
     articleId,
+    titre: titreDeLArticle(articleId),
     statut: 'en_attente_paiement',
     prix: euros(montants.prix),
     fraisDePort: euros(montants.frais),
@@ -130,7 +136,9 @@ export class ReservationSimulee {
   commandes: CommandeEmise[] = [];
   prochaineCommande: CommandeEmise | null = null;
   refus: { statut: number; type: string } | null = null;
+  listeIndisponible = false;
   readonly demandes: DemandeDeCommande[] = [];
+  readonly listes: URL[] = [];
 
   async brancher(collector: Collector): Promise<void> {
     const { page } = collector;
@@ -178,6 +186,9 @@ export class ReservationSimulee {
     if (requete.method() === 'POST' && url.pathname === cheminCommandes) {
       return this.creer(route);
     }
+    if (requete.method() === 'GET' && url.pathname === cheminCommandes) {
+      return this.lister(route, url);
+    }
     const id = decodeURIComponent(url.pathname.split('/').at(-1) ?? '');
     const commande = this.commandes.find((candidate) => candidate.id === id);
     if (requete.method() === 'GET' && commande !== undefined) {
@@ -187,6 +198,27 @@ export class ReservationSimulee {
       status: 404,
       contentType: 'application/problem+json',
       body: JSON.stringify(probleme(404)),
+    });
+  }
+
+  private lister(route: Route, url: URL): Promise<void> {
+    this.listes.push(url);
+    if (this.listeIndisponible) {
+      return route.fulfill({
+        status: 503,
+        contentType: 'application/problem+json',
+        body: JSON.stringify(probleme(503)),
+      });
+    }
+    const page = Number(url.searchParams.get('page') ?? '1');
+    const taille = Number(url.searchParams.get('taille') ?? '20');
+    return route.fulfill({
+      json: {
+        elements: this.commandes.slice((page - 1) * taille, page * taille),
+        page,
+        taille,
+        total: this.commandes.length,
+      },
     });
   }
 

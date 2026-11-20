@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"collector/libs/platform/logging"
 	"collector/libs/platform/token"
@@ -108,6 +109,7 @@ func (m moneyPayload) money() (montants.Money, error) {
 type reservationPayload struct {
 	ID          string       `json:"reservationId"`
 	ArticleID   string       `json:"articleId"`
+	Title       string       `json:"titre"`
 	ExpiresAt   time.Time    `json:"echeance"`
 	Price       moneyPayload `json:"prix"`
 	ShippingFee moneyPayload `json:"fraisDePort"`
@@ -130,10 +132,27 @@ func (p reservationPayload) reservation() (commandes.Reservation, error) {
 	article, articleErr := commandes.ParseArticleID(p.ArticleID)
 	price, priceErr := p.Price.money()
 	shippingFee, shippingErr := p.ShippingFee.money()
-	if err := errors.Join(idErr, articleErr, priceErr, shippingErr, expiryError(p.ExpiresAt)); err != nil {
+	if err := errors.Join(idErr, articleErr, titleError(p.Title), priceErr, shippingErr, expiryError(p.ExpiresAt)); err != nil {
 		return commandes.Reservation{}, err
 	}
-	return commandes.Reservation{ID: id, Article: article, ExpiresAt: p.ExpiresAt, Price: price, ShippingFee: shippingFee}, nil
+	return commandes.Reservation{
+		ID:          id,
+		Article:     article,
+		Title:       p.Title,
+		ExpiresAt:   p.ExpiresAt,
+		Price:       price,
+		ShippingFee: shippingFee,
+	}, nil
+}
+
+func titleError(title string) error {
+	if strings.TrimSpace(title) == "" {
+		return errors.New("titre absent")
+	}
+	if utf8.RuneCountInString(title) > commandes.MaxTitleLength {
+		return errors.New("titre trop long")
+	}
+	return nil
 }
 
 func expiryError(expiresAt time.Time) error {

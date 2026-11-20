@@ -23,6 +23,12 @@ const (
 	codeRequired   = "obligatoire"
 )
 
+var pageLimits = httpserver.PageLimits{
+	DefaultSize: commandes.DefaultPageSize,
+	MaxSize:     commandes.MaxPageSize,
+	MaxNumber:   commandes.MaxPageNumber,
+}
+
 var notReservable = problem.Typed(problemes.ArticleNotReservable, "Article non réservable",
 	http.StatusUnprocessableEntity, "L'article n'est pas réservable.")
 
@@ -35,6 +41,7 @@ var activeElsewhere = problem.Typed(problemes.ReservationActive, "Réservation d
 type OrderService interface {
 	Place(ctx context.Context, buyer commandes.BuyerID, credential token.Credential, article commandes.ArticleID) (commandes.Recorded, error)
 	OwnOrder(ctx context.Context, buyer commandes.BuyerID, id commandes.ID) (commandes.Order, error)
+	OwnOrders(ctx context.Context, buyer commandes.BuyerID, page commandes.PageRequest) (commandes.OrderPage, error)
 }
 
 type Authenticator interface {
@@ -56,6 +63,7 @@ func Register(mux *http.ServeMux, orders OrderService, authenticator Authenticat
 		return authenticator.Authenticate(logger, token.RequireRole(buyerRole, handler))
 	}
 	mux.Handle("POST "+ordersPath, buyerOnly(limiter.Limit(http.HandlerFunc(h.place))))
+	mux.Handle("GET "+ordersPath, buyerOnly(http.HandlerFunc(h.ownOrders)))
 	mux.Handle("GET "+ordersPath+"/{id}", buyerOnly(http.HandlerFunc(h.ownOrder)))
 	mux.HandleFunc("/", httpserver.NotFound)
 }
@@ -119,6 +127,25 @@ func (h handlers) ownOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpjson.Write(w, http.StatusOK, toOrderResponse(order))
+}
+
+func (h handlers) ownOrders(w http.ResponseWriter, r *http.Request) {
+	buyer, _, authenticated := buyerOf(w, r)
+	if !authenticated {
+		return
+	}
+	pagination, fieldErrors := httpserver.PaginationOf(r.URL.Query(), pageLimits)
+	if len(fieldErrors) > 0 {
+		problem.Write(w, problem.Validation(fieldErrors))
+		return
+	}
+	request := commandes.PageRequest(pagination)
+	page, err := h.orders.OwnOrders(r.Context(), buyer, request)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+	httpjson.Write(w, http.StatusOK, toOrderPageResponse(page, request))
 }
 
 func buyerOf(w http.ResponseWriter, r *http.Request) (commandes.BuyerID, token.Credential, bool) {

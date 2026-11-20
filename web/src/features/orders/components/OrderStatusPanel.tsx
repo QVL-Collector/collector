@@ -28,6 +28,9 @@ export function OrderStatusPanel({ summary }: OrderStatusPanelProps) {
           <Typography id={headingId} component="h2" variant="overline" color="text.secondary">
             {t('orders.statusTitle')}
           </Typography>
+          <Typography component="p" variant="h6" sx={{ overflowWrap: 'anywhere' }}>
+            {summary.articleTitle}
+          </Typography>
           <OrderStatusChip status={summary.status} label={summary.statusLabel} />
           <Typography variant="caption" color="text.secondary">
             <time dateTime={summary.createdDateTime}>{summary.createdLabel}</time>

@@ -16,6 +16,7 @@ type Marketplace interface {
 type Orders interface {
 	Record(ctx context.Context, placement Placement) (Recorded, error)
 	FindOwned(ctx context.Context, buyer BuyerID, id ID) (Order, error)
+	ListOwned(ctx context.Context, buyer BuyerID, page PageRequest) (OrderPage, error)
 }
 
 type Clock func() time.Time
@@ -56,4 +57,12 @@ func (s *Service) OwnOrder(ctx context.Context, buyer BuyerID, id ID) (Order, er
 		return Order{}, err
 	}
 	return order.AsOf(s.now()), nil
+}
+
+func (s *Service) OwnOrders(ctx context.Context, buyer BuyerID, page PageRequest) (OrderPage, error) {
+	orders, err := s.orders.ListOwned(ctx, buyer, page)
+	if err != nil {
+		return OrderPage{}, err
+	}
+	return orders.AsOf(s.now()), nil
 }

@@ -15,6 +15,33 @@ tags:
   - name: Commandes
 paths:
   /commandes:
+    get:
+      tags: [Commandes]
+      operationId: listerMesCommandes
+      summary: >-
+        Commandes de l'acheteur connecté, de la plus récente à la plus ancienne (creeLe décroissant, id décroissant en
+        départage). Seules les commandes dont l'acheteur est le sujet du jeton sont listées ; le statut de chaque élément
+        est dérivé à la lecture comme pour le détail
+      security:
+        - jetonKeycloak: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Taille"
+      responses:
+        "200":
+          description: Page de commandes de l'acheteur ; une page au-delà du total est vide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageCommandes"
+        "400":
+          $ref: "#/components/responses/PaginationInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
     post:
       tags: [Commandes]
       operationId: reserverEtCommander
@@ -105,6 +132,27 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Présent une seule fois et non vide (sinon code invalide), entier entre les bornes (sinon code hors_limites)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000
+        default: 1
+    Taille:
+      name: taille
+      in: query
+      required: false
+      description: Présent une seule fois et non vide (sinon code invalide), entier entre les bornes (sinon code hors_limites)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
   schemas:
     CreationCommande:
       description: >-
@@ -133,7 +181,7 @@ components:
     Commande:
       type: object
       additionalProperties: false
-      required: [id, articleId, statut, prix, fraisDePort, totalPaye, commission, montantVendeur, echeance, creeLe]
+      required: [id, articleId, titre, statut, prix, fraisDePort, totalPaye, commission, montantVendeur, echeance, creeLe]
       properties:
         id:
           type: string
@@ -141,6 +189,13 @@ components:
         articleId:
           type: string
           format: uuid
+        titre:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: >-
+            Titre de l'article figé à la réservation, tel que renvoyé par la Place de marché ; une modification ultérieure
+            de l'annonce ne le change pas
         statut:
           type: string
           enum: [en_attente_paiement, expiree]
@@ -175,6 +230,24 @@ components:
         creeLe:
           type: string
           format: date-time
+    PageCommandes:
+      type: object
+      additionalProperties: false
+      required: [elements, page, taille, total]
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Commande"
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
     ErreurDeChamp:
       type: object
       additionalProperties: false
@@ -185,7 +258,7 @@ components:
           example: articleId
         code:
           type: string
-          enum: [obligatoire, invalide]
+          enum: [obligatoire, invalide, hors_limites]
     Probleme:
       type: object
       required: [type, title, status]
@@ -211,6 +284,14 @@ components:
       description: >-
         articleId absent ou qui n'est pas un UUID (urn:collector:probleme:saisie-invalide), ou corps invalide : JSON mal
         formé, clé dupliquée, valeur racine autre qu'un objet, articleId d'un autre type (urn:collector:probleme:corps-invalide)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    PaginationInvalide:
+      description: >-
+        page ou taille répété, vide, non entier (code invalide) ou hors bornes (code hors_limites)
+        (urn:collector:probleme:saisie-invalide)
       content:
         application/problem+json:
           schema:

@@ -223,6 +223,41 @@ export const en: Translation = {
     },
   },
   orders: {
+    navigation: 'My reservations',
+    list: {
+      documentTitle: 'My reservations · Collector',
+      title: 'My reservations',
+      subtitle:
+        'Find the items reserved in your name, their amount and how much time you have left to pay.',
+      listTitle: 'Your reservations',
+      listLabel: 'Reservations',
+      paginationLabel: 'My reservations pagination',
+      loading: 'Loading your reservations',
+      loaded_one: '{{count}} reservation',
+      loaded_other: '{{count}} reservations',
+      total: 'Total amount',
+      timeLeft: 'Expires {{relative}}',
+      lastMinute: 'Expires in less than a minute',
+      deadlineReached: 'Deadline reached, updating the status…',
+      expired: 'The reservation of “{{title}}” has expired.',
+      viewDetail: 'View the reservation',
+      viewDetailLabel: 'View the reservation “{{title}}”',
+      forbiddenDescription:
+        'Your account does not have the role required to see these reservations.',
+      empty: {
+        title: 'No reservations yet',
+        description: 'Reserve an item from the catalogue: it is held for you while you pay.',
+        action: 'Browse the catalogue',
+      },
+      error: {
+        title: 'Your reservations are temporarily unavailable',
+        description: 'Check your connection, then try again.',
+        retry: 'Try again',
+      },
+      unauthenticated: {
+        description: 'Sign in again to see your reservations.',
+      },
+    },
     pendingDocumentTitle: 'Your order · Collector',
     pendingTitle: 'Your order',
     loading: 'Loading your order',

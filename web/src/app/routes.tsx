@@ -6,8 +6,9 @@ import { publishedArticleRoutePattern } from '../features/catalogue/cataloguePat
 import { CataloguePage } from '../features/catalogue/components/CataloguePage';
 import { NotificationsPage } from '../features/notifications/components/NotificationsPage';
 import { notificationsPath } from '../features/notifications/notificationsPaths';
+import { MyOrdersPage } from '../features/orders/components/MyOrdersPage';
 import { OrderConfirmationPage } from '../features/orders/components/OrderConfirmationPage';
-import { orderRoutePattern } from '../features/orders/ordersPaths';
+import { buyerSpacePath, orderRoutePattern } from '../features/orders/ordersPaths';
 import { ArticleEditorPage } from '../features/seller/components/ArticleEditorPage';
 import { NewArticlePage } from '../features/seller/components/NewArticlePage';
 import { SellerSpacePage } from '../features/seller/components/SellerSpacePage';
@@ -42,7 +43,10 @@ export const appRoutes: RouteObject[] = [
       },
       {
         element: <RequireAuthentication requiredRole="acheteur" />,
-        children: [{ path: orderRoutePattern, element: <OrderConfirmationPage /> }],
+        children: [
+          { path: buyerSpacePath, element: <MyOrdersPage /> },
+          { path: orderRoutePattern, element: <OrderConfirmationPage /> },
+        ],
       },
       {
         element: <RequireAuthentication requiredRole="admin" />,
