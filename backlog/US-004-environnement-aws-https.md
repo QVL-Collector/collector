@@ -4,7 +4,7 @@
 |---|---|
 | Epic | E2 Plateforme AWS |
 | Statut | En cours |
-| Sprint | 1 (J4) |
+| Sprint | 1 (J4), reportée au sprint 3 (session AWS 2, [sprint-3.md](sprints/sprint-3.md)) |
 | Engagement | Ferme — **première US d'infrastructure** : X17 et X20 y sont des AC bloquants (D14) |
 | Estimation | 8 points |
 | Dépend de | US-001 ; verdicts de XP01 et XP03 (2026-11-02) |

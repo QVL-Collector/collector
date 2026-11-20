@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Candidate (XP en D14) |
+| Statut | Confirmée (XP03, 2026-11-20) |
 | Date | 2026-10-26 |
 | Décideur | Martin |
 | Dépend de | [D03](D03-hebergement-orchestration.md), [D04](D04-stack.md), [D05](D05-communication-interservice.md), [D06](D06-authentification-autorisation.md), [D07](D07-donnees.md) |
@@ -317,6 +317,8 @@ Date : 2026-10-26
 ## Conséquences
 
 La décision de Martin est enregistrée ci-dessus ; ses conséquences :
+
+> **Verdict du 2026-11-20 (XP03)** : décision **confirmée** : liste blanche de l'ALB retenue sur EKS ; un 400 émis par l'ALB est accepté comme refus (XE4) ; MX2 couvert par la sonde Lambda d'US-004 (AC8). Détail : [XP03](../experimentations/XP03-identite-exposition.md).
 
 - **D06** : `KC_HOSTNAME` à `https://auth.<domaine>` dès le sprint 1 ; « Web Origins » limité à `https://<domaine>` ; le repli sslip.io de D06 est remplacé par le repli de D08 (chaîne 2, sur NLB).
 - **D07** : `img-src` sur l'hôte exact du bucket, de style hébergé virtuel (MD8).

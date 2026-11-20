@@ -7,9 +7,9 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 
 ## État actuel
 
-- **Phase** : décisions techniques closes (J2, D01 à D14). Jalon en cours : J3, sonde du compte AWS, bac à sable et documents de process.
-- **Décisions** : Session S3 close : [D03](docs/decisions/D03-hebergement-orchestration.md) en statut Confirmée (XP01 : EKS, repli ECS Fargate), [D04](docs/decisions/D04-stack.md) décidée (Go, React + TypeScript + MUI). Contraintes de l'environnement : [environnement-learner-lab.md](docs/00-cadrage/environnement-learner-lab.md). Prochaine étape : S4 (D05 à D11). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
-- **Code** : front React en cours (US-010) ; IaC AWS dans [infra/](infra/README.md) (couche persistante, couche éphémère EKS, chart du front) et scripts d'allumage et d'extinction dans [tools/](tools/README.md) (US-004).
+- **Phase** : sprint 3 en cours (J5 bis). Sprints 1 et 2 clos sur le périmètre local ; les US qui demandent AWS sont reportées au sprint 3 : [sprint-1.md](backlog/sprints/sprint-1.md), [sprint-2.md](backlog/sprints/sprint-2.md), [sprint-3.md](backlog/sprints/sprint-3.md).
+- **Décisions** : D01 à D14 tranchées ; D03, D05, D06 et D08 confirmées par XP01 à XP03 le 2026-11-20 (EKS, RabbitMQ, Keycloak, ALB). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
+- **Code** : quatre services Go dans [services/](services/) (Place de marché, Contrôle, Interactions, Transactions), front React dans [web/](web/), canal et identités dans [infra/](infra/README.md), scripts d'allumage et d'extinction AWS dans [tools/](tools/README.md) (US-004, en cours).
 
 ## Démarrer / arrêter
 

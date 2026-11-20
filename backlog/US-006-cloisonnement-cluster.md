@@ -4,7 +4,7 @@
 |---|---|
 | Epic | E2 Plateforme AWS |
 | Statut | À faire |
-| Sprint | 1 (J4) |
+| Sprint | 1 (J4), reportée au sprint 3 (session AWS 2, [sprint-3.md](sprints/sprint-3.md)) |
 | Engagement | Ferme |
 | Estimation | 5 points |
 | Dépend de | US-004 |

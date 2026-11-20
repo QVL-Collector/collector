@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E6 Réservation |
-| Statut | En revue |
+| Statut | Livrée |
 | Sprint | 3 (J5 bis) |
 | Engagement | Ferme |
 | Estimation | 5 points |
@@ -69,12 +69,12 @@ Mesures : MC7, MA3, MA5, MA6, MD1 ; menaces M-MOD-02, M-SYN-01. Frontière : app
 
 Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
-- [ ] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
-- [ ] Revue de code faite, retours traités.
-- [ ] Martin a testé et prononcé « je valide la livraison de la feature ».
-- [ ] Documentation touchée à jour.
-- [ ] Statut, date de validation et liens des rapports renseignés ci-dessous.
-- [ ] Aucune donnée sensible ni credential ajouté au dépôt.
+- [x] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
+- [x] Revue de code faite, retours traités.
+- [x] Martin a testé et prononcé « je valide la livraison de la feature ».
+- [x] Documentation touchée à jour.
+- [x] Statut, date de validation et liens des rapports renseignés ci-dessous.
+- [x] Aucune donnée sensible ni credential ajouté au dépôt.
 
 ## Suivi
 
@@ -82,5 +82,7 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 |---|---|
 | Rapport de test | [US-030-rapport-tests.md](../docs/rapports/tests/US-030-rapport-tests.md) |
 | Rapport de revue de code | [US-030-revue-code.md](../docs/rapports/revues/US-030-revue-code.md) |
-| Validation Martin | AAAA-MM-JJ |
-| Livraison (PR / merge) | |
+| Validation Martin | 2026-11-16 |
+| Livraison (PR / merge) | https://github.com/QVL-Collector/collector/pull/45 |
+
+AC7 (route « réserver » absente de l'ALB, politique réseau) : non testé localement, preuve reportée à la session AWS ([rapport de test](../docs/rapports/tests/US-030-rapport-tests.md), « Hors périmètre »).

@@ -4,7 +4,7 @@
 |---|---|
 | Epic | E1 Chaîne de livraison |
 | Statut | À faire |
-| Sprint | 1 (J4) |
+| Sprint | 1 (J4), reportée au sprint 3 (session AWS 2, [sprint-3.md](sprints/sprint-3.md)) |
 | Engagement | Ferme (ordre de coupe S1 n° 1 : repli sur le déploiement depuis le poste, signature conservée) |
 | Estimation | 5 points |
 | Dépend de | US-002, US-004 |
