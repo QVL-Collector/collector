@@ -4,7 +4,7 @@
 |---|---|
 | Décisions testées | [D06](../decisions/D06-authentification-autorisation.md) et [D08](../decisions/D08-exposition-tls-domaine.md) (statut `Candidate (XP03)`) |
 | Dates prévues | XE1, XE2 pendant XP00 (2026-10-27) ; local 2026-10-29 ; EKS session 2 2026-10-31 |
-| Date d'exécution | 2026-10-28, locale : docker compose de 09 h 07 à 09 h 22 UTC, k3d (cluster jetable `xp02-essai`) de 09 h 44 à 10 h 04 UTC ; XE1, XE2 et EKS non exécutés |
+| Date d'exécution | 2026-10-28, locale : docker compose de 09 h 07 à 09 h 22 UTC, k3d (cluster jetable `xp02-essai`) de 09 h 44 à 10 h 04 UTC ; EKS (cluster `collector-xp01`, session 2026-11-20 partagée avec XP02 en cours sur le même cluster) de 11 h 01 à 11 h 30 UTC, base Keycloak dans RDS (`BASE=rds`) |
 | Exécutée par | Martin |
 | Scripts | `sandbox/XP03-identite-exposition/` (realm de test, règles d'ALB, service de test vérifiant l'audience, proxy local) |
 | Dépend de | [XP00](XP00-sonde-compte.md) (S6, S7), [XP01](XP01-orchestrateur.md) (cluster, ALB, RDS) |
@@ -144,18 +144,18 @@ curl -s --max-time 5 -o /dev/null -w '%{http_code}\n' https://auth.collector.qvl
 
 | # | Local | EKS | Atteint |
 |---|---|---|---|
-| XE1 | — | Reporté à la session EKS | Reporté |
-| XE2 | — | Reporté à la session EKS | Reporté |
-| XE4 + ME8 | Caddy : 200 sur découverte, `certs` et page de connexion ; 26/26 chemins interdits en 404 (traversées, encodages, casse, barre oblique inverse) ; `/reserver` 404 ; 9000 sans réponse | Reporté à la session EKS | Oui en local |
-| K1 | — (indicatif : Keycloak 651 Mio compose, 671 Mio k3d, 20m CPU au repos) | Reporté à la session EKS | Reporté |
-| K2 | compose 29 s, 30 s ; k3d 110 s (tirage de l'image PostgreSQL sur un nouvel agent compris), 41 s | Reporté à la session EKS | Oui en local |
-| K3 | compose et k3d : 5 × 401, 1 × 200 ; MA3 et MA5 conformes (9/9 chaque fois) | Reporté à la session EKS | Oui en local |
-| G7-4 | k3d : `ns-intrus` → 8080, 9000, 8081, 5432 fermés ; témoins `transactions-test` ouverts, page de connexion 200 (9/9) | Reporté à la session EKS | Oui (débogage) |
-| XE3 | — (indicatif : 80 → 301 par Caddy) | Reporté à la session EKS | Reporté |
-| MA12 | compose et k3d : OTP demandé à l'admin, pas au vendeur (5/5 chaque fois) | Reporté à la session EKS | Oui en local |
-| MX2 | — | Reporté à la session EKS | Reporté |
+| XE1 | — | Les deux alias résolvent vers les deux adresses de l'ALB `collector-xp01` depuis 8.8.8.8 et 1.1.1.1 (par DoH : le DNS UDP 53 vers les résolveurs publics est bloqué depuis le poste) | Seuil atteint |
+| XE2 | — | Certificat ACM `ISSUED` (CN `collector.qvl-project.com`, SAN `*.collector.qvl-project.com`, Amazon RSA 2048 M01) servi pour les deux noms ; écouteur 443 en `ELBSecurityPolicy-TLS13-1-2-Res-2021-06`, TLS 1.3 négocié | Seuil atteint |
+| XE4 + ME8 | Caddy : 200 sur découverte, `certs` et page de connexion ; 26/26 chemins interdits en 404 (traversées, encodages, casse, barre oblique inverse) ; `/reserver` 404 ; 9000 sans réponse | ALB : 200 sur découverte, `certs` et page de connexion ; 22/26 chemins interdits en 404 ; **4 chemins en 400 renvoyés par l'ALB lui-même** (`Server: awselb/2.0`, jamais transmis à Keycloak) : `/%2e%2e/admin/`, `/%2E%2E/admin/`, `/resources/..%2f..%2fadmin/`, `/resources/%2e%2e/%2e%2e/admin/master/console/` (traversées au-dessus de la racine) ; `/reserver` 404 ; 9000 délai expiré ; 28/32 | Oui en local ; EKS : 400 au lieu de 404 sur 4 chemins, à trancher par Martin |
+| K1 | — (indicatif : Keycloak 651 Mio compose, 671 Mio k3d, 20m CPU au repos) | Repos 300 s seulement (et non 15 min), sans pic de charge : Keycloak 560 Mio max, aucun `OOMKilled`, aucun pod `Pending` ; RabbitMQ et KEDA de XP02 présents (nœuds à 46 % et 28 % de mémoire) | Partiel : repos court sans pic, à compléter |
+| K2 | compose 29 s, 30 s ; k3d 110 s (tirage de l'image PostgreSQL sur un nouvel agent compris), 41 s | RDS : 50 s et 51 s (base neuve recréée par pod `psql`, import du realm, image tirée d'ECR) | Oui en local ; EKS seuil atteint |
+| K3 | compose et k3d : 5 × 401, 1 × 200 ; MA3 et MA5 conformes (9/9 chaque fois) | 5 × 401, 1 × 200 ; MA3 et MA5 conformes (9/9) ; `verificateur` joint depuis `transactions-test` | Oui en local ; EKS seuil atteint |
+| G7-4 | k3d : `ns-intrus` → 8080, 9000, 8081, 5432 fermés ; témoins `transactions-test` ouverts, page de connexion 200 (9/9) | `ns-intrus` → 8080, 9000, 8081, 5432 et NodePort 30081 des deux nœuds fermés ; témoins `transactions-test` ouverts ; page de connexion 200 depuis `transactions-test` et poste → ALB (12/12) | Oui (débogage) ; EKS seuil atteint |
+| XE3 | — (indicatif : 80 → 301 par Caddy) | 80 → 301 sur les deux noms ; HSTS `max-age=31536000; includeSubDomains` ; hôte inconnu 404 ; `testssl.sh` : SSLv2, SSLv3, TLS 1.0, 1.1 non offerts, TLS 1.2 et 1.3 offerts (7/7) | Seuil atteint |
+| MA12 | compose et k3d : OTP demandé à l'admin, pas au vendeur (5/5 chaque fois) | OTP demandé à l'admin (connexion aboutie, rôle `admin`), pas au vendeur (5/5) | Oui |
+| MX2 | — | Non exécuté (CloudShell hors de cette session) | Reporté |
 
-Contrôles complémentaires du realm (`verifier.sh ma`, compose) : 18/18 (MA1, MA2, MA3, MA5, MA9, MA11, MA13). MA14 (Trivy) non rejoué. Relevés : [`docs/mesures/XP03-identite-exposition.csv`](../mesures/XP03-identite-exposition.csv) (format du CSV d'XP00, et non les colonnes annoncées dans « Données collectées » ; les scripts écrivent encore l'ancien format) et sorties dans [`docs/mesures/XP03-identite-exposition/`](../mesures/XP03-identite-exposition/) (seules les charges utiles décodées des jetons y figurent).
+Contrôles complémentaires du realm (`verifier.sh ma`, compose) : 18/18 (MA1, MA2, MA3, MA5, MA9, MA11, MA13). MA14 (Trivy) non rejoué. EKS : `verifier.sh ma` 18/18. Groupe cible `collector-xp01-kc` : nœud portant Keycloak `healthy`, l'autre `unhealthy` (`Target.Timeout`), attendu avec `externalTrafficPolicy: Local`. Sorties EKS : `20261120T*-eks-*` (XE1/XE2, XE4, testssl, G7-4, K1). Relevés : [`docs/mesures/XP03-identite-exposition.csv`](../mesures/XP03-identite-exposition.csv) (format du CSV d'XP00, et non les colonnes annoncées dans « Données collectées » ; les scripts écrivent encore l'ancien format) et sorties dans [`docs/mesures/XP03-identite-exposition/`](../mesures/XP03-identite-exposition/) (seules les charges utiles décodées des jetons y figurent).
 
 ## Difficultés
 
@@ -164,6 +164,12 @@ Contrôles complémentaires du realm (`verifier.sh ma`, compose) : 18/18 (MA1, M
 - **Import du realm refusé au premier lancement compose** : Keycloak s'est arrêté sur `invalidPasswordBlacklistedMessage` ; un des mots de passe aléatoires des comptes de test a été refusé par `passwordBlacklist` (filtre de Bloom, probabilité de faux positif 1e-4 par mot de passe). Relancé avec des secrets régénérés : pile prête en 31 s. Rare, mais une session EKS peut tomber dessus : `identifiants.sh` pourrait vérifier les mots de passe contre la liste, ou l'import être rejoué automatiquement avec de nouveaux secrets.
 - **`scripts/compose.sh down` sans `.env` chargé** : l'interpolation de `docker-compose.yml` échoue (`MDP_POSTGRES` requis), l'arrêt ne se fait pas et `.env` n'est pas supprimé ; contourné en chargeant `.env` avant `down`. À corriger dans le script (charger `.env` dans `down`).
 - **K2 k3d** : la première mesure (110 s) inclut le tirage de `postgres:18.3` (162 Mo, 3 min 20 s sur le premier agent) quand le pod change de nœud ; l'image n'est pas importée dans le cluster par `k3d.sh up`, ce qui a aussi fait expirer `up` (attente PostgreSQL de 180 s). Sur EKS, prévoir le tirage de l'image Keycloak optimisée dans la mesure.
+- **EKS, session 2026-11-20 (exécutée par un agent)** : session partagée avec XP02 (RabbitMQ, KEDA) en cours sur le même cluster, aucune de ses ressources touchée ; `up` en 3 min 20 s (push ECR compris).
+- **EKS, `reseau` (G7-4)** : `jq` Windows sort en CRLF ; la liste des nœuds (`IP:30081`) gardait un `
+` et `nc` répondait `bad port '30081'` (2 faux « fermé », 12/14). Corrigé dans `scripts/k3d.sh` (`tr -d '
+'` après `jq`), rejoué : 12/12.
+- **EKS, réinitialisations ponctuelles** : un `curl: (35) Recv failure: Connection was reset` sur la page de connexion au premier passage de XE4 (rejoué : 200, 32 passages dont 4 en 400 ALB), puis « formulaire de connexion introuvable » au premier lancement de K3 (rejoué sans changement : 9/9). Origine non établie (poste ou ALB).
+- **EKS, XE4** : l'ALB répond lui-même 400 (et non 404) aux chemins dont la traversée remonte au-dessus de la racine ; consigné tel quel, à trancher par Martin (aucune règle modifiée).
 - **G7-4 local** : le témoin « ALB → page de connexion » n'existe pas en local ; remplacé par `transactions-test` → page de connexion (200).
 
 ## Limites
@@ -176,5 +182,6 @@ Contrôles complémentaires du realm (`verifier.sh ma`, compose) : 18/18 (MA1, M
 
 - **Relecture architecture** :
 - **Relecture sécurité** (IAM, TLS, realm) :
+- **Décision de Martin sur XE4 (2026-11-20)** : les 4 chemins de traversée encodée rejetés en 400 par l'ALB lui-même (`Server: awselb/2.0`, avant toute évaluation des règles, rien n'atteint Keycloak) comptent comme refus valides ; seuil amendé en « 404, ou 400 émis par l'ALB ». XE4 réussi sur EKS.
 - **Verdict de Martin** :
 - **Mise à jour de D06 et D08** (dont décision du troisième nœud au repos) :

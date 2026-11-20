@@ -1,0 +1,6 @@
+
+
+rabbitmq.collector-canal.svc:5672 ferme 5s
+rabbitmq.collector-canal.svc:15672 ferme 5s
+kube-dns.kube-system.svc:53 ouvert 0s
+curl 5672 code=000 exit=28

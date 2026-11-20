@@ -4,7 +4,7 @@
 #             API de gestion) + temoins autorises.
 #   ecartes : partie broker de XC4 (5 livraisons puis .ecartes, message suivant non bloque).
 # Resultats : CSV + detail dans docs/mesures/XP02-canal-rabbitmq/.
-# Usage : PLATEFORME=compose|k3d scripts/sonde.sh refus|ecartes
+# Usage : PLATEFORME=compose|k3d|eks scripts/sonde.sh refus|ecartes (KUBE_CONTEXTE : voir lib.sh)
 # A lancer AVANT le producteur et le consommateur de go/ : la sonde lit controle.demandes.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 charger_env
@@ -23,7 +23,7 @@ lancer_sonde() {
       for v in "${VARIABLES_MDP[@]}"; do args+=(-e "$v"); done
       docker run --rm --network xp02_canal "${args[@]}" -e AMQP_HOTE=rabbitmq "$SONDE_IMAGE" "$scenario"
       ;;
-    k3d)
+    k3d|eks)
       "$XP_DIR/scripts/k3d.sh" sonde "$scenario"
       ;;
     *) echec "PLATEFORME inconnue : $PLATEFORME" ;;
@@ -44,9 +44,9 @@ api_gestion() {
 }
 
 base_gestion="http://127.0.0.1:15672"
-if [[ "$PLATEFORME" == k3d && "$scenario" == refus ]]; then
+if [[ ( "$PLATEFORME" == k3d || "$PLATEFORME" == eks ) && "$scenario" == refus ]]; then
   # API de gestion par port-forward seulement (MC4), depuis le poste.
-  kubectl port-forward -n collector-canal svc/rabbitmq 15673:15672 >/dev/null 2>&1 &
+  command kubectl --context "$KUBE_CONTEXTE" port-forward -n collector-canal svc/rabbitmq 15673:15672 >/dev/null 2>&1 &
   pf=$!
   trap 'kill "$pf" 2>/dev/null || true' EXIT
   sleep 3

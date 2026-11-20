@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Candidate (XP à définir en D14) |
+| Statut | Confirmée (XP01, 2026-11-20) |
 | Date | 2026-10-09 |
 | Décideur | Martin |
 | Dépend de | [D02](D02-decoupage-applicatif.md) |
@@ -595,7 +595,9 @@ Date : 2026-10-09
 
 ## Conséquences
 
-Martin a retenu l'option A en statut Candidate : ces conséquences s'appliquent, sous réserve de l'expérimentation (D14). Contraintes du Learner Lab : [environnement-learner-lab.md](../00-cadrage/environnement-learner-lab.md).
+Martin a retenu l'option A en statut Candidate : ces conséquences s'appliquent, sous réserve de l'expérimentation (D14).
+
+> **Verdict du 2026-11-20 (XP01, sessions 1 et 2)** : option A **confirmée**. G1 à G4 et G6 à G8 réussis, G2 deux fois (16 et 17 min), G9 ≈ 0,30 $/h. G5 est jugé sur le délai d'ajout de capacité et le taux d'erreurs, conformes ; le p95 au-dessus de 500 ms, constaté même depuis la région, vient du service de test `hpa-example` (calcul CPU par requête) et sera mesuré sur le catalogue réel (US-016). Repli inchangé : option B. Détail : [XP01](../experimentations/XP01-orchestrateur.md#conclusion). Contraintes du Learner Lab : [environnement-learner-lab.md](../00-cadrage/environnement-learner-lab.md).
 
 - **Statut et expérimentation** : D03 passe en `Candidate (XPnn)`. La sonde du compte et la session de configuration AWS précèdent l'expérimentation ([PILOTAGE.md](../PILOTAGE.md) § 3.2).
 - **D05 — Canal** :

@@ -20,6 +20,14 @@ PLATEFORME="${PLATEFORME:-compose}"
 # shellcheck source=../versions.env
 source "$XP_DIR/versions.env"
 
+# EKS : noms publics de l'ALB de XP01 (alias Route 53 de la couche ephemere), certificat ACM public.
+if [[ "$PLATEFORME" == eks ]]; then
+  DOMAINE_EKS="${DOMAINE_EKS:-collector.qvl-project.com}"
+  export HOTE_FRONT="${HOTE_FRONT:-$DOMAINE_EKS}"
+  export HOTE_AUTH="${HOTE_AUTH:-auth.$DOMAINE_EKS}"
+  export AWS_PROFILE="${AWS_PROFILE:-collector-lab}" AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1 AWS_PAGER=""
+fi
+
 # Noms et ports locaux (protocole XP03 : collector.localhost, auth.collector.localhost).
 export HOTE_FRONT="${HOTE_FRONT:-collector.localhost}"
 export HOTE_AUTH="${HOTE_AUTH:-auth.collector.localhost}"
@@ -42,6 +50,30 @@ if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then POUBELLE=NUL; e
 
 journal() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*" >&2; }
 echec() { journal "ECHEC : $*"; exit 1; }
+
+masquer() { sed -E 's/[0-9]{12}/<compte>/g'; }
+
+# Contexte kube toujours explicite, jamais le contexte courant : k3d-* pour k3d, *collector* pour EKS
+# (alias collector-xp01 pose par up.sh de XP01 si KUBE_CONTEXTE est vide).
+KUBE_CONTEXTE="${KUBE_CONTEXTE:-}"
+
+exiger_contexte() {
+  [[ "$PLATEFORME" != eks || -n "$KUBE_CONTEXTE" ]] || KUBE_CONTEXTE="collector-xp01"
+  case "$PLATEFORME:$KUBE_CONTEXTE" in
+    k3d:k3d-*) ;;
+    eks:k3d-*) echec "PLATEFORME=eks avec le contexte k3d '$KUBE_CONTEXTE'" ;;
+    eks:*collector*) ;;
+    *) echec "KUBE_CONTEXTE='$KUBE_CONTEXTE' refuse pour PLATEFORME=$PLATEFORME (attendu : k3d-* ou *collector*)" ;;
+  esac
+  command kubectl config get-contexts -o name | tr -d '\r' | grep -qx "$KUBE_CONTEXTE" ||
+    echec "contexte '$KUBE_CONTEXTE' absent du kubeconfig"
+  export KUBE_CONTEXTE
+}
+
+kubectl() {
+  [[ -n "$KUBE_CONTEXTE" ]] || echec "KUBE_CONTEXTE vide : contexte kube explicite obligatoire"
+  command kubectl --context "$KUBE_CONTEXTE" "$@"
+}
 
 chemin_hote() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
@@ -88,3 +120,5 @@ resume_jeton() {
   # MX5 : seuls aud, azp, scope, exp et les roles sont consignes, jamais le jeton.
   charge_utile | jq -c '{aud, azp, scope, typ, exp, roles: (.realm_access.roles // [])}'
 }
+
+[[ "$PLATEFORME" != k3d && "$PLATEFORME" != eks ]] || exiger_contexte

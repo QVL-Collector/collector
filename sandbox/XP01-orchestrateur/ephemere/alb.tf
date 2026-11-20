@@ -36,6 +36,8 @@ resource "aws_lb_listener" "https" {
   ssl_policy        = var.politique_tls
   certificate_arn   = data.aws_acm_certificate.collector.arn
 
+  routing_http_response_strict_transport_security_header_value = local.xp03 ? "max-age=31536000; includeSubDomains" : null
+
   default_action {
     type = "fixed-response"
 
@@ -60,6 +62,84 @@ resource "aws_lb_listener_rule" "test" {
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.test.arn
+  }
+}
+
+resource "aws_lb_target_group" "keycloak" {
+  count = local.xp03 ? 1 : 0
+
+  name                 = "${local.nom}-kc"
+  vpc_id               = aws_vpc.principal.id
+  protocol             = "HTTP"
+  port                 = var.nodeport_keycloak
+  target_type          = "instance"
+  deregistration_delay = 10
+
+  health_check {
+    path                = "/realms/collector/.well-known/openid-configuration"
+    matcher             = "200"
+    interval            = 10
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
+resource "aws_lb_listener_rule" "keycloak_refus" {
+  count = local.xp03 ? 1 : 0
+
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 20
+
+  condition {
+    host_header {
+      values = [local.hote_auth]
+    }
+  }
+
+  condition {
+    path_pattern {
+      regex_values = [".*(\\.\\.|%2[eEfF]|%5[cC]|%25|\\\\).*"]
+    }
+  }
+
+  action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "keycloak" {
+  count = local.xp03 ? 1 : 0
+
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 30
+
+  condition {
+    host_header {
+      values = [local.hote_auth]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = [
+        "/realms/collector/.well-known/openid-configuration",
+        "/realms/collector/protocol/openid-connect/*",
+        "/realms/collector/login-actions/*",
+        "/resources/*",
+      ]
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.keycloak[0].arn
   }
 }
 

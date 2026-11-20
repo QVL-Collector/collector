@@ -176,15 +176,15 @@ Session EKS 1 jouée le 2026-11-06 (mesures : `docs/mesures/XP01-orchestrateur.c
 | # | EKS (session 1) | ECS Fargate | Atteint EKS | Atteint ECS |
 |---|---|---|---|---|
 | G1 | Cluster 1.35 et node group `ACTIVE` (2 × t3.medium), add-ons vpc-cni, kube-proxy, coredns, metrics-server | | Oui | |
-| G2 | 16 min du premier `apply` au HTTPS 200 (cluster 10,5 min, RDS 7,4 min en parallèle) ; deux `apply` : description de règle refusée par EC2, corrigée | | Oui (1/2) | |
+| G2 | Session 2 : 17 min (apply 15,5 min, nœuds Ready 16 min). Session 1 : 16 min du premier `apply` au HTTPS 200 (cluster 10,5 min, RDS 7,4 min en parallèle) ; deux `apply` : description de règle refusée par EC2, corrigée | | Oui (2/2) | |
 | G3 | 8 min : `destroy` 5,8 min, inventaire strict vide | | Oui | |
 | G4 | Écriture, lecture, URL présignée (200) depuis `pdm-test` par IMDSv2, aucune clé statique | | Oui | |
-| G5 | Délai seuil → capacité : 14 s (tir 1, 8 req/s) et 8 s (tir 2, 5 req/s) ; erreurs 0,03 % et 0 % ; p95 1,07 s et 0,80 s | | Non (p95) | |
+| G5 | Délai seuil → capacité : 14 s (tir 1, 8 req/s) et 8 s (tir 2, 5 req/s) ; erreurs 0,03 % et 0 % ; p95 1,07 s et 0,80 s depuis le poste. Session 2, tir depuis la région : 8 req/s → 6 réplicas en 86 s, 0 % d'erreurs, p95 4,9 s (saturation à 6 × 500m) ; 5 req/s → 6 réplicas, 0 % d'erreurs, p95 936 ms | | Oui (délai, erreurs) ; p95 imputé au service de test (verdict) | |
 | G6 | Remplaçant `Ready` en 14 s, 0 erreur sur 706 requêtes | | Oui | |
 | G7 | G7-1 refus (témoin 200), G7-3 refus (témoin TLS établi), G7-5 politiques actives sur 2/2 nœuds ; G7-2 et G7-4 en XP02, XP03 | | Oui (partiel) | |
 | G8 | G8-1 et G8-2 refus hors `pdm-test`, IMDSv1 401 ; G8-3 401 ; G8-4 403 (autorisateur Node), écart ES-38 non constaté | | Oui | |
-| G9 | Session 2 | | | |
-| G10 | Session 2 | | | |
+| G9 | ≈ 0,30 $/h : plan de contrôle EKS 0,10 ; 2 × t3.medium 0,083 ; NAT 0,045 ; ALB ≈ 0,031 (heure + LCU) ; RDS db.t3.micro 0,018 ; IPv4 publiques ≈ 0,015 ; EBS et stockage RDS ≈ 0,008 (tarifs us-east-1) | | Oui (≤ 0,40) | |
+| G10 | Socle commun 11 fichiers, 502 lignes. EKS : `eks.tf` 115 lignes (7 ressources) + chart 4 fichiers, 101 lignes = 216 lignes ; composants : cluster, node group, 4 add-ons, Helm, HPA. ECS : `ecs.tf` 164 lignes (11 ressources), pas de manifest | | Relevé | |
 
 Constats de la session 1 :
 
@@ -207,7 +207,8 @@ Constats de la session 1 :
 
 ## Conclusion
 
-- **Relecture architecture** :
-- **Relecture sécurité** (IAM, TLS) :
-- **Verdict de Martin** :
-- **Mise à jour de D03** :
+- **G5 en session 2** : tir depuis la région (Job k6 dans le cluster, `sandbox/XP01-orchestrateur/k8s/tir-g5-region.yaml`, mesures `docs/mesures/XP01-orchestrateur/EKS2-g5-region-*`). Délai seuil → capacité et erreurs conformes aux deux débits ; le p95 reste au-dessus de 500 ms sans l'aller-retour Paris – us-east-1 (936 ms à 5 req/s, médiane 224 ms, minimum 83 ms) : `hpa-example` consomme du CPU à chaque requête et chaque pod plafonne à sa limite de 500m. L'écart vient du service de test, pas de l'orchestrateur ; Fargate aurait la même médiane.
+- **Relecture architecture** : EKS satisfait les critères qui mesurent l'orchestrateur (G1 à G4, G5 délai et erreurs, G6 à G8) ; coût G9 ≈ 0,30 $/h sous le plafond ; complexité G10 supérieure à ECS, compensée par le « local d'abord » (même chart de k3d à EKS, X2).
+- **Relecture sécurité** (IAM, TLS) : IMDS réservé par politique réseau (G8), API du cluster limitée au /32 du poste (MX3), HSTS et redirection à l'ALB ; écart résiduel ES-38 (G8-4) documenté.
+- **Verdict de Martin** (2026-11-20) : **EKS retenu**. G5 est jugé sur le délai d'ajout de capacité et le taux d'erreurs, conformes ; le seuil de p95 sera mesuré sur le vrai catalogue (US-016), l'écart constaté étant une limite du service de test `hpa-example`.
+- **Mise à jour de D03** : statut `Confirmée (XP01)`, ECS Fargate reste le repli documenté.

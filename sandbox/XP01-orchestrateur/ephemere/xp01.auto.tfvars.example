@@ -8,5 +8,8 @@
 # Variante EKS : 1 = repli MS3 (IMDS fermé aux pods), 2 = MS3 principal (IMDS ouvert, filtré par politique réseau).
 # imds_limite_sauts = 1
 
+# Session EKS de XP03 (Keycloak derrière l'ALB) : à garder pendant toute la session, sinon un apply retire les règles.
+# xp03 = true
+
 # Essai de densité, session EKS 2.
 # delegation_prefixes = true

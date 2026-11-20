@@ -1,0 +1,53 @@
+# EKS seulement (scripts/eks.sh) : Keycloak derriere l'ALB de XP01 et base dans RDS.
+# - NodePort 30081 (variable nodeport_keycloak de XP01), port 8080 seul : 9000 n'est jamais expose.
+#   externalTrafficPolicy Local : l'adresse source de l'ALB est conservee jusqu'au pod (pas de SNAT),
+#   ce qui permet de n'autoriser que les sous-reseaux publics de l'ALB.
+# - CIDR = cidr_publics et cidr_prives de XP01 pour cidr_vpc 10.40.0.0/16 (a reprendre si cidr_vpc change).
+#   Les pods (VPC CNI) sont dans les sous-reseaux prives : ils ne correspondent jamais aux CIDR publics.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-alb
+  namespace: identite-test
+  labels: { app: keycloak, app.kubernetes.io/part-of: xp03 }
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector: { app: keycloak }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080, nodePort: 30081 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-depuis-alb
+  namespace: identite-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector:
+    matchLabels: { app: keycloak }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - ipBlock: { cidr: 10.40.0.0/24 }
+        - ipBlock: { cidr: 10.40.1.0/24 }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-rds
+  namespace: identite-test
+  labels: { app.kubernetes.io/part-of: xp03 }
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [keycloak, base-admin] }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock: { cidr: 10.40.16.0/20 }
+        - ipBlock: { cidr: 10.40.32.0/20 }
+      ports:
+        - { protocol: TCP, port: 5432 }

@@ -1,0 +1,163 @@
+
+Testing all IP addresses (port 443): 18.210.115.44 34.199.65.3
+-----------------------------------------------------
+ Start 2026-11-20 11:09:31        -->> 18.210.115.44:443 (auth.collector.qvl-project.com) <<--
+
+ Further IP addresses:   34.199.65.3 
+ rDNS (18.210.115.44):   --
+ Service detected:       HTTP
+
+ Testing protocols via sockets except NPN+ALPN 
+
+ SSLv2      not offered (OK)
+ SSLv3      not offered (OK)
+ TLS 1      not offered
+ TLS 1.1    not offered
+ TLS 1.2    offered (OK)
+ TLS 1.3    offered (OK): final
+ NPN/SPDY   h2, http/1.1 (advertised)
+ ALPN/HTTP2 h2, http/1.1 (offered)
+
+ Testing server defaults (Server Hello) 
+
+ TLS extensions (standard)    "server name/#0" "EC point formats/#11"
+                              "application layer protocol negotiation/#16"
+                              "extended master secret/#23" "session ticket/#35"
+                              "supported versions/#43" "key share/#51"
+                              "next protocol/#13172"
+                              "renegotiation info/#65281"
+ Session Ticket RFC 5077 hint 82443 seconds, session tickets keys seems to be rotated < daily
+ SSL Session ID support       yes
+ Session Resumption           Tickets: yes, ID: yes
+ TLS clock skew               Random values, no fingerprinting possible 
+ Certificate Compression      none
+ Client Authentication        none
+ Signature Algorithm          SHA256 with RSA
+ Server key size              RSA 2048 bits (exponent is 65537)
+ Server key usage             Digital Signature, Key Encipherment
+ Server extended key usage    TLS Web Server Authentication
+ Serial                       09984306CEECD2A50825D805060DD995 (OK: length 16)
+ Fingerprints                 SHA1 AD4811AA2B7EBF18C4C83A00EF9297D7BE28F4B3
+                              SHA256 66D0F9921A5C691E97945AEDFA2D6225FF285D828ADB8623DA747F19D51EED66
+ Common Name (CN)             collector.qvl-project.com 
+ subjectAltName (SAN)         collector.qvl-project.com
+                              *.collector.qvl-project.com 
+ Trust (hostname)             Ok via SAN wildcard (same w/o SNI)
+                              wildcard certificate could be problematic, see other hosts at
+                              https://search.censys.io/search?resource=hosts&virtual_hosts=INCLUDE&q=66D0F9921A5C691E97945AEDFA2D6225FF285D828ADB8623DA747F19D51EED66
+ Chain of trust               Ok   
+ EV cert (experimental)       no 
+ Certificate Validity (UTC)   172 >= 60 days (2026-10-26 00:00 --> 2027-05-11 23:59)
+ ETS/"eTLS", visibility info  not present
+ Certificate Revocation List  http://crl.r2m01.amazontrust.com/r2m01.crl
+ OCSP URI                     http://ocsp.r2m01.amazontrust.com
+ OCSP stapling                not offered
+ OCSP must staple extension   --
+ DNS CAA RR (experimental)    Error: error sending query: Could not send or receive, because of network error
+not offered
+ Certificate Transparency     yes (certificate extension)
+ Certificates provided        3
+ Issuer                       Amazon RSA 2048 M01 (Amazon from US)
+ Intermediate cert validity   #1: ok > 40 days (2030-08-23 22:21). Amazon RSA 2048 M01 <-- Amazon Root CA 1
+                              #2: ok > 40 days (2037-12-31 01:00). Amazon Root CA 1 <-- Starfield Services Root Certificate Authority - G2
+ Intermediate Bad OCSP (exp.) Ok
+
+
+ Testing HTTP header response @ "/" 
+
+ HTTP Status Code             404 Not Found (Hint: supply a path which doesn't give a "404 Not Found")
+ HTTP clock skew              0 sec from localtime
+ Strict Transport Security    365 days=31536000 s, includeSubDomains
+ Public Key Pinning           --
+ Server banner                awselb/2.0
+ Application banner           --
+ Cookie(s)                    (none issued at "/") -- HTTP status 404 signals you maybe missed the web application
+ Security headers             --
+ Reverse Proxy banner         --
+
+
+
+ Done 2026-11-20 11:10:32 [  64s] -->> 18.210.115.44:443 (auth.collector.qvl-project.com) <<--
+
+-----------------------------------------------------
+ Start 2026-11-20 11:10:32        -->> 34.199.65.3:443 (auth.collector.qvl-project.com) <<--
+
+ Further IP addresses:   18.210.115.44 
+ rDNS (34.199.65.3):     --
+ Service detected:       HTTP
+
+ Testing protocols via sockets except NPN+ALPN 
+
+ SSLv2      not offered (OK)
+ SSLv3      not offered (OK)
+ TLS 1      not offered
+ TLS 1.1    not offered
+ TLS 1.2    offered (OK)
+ TLS 1.3    offered (OK): final
+ NPN/SPDY   h2, http/1.1 (advertised)
+ ALPN/HTTP2 h2, http/1.1 (offered)
+
+ Testing server defaults (Server Hello) 
+
+ TLS extensions (standard)    "server name/#0" "EC point formats/#11"
+                              "application layer protocol negotiation/#16"
+                              "extended master secret/#23" "session ticket/#35"
+                              "supported versions/#43" "key share/#51"
+                              "next protocol/#13172"
+                              "renegotiation info/#65281"
+ Session Ticket RFC 5077 hint 82232 seconds, session tickets keys seems to be rotated < daily
+ SSL Session ID support       yes
+ Session Resumption           Tickets: yes, ID: yes
+ TLS clock skew               Random values, no fingerprinting possible 
+ Certificate Compression      none
+ Client Authentication        none
+ Signature Algorithm          SHA256 with RSA
+ Server key size              RSA 2048 bits (exponent is 65537)
+ Server key usage             Digital Signature, Key Encipherment
+ Server extended key usage    TLS Web Server Authentication
+ Serial                       09984306CEECD2A50825D805060DD995 (OK: length 16)
+ Fingerprints                 SHA1 AD4811AA2B7EBF18C4C83A00EF9297D7BE28F4B3
+                              SHA256 66D0F9921A5C691E97945AEDFA2D6225FF285D828ADB8623DA747F19D51EED66
+ Common Name (CN)             collector.qvl-project.com 
+ subjectAltName (SAN)         collector.qvl-project.com
+                              *.collector.qvl-project.com 
+ Trust (hostname)             Ok via SAN wildcard (same w/o SNI)
+                              wildcard certificate could be problematic, see other hosts at
+                              https://search.censys.io/search?resource=hosts&virtual_hosts=INCLUDE&q=66D0F9921A5C691E97945AEDFA2D6225FF285D828ADB8623DA747F19D51EED66
+ Chain of trust               Ok   
+ EV cert (experimental)       no 
+ Certificate Validity (UTC)   172 >= 60 days (2026-10-26 00:00 --> 2027-05-11 23:59)
+ ETS/"eTLS", visibility info  not present
+ Certificate Revocation List  http://crl.r2m01.amazontrust.com/r2m01.crl
+ OCSP URI                     http://ocsp.r2m01.amazontrust.com
+ OCSP stapling                not offered
+ OCSP must staple extension   --
+ DNS CAA RR (experimental)    Error: error sending query: Could not send or receive, because of network error
+not offered
+ Certificate Transparency     yes (certificate extension)
+ Certificates provided        3
+ Issuer                       Amazon RSA 2048 M01 (Amazon from US)
+ Intermediate cert validity   #1: ok > 40 days (2030-08-23 22:21). Amazon RSA 2048 M01 <-- Amazon Root CA 1
+                              #2: ok > 40 days (2037-12-31 01:00). Amazon Root CA 1 <-- Starfield Services Root Certificate Authority - G2
+ Intermediate Bad OCSP (exp.) Ok
+
+
+ Testing HTTP header response @ "/" 
+
+ HTTP Status Code             404 Not Found (Hint: supply a path which doesn't give a "404 Not Found")
+ HTTP clock skew              0 sec from localtime
+ Strict Transport Security    365 days=31536000 s, includeSubDomains
+ Public Key Pinning           --
+ Server banner                awselb/2.0
+ Application banner           --
+ Cookie(s)                    (none issued at "/") -- HTTP status 404 signals you maybe missed the web application
+ Security headers             --
+ Reverse Proxy banner         --
+
+
+
+ Done 2026-11-20 11:11:30 [ 122s] -->> 34.199.65.3:443 (auth.collector.qvl-project.com) <<--
+
+-----------------------------------------------------
+Done testing now all IP addresses (on port 443): 18.210.115.44 34.199.65.3
+

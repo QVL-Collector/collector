@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Verifications locales de XP03 (protocole § B) ; resultats dans le CSV et docs/mesures/XP03-identite-exposition/.
-# Usage : PLATEFORME=compose|k3d scripts/verifier.sh <verification>
+# Usage : PLATEFORME=compose|k3d|eks scripts/verifier.sh <verification>  (k3d, eks : KUBE_CONTEXTE, voir lib.sh)
 #   k2      demarrage sur base neuve avec import du realm, 2 mesures (compose : pile recreee)
-#   xe4     liste blanche du proxy (XE4 + ME8), chemins figes ci-dessous            (compose)
+#   xe4     liste blanche du proxy ou de l'ALB (XE4 + ME8), chemins figes ci-dessous  (compose, eks)
+#   xe3     80 -> 301, HSTS, hote inconnu 404, testssl.sh                              (eks)
 #   k3      six cas contre "reserver" + route d'acheteur (MA5) ; attend l'expiration d'un jeton (~5,5 min)
 #   ma12    OTP demande a l'admin de test, pas au vendeur de test
 #   ma      parametres du realm et refus de flux (MA1, MA2, MA3, MA5, MA9, MA11, MA13)
@@ -48,7 +49,7 @@ CHEMINS_404=(
 )
 
 xe4() {
-  [[ "$PLATEFORME" == compose ]] || echec "xe4 : liste blanche du proxy local (compose) ; sur EKS, celle de l'ALB"
+  [[ "$PLATEFORME" == compose || "$PLATEFORME" == eks ]] || echec "xe4 : proxy local (compose) ou ALB (eks)"
   local sortie p code
   csv_init
   sortie="$SORTIES_DIR/$(horodatage)-$PLATEFORME-xe4.txt"
@@ -68,7 +69,30 @@ xe4() {
   code="$(curl_pub --max-time 5 -o "$POUBELLE" -w '%{http_code}' "https://$HOTE_AUTH:9000/health" 2>/dev/null || true)"
   echo "port-9000 ${code:-000}" >>"$sortie"; resultat XE4 "port 9000" "${code:-000}" 000 "refus ou delai expire"
   code="$(curl -s --max-time 5 -o "$POUBELLE" -w '%{http_code}' "http://$HOTE_FRONT:$PORT_HTTP/" || true)"
-  echo "http-front $code" >>"$sortie"; resultat XE3 "http -> https (indicatif local)" "$code" 301 "redirection 80"
+  echo "http-front $code" >>"$sortie"; resultat XE3 "http -> https (indicatif)" "$code" 301 "redirection 80"
+}
+
+xe3() {
+  # EKS : 80 -> 301 vers https, HSTS present, hote inconnu -> 404, rapport testssl.sh (TLS 1.2 minimum).
+  [[ "$PLATEFORME" == eks ]] || echec "xe3 : ALB (PLATEFORME=eks)"
+  csv_init
+  local h r hsts f anciens
+  for h in "$HOTE_FRONT" "$HOTE_AUTH"; do
+    r="$(curl -s --max-time 10 -o "$POUBELLE" -w '%{http_code} %{redirect_url}' "http://$h/" || true)"
+    resultat XE3 "http://$h/ -> 301" "${r%% *}" 301 "redirection : ${r#* }"
+  done
+  for u in "$URL_FRONT/" "$URL_AUTH/realms/collector/.well-known/openid-configuration"; do
+    hsts="$(curl_pub -s -D - -o "$POUBELLE" "$u" | tr -d '\r' | grep -ci '^strict-transport-security:' || true)"
+    resultat XE3 "HSTS ${u#https://}" "$([[ "$hsts" -ge 1 ]] && echo oui || echo non)" oui "en-tete Strict-Transport-Security"
+  done
+  r="$(curl_pub -o "$POUBELLE" -w '%{http_code}' --connect-to "inconnu.$HOTE_FRONT:443:$HOTE_FRONT:443" "https://inconnu.$HOTE_FRONT/" || true)"
+  resultat XE3 "hote inconnu (inconnu.$HOTE_FRONT)" "$r" 404 "action par defaut de l'ecouteur"
+  for h in "$HOTE_FRONT" "$HOTE_AUTH"; do
+    f="$SORTIES_DIR/$(horodatage)-$PLATEFORME-testssl-$h.txt"
+    docker run --rm "$TESTSSL_IMAGE" --quiet --color 0 --protocols --server-defaults --headers "https://$h/" >"$f" 2>&1 || true
+    anciens="$(grep -cE '^ *(SSLv2|SSLv3|TLS 1|TLS 1\.1) +offered' "$f" || true)"
+    resultat XE3 "protocoles < TLS 1.2 offerts ($h)" "$anciens" 0 "testssl.sh, detail : $(basename "$f")"
+  done
 }
 
 k3() {
@@ -196,7 +220,7 @@ message_echec() {
 }
 
 k2() {
-  [[ "$PLATEFORME" == compose ]] || echec "k2 compose seulement ici ; k3d : scripts/k3d.sh k2"
+  [[ "$PLATEFORME" == compose ]] || echec "k2 compose seulement ici ; k3d : scripts/k3d.sh k2 ; eks : scripts/eks.sh k2"
   csv_init
   local n debut fin
   for n in 1 2; do
@@ -231,6 +255,7 @@ trivy() {
 case "${1:-}" in
   k2) k2 ;;
   xe4) xe4 ;;
+  xe3) xe3 ;;
   k3) k3 ;;
   ma12) ma12 ;;
   ma) ma ;;

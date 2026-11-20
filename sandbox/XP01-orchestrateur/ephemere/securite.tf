@@ -26,6 +26,17 @@ resource "aws_vpc_security_group_egress_rule" "alb_cibles" {
   to_port           = local.port_cible
 }
 
+resource "aws_vpc_security_group_egress_rule" "alb_keycloak" {
+  count = local.xp03 ? 1 : 0
+
+  security_group_id = aws_security_group.alb.id
+  description       = "Vers le NodePort de Keycloak (XP03)"
+  cidr_ipv4         = var.cidr_vpc
+  ip_protocol       = "tcp"
+  from_port         = var.nodeport_keycloak
+  to_port           = var.nodeport_keycloak
+}
+
 resource "aws_security_group" "rds" {
   name        = "${local.nom}-rds"
   description = "RDS du bac a sable, 5432 depuis les seuls clients autorises"

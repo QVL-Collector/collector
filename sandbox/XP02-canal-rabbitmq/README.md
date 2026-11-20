@@ -62,10 +62,11 @@ scripts/compose.sh down                            # supprime conteneur, réseau
 
 ### B. k3d (protocole § B)
 
-Dans le cluster de XP01 (contexte `k3d-*` courant), ou dans un cluster jetable :
+Contexte kube toujours explicite (`KUBE_CONTEXTE`, jamais le contexte courant ; liste blanche `k3d-*` et `*collector*`), dans un cluster k3d ou un cluster jetable :
 
 ```bash
 scripts/k3d.sh cluster-essai up && export KUBECONFIG="$(cygpath -m .genere/kubeconfig-xp02-essai)"   # facultatif
+export KUBE_CONTEXTE=k3d-xp02-essai
 scripts/k3d.sh up                                  # B1 : broker, Secrets par service, politiques, KEDA, consommateur lent
 PLATEFORME=k3d scripts/sonde.sh refus              # XC2, XC9 depuis un pod de pdm-test (API par port-forward)
 scripts/k3d.sh reseau                              # XC7 + XC9 réseau : ns-intrus et pdm-test, témoins 5672 et KEDA
@@ -78,6 +79,10 @@ scripts/k3d.sh cluster-essai down                  # si le cluster jetable a ét
 ```
 
 Le consommateur lent de XC6 est un PerfTest (identité `svc-controle`, 200 ms par message) : XC6 ne dépend pas de `go/`.
+
+### C. EKS (protocole § C)
+
+Cluster de XP01 allumé par `up.sh eks` (contexte `collector-xp01`, défaut de `KUBE_CONTEXTE` avec `PLATEFORME=eks`). Mêmes commandes que § B avec `export PLATEFORME=eks` ; aucune image à pousser : la sonde tourne dans `SONDE_BASE_IMAGE` (sonde en ConfigMap, `pika` installé par empreinte au démarrage, sortie vers PyPI par la NAT). Volume `emptyDir` : aucune StorageClass. `20-politiques-reseau.yaml` ouvre la sortie de `controle-test` vers le seul 5672 du broker (XP01 y ferme le VPC).
 
 ## Constats de préparation (2026-10-26, poste de Martin, à blanc)
 

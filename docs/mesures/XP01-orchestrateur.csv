@@ -32,3 +32,15 @@ horodatage_utc;xp;session;plateforme;critere;etape;valeur;unite;seuil;atteint;co
 2026-11-06T13:22:55Z;XP01;EKS1;eks;G5;tir2-p95;798;ms;500;non;p95 798 ms, médiane 249 ms, CPU 45 à 90 % sur 6 réplicas ; plancher de latence = aller-retour Paris–us-east-1 (min 173 ms) + calcul hpa-example sur t3.medium ; critère p95 à rejouer depuis une source dans la région (pod k6 ou tir depuis us-east-1)
 2026-11-06T13:29:47Z;XP01;EKS1;eks;G3;destroy;350;s;;;fin du destroy (statut 0)
 2026-11-06T13:30:59Z;XP01;EKS1;eks;G3;inventaire-vide;8;min;20;oui;destroy 0, inventaire 0
+2026-11-20T10:15:40Z;XP01;EKS2;eks;G2;apply:aws_eks_cluster.principal[0];752;s;;;fin de création depuis le lancement de l'apply
+2026-11-20T10:15:40Z;XP01;EKS2;eks;G2;apply:aws_eks_addon.avant_noeuds["kube-proxy"];761;s;;;fin de création depuis le lancement de l'apply
+2026-11-20T10:15:40Z;XP01;EKS2;eks;G2;apply:aws_eks_addon.avant_noeuds["vpc-cni"];761;s;;;fin de création depuis le lancement de l'apply
+2026-11-20T10:15:41Z;XP01;EKS2;eks;G2;apply:aws_eks_node_group.principal[0];869;s;;;fin de création depuis le lancement de l'apply
+2026-11-20T10:15:41Z;XP01;EKS2;eks;G2;apply:aws_eks_addon.apres_noeuds["coredns"];884;s;;;fin de création depuis le lancement de l'apply
+2026-11-20T10:15:41Z;XP01;EKS2;eks;G2;apply:aws_eks_addon.apres_noeuds["metrics-server"];905;s;;;fin de création depuis le lancement de l'apply
+2026-11-20T10:15:42Z;XP01;EKS2;eks;G2;apply;928;s;;;apply terminé
+2026-11-20T10:16:02Z;XP01;EKS2;eks;G2;noeuds-ready;948;s;;;kubeconfig et nœuds Ready
+2026-11-20T10:16:25Z;XP01;EKS2;eks;G2;chart;971;s;;;chart de test installé
+2026-11-20T10:16:34Z;XP01;EKS2;eks;G2;https-200;17;min;45;oui;premier HTTPS 200 par l'ALB
+2026-11-20T11:42:17Z;XP01;EKS2;eks;G3;destroy;368;s;;;fin du destroy (statut 0)
+2026-11-20T11:43:38Z;XP01;EKS2;eks;G3;inventaire-vide;8;min;20;non;destroy 0, inventaire 1
