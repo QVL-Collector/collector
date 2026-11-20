@@ -10,3 +10,17 @@
 #   # validation: Sécurité 2026-11-04, Martin 2026-11-04
 #   # creee: 2026-11-04
 #   CVE-2026-0000 exp:2026-12-04
+
+# composant: infra/ephemere/alb.tf (ALB public du POC)
+# justification: voulu (D08, US-004) ; groupe de sécurité limité au /32 du poste hors démonstration (ME5), ouverture par tools/alb.sh après contrôle vert seulement (AC10) ; le Learner Lab n'offre ni VPN ni bastion
+# mesure: précondition Terraform alb_ouvert ⇒ preuve_controle == session ; X17 et XE4 rejoués par tools/controle-apres-deploiement.sh à chaque up
+# validation: Martin 2026-11-20 (décision) ; Sécurité à confirmer
+# creee: 2026-11-20
+AWS-0053 exp:2026-12-20
+
+# composant: infra/ephemere/eks.tf (point d'accès public de l'API EKS)
+# justification: voulu (D08, D03 MS1, US-004) ; public_access_cidrs limité au /32 du poste, accès privé activé ; le Learner Lab n'offre ni VPN ni bastion pour un point d'accès privé seul
+# mesure: MX3 vérifié hors plage (kubectl refusé depuis une sonde Lambda, XP01 session 1) et rejoué par tools/controle-apres-deploiement.sh à chaque up
+# validation: Martin 2026-11-20 (décision) ; Sécurité à confirmer
+# creee: 2026-11-20
+AWS-0040 exp:2026-12-20

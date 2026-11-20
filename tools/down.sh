@@ -20,10 +20,6 @@ tf init -input=false >/dev/null
 T0="$(maintenant)"
 journal "lancement de l'extinction"
 
-if ! etat_vide; then
-  ORCHESTRATEUR="$(tf output -raw orchestrateur 2>/dev/null || printf '%s' "$ORCHESTRATEUR")"
-fi
-
 retirer_charges_cluster() {
   command -v kubectl >/dev/null 2>&1 || return 0
   aws eks describe-cluster --name "$NOM" >/dev/null 2>&1 || return 0
@@ -83,7 +79,7 @@ detruire() {
   variables_tf "$(ip_poste 2>/dev/null || printf '192.0.2.1/32')"
   for essai in 1 2 3; do
     journal "terraform destroy, essai $essai"
-    if tf destroy -auto-approve -input=false | masquer; then
+    if tf destroy -auto-approve -input=false "${ALB_FERME[@]}" | masquer; then
       return 0
     fi
     [ "$essai" -lt 3 ] || return 1
@@ -99,19 +95,27 @@ noter_cout() {
     return 0
   }
   duree_min=$((($(maintenant) - debut + 59) / 60))
-  cout="$(awk -v m="$duree_min" -v h="$(cout_horaire "$ORCHESTRATEUR")" 'BEGIN { printf "%.2f", m / 60 * h }')"
+  cout="$(awk -v m="$duree_min" -v h="$COUT_HORAIRE_USD" 'BEGIN { printf "%.2f", m / 60 * h }')"
   mkdir -p "$(dirname "$CSV_COUTS")"
-  [ -f "$CSV_COUTS" ] || printf '%s\n' 'date;orchestrateur;duree_allumee_min;cout_estime_usd' >"$CSV_COUTS"
-  printf '%s;%s;%s;%s\n' "$(date -u +%Y-%m-%d)" "${ORCHESTRATEUR:-?}" "$duree_min" "$cout" >>"$CSV_COUTS"
+  [ -f "$CSV_COUTS" ] || printf '%s\n' 'date;duree_allumee_min;cout_estime_usd' >"$CSV_COUTS"
+  printf '%s;%s;%s\n' "$(date -u +%Y-%m-%d)" "$duree_min" "$cout" >>"$CSV_COUTS"
   DEBUT_ALLUMAGE="$(maintenant)"
   [ ! -f "$FICHIER_SESSION" ] || ecrire_session
   cumul="$(cumul_couts)"
   journal "G5 : session $duree_min min ≈ $cout \$ ; cumul estimé du projet $cumul \$ sur $BUDGET_USD \$ (arrêt à $SEUIL_G5_PCT %)"
 }
 
-[ "$ORCHESTRATEUR" != "eks" ] || retirer_charges_cluster
+supprimer_sonde_externe() {
+  aws lambda get-function --function-name "$SONDE_EXTERNE" >/dev/null 2>&1 || return 0
+  journal "suppression de la sonde hors plage restée en place"
+  aws lambda delete-function --function-name "$SONDE_EXTERNE" >/dev/null || true
+  aws logs delete-log-group --log-group-name "/aws/lambda/$SONDE_EXTERNE" >/dev/null 2>&1 || true
+}
+
+retirer_charges_cluster
 vider_bucket_photos
 supprimer_secrets_session
+supprimer_sonde_externe
 
 STATUT_DESTROY=0
 if etat_vide; then
@@ -125,9 +129,9 @@ sauvegarder_etat down
 aws scheduler delete-schedule-group --name "$GROUPE_PLANIF" >/dev/null 2>&1 || true
 kubectl config delete-context "$NOM" >/dev/null 2>&1 || true
 
-journal "G2 : inventaire strict"
+journal "G2 : inventaire strict (status.sh --strict, AC4)"
 STATUT_INVENTAIRE=0
-"$RACINE_TOOLS/inventaire.sh" --strict || STATUT_INVENTAIRE=1
+"$RACINE_TOOLS/status.sh" --strict || STATUT_INVENTAIRE=1
 
 DUREE_MIN=$((($(maintenant) - T0 + 59) / 60))
 phase down inventaire "$(($(maintenant) - T0))" "X5 : $DUREE_MIN min (cible 20), destroy $STATUT_DESTROY, inventaire $STATUT_INVENTAIRE"

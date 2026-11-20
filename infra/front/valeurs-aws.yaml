@@ -1,0 +1,7 @@
+# Valeurs de démonstration sur EKS (US-004). Image épinglée par empreinte (MS9) ; remplacée par l'image du front
+# publiée par la CI dès qu'elle est poussée (D10). Fenêtre de descente réduite : retour au plancher en 10 min au
+# plus (XP01 session 1, X7 bis : 10 min 16 s avec les 300 s par défaut).
+image: docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+
+hpa:
+  descenteStabilisationS: 60

@@ -93,10 +93,12 @@ q_secrets() { aws_json secretsmanager list-secrets | jq -r '.SecretList[].Name';
 q_journaux() {
   aws_json logs describe-log-groups |
     jq -r --arg p "$GROUPES_JOURNAUX_PERSISTANTS" '($p | split(" ")) as $persistants | .logGroups[] |
-      select(.logGroupName | test("^/(aws/eks|aws/ecs|ecs|collector|aws/rds)/")) |
+      select(.logGroupName | test("^/(aws/eks|aws/ecs|ecs|collector|aws/rds)/|^/aws/lambda/collector-")) |
       select(.logGroupName as $n | $persistants | index($n) | not) |
       "\(.logGroupName) retention=\(.retentionInDays // "infinie")"'
 }
+
+q_lambda() { aws_json lambda list-functions | jq -r --arg p "$NOM-" '.Functions[] | select(.FunctionName | startswith($p)) | .FunctionName'; }
 
 q_alarmes() { aws_json cloudwatch describe-alarms | jq -r '.MetricAlarms[] | select(.AlarmName | test("collector")) | .AlarmName'; }
 
@@ -148,6 +150,7 @@ verifier "ec2:vpc" q_vpc
 verifier "ec2:groupe-securite" q_sg
 verifier "secretsmanager:secret" q_secrets
 verifier "logs:groupe" q_journaux
+verifier "lambda:fonction" q_lambda
 verifier "cloudwatch:alarme" q_alarmes
 verifier "scheduler" q_planifications
 verifier "route53:enregistrement" q_dns
