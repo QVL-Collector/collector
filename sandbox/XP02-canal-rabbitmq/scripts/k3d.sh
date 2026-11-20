@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Local 2 (k3d) : broker, politiques reseau, KEDA et consommateur lent dans le cluster de XP01.
-# Debogage de XC5 (pod), XC6, XC7 et de la partie reseau de XC9 ; sans valeur de preuve pour EKS.
-# Le contexte kubectl courant doit etre un cluster k3d (k3d-<nom>) ; rien n'est fait ailleurs.
+# Local 2 (k3d) et EKS : broker, politiques reseau, KEDA et consommateur lent dans le cluster de XP01.
+# Contexte explicite : KUBE_CONTEXTE=k3d-<nom> (k3d), ou PLATEFORME=eks et KUBE_CONTEXTE=*collector*
+# (defaut collector-xp01) ; le contexte courant n'est jamais utilise.
 # Usage :
 #   scripts/k3d.sh cluster-essai up|down   cluster k3d jetable "xp02-essai" (si celui de XP01 est absent)
 #   scripts/k3d.sh up                      namespaces, broker, secrets, politiques, KEDA, XC6
@@ -10,7 +10,7 @@
 #   scripts/k3d.sh xc6                     vague de 300 messages, consommateurs 1 -> >=2 -> 1
 #   scripts/k3d.sh down                    retire tout ce que XP02 a pose (KEDA compris)
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-PLATEFORME=k3d
+[[ "$PLATEFORME" == eks ]] || PLATEFORME=k3d
 K3S_IMAGE="${K3S_IMAGE:-rancher/k3s:v1.35.5-k3s1@sha256:2074403abe1bded11ef3dde09d457e13be8e0b64c218b1c4f8269b4565cfbc65}"
 CLUSTER_ESSAI="xp02-essai"
 KUBECONFIG_ESSAI="$GENERE_DIR/kubeconfig-$CLUSTER_ESSAI"
@@ -18,13 +18,8 @@ NS_SERVICES=(pdm-test controle-test interactions-test lecture-test)
 # kubectl.exe ne lit pas les chemins /c/... : chemins relatifs au repertoire de XP02.
 cd "$XP_DIR"
 
-contexte() {
-  local c
-  c="$(kubectl config current-context)"
-  [[ "$c" == k3d-* ]] || echec "contexte kubectl '$c' : un cluster k3d est attendu"
-  printf '%s' "$c"
-}
-nom_cluster() { local c; c="$(contexte)"; printf '%s' "${c#k3d-}"; }
+contexte() { exiger_contexte; printf '%s' "$KUBE_CONTEXTE"; }
+nom_cluster() { printf '%s' "${KUBE_CONTEXTE#k3d-}"; }
 
 cluster_essai() {
   case "${1:-}" in
@@ -36,8 +31,9 @@ cluster_essai() {
         --api-port 127.0.0.1:6550 --kubeconfig-update-default=false --kubeconfig-switch-context=false \
         --wait --timeout 300s
       k3d kubeconfig get "$CLUSTER_ESSAI" >"$KUBECONFIG_ESSAI"
-      KUBECONFIG="$(chemin_hote "$KUBECONFIG_ESSAI")" kubectl wait --for=condition=Ready nodes --all --timeout=180s
-      journal "Cluster pret ; pour les commandes suivantes : export KUBECONFIG=\"$(chemin_hote "$KUBECONFIG_ESSAI")\""
+      KUBECONFIG="$(chemin_hote "$KUBECONFIG_ESSAI")" command kubectl --context "k3d-$CLUSTER_ESSAI" \
+        wait --for=condition=Ready nodes --all --timeout=180s
+      journal "Cluster pret ; pour les commandes suivantes : export KUBECONFIG=\"$(chemin_hote "$KUBECONFIG_ESSAI")\" KUBE_CONTEXTE=k3d-$CLUSTER_ESSAI"
       ;;
     down)
       k3d cluster delete "$CLUSTER_ESSAI"
@@ -109,20 +105,23 @@ up() {
 }
 
 pod_jetable() {
-  # pod_jetable <namespace> <image> <commande sh> [secret envFrom] : journal complet du pod.
+  # pod_jetable <namespace> <image> <commande sh> [secret envFrom] [configmap montee sur /sonde] : journal complet du pod.
   # (kubectl run -i perd les premieres lignes : pod cree, attendu jusqu'a sa fin, journal lu, supprime.)
-  local ns="$1" image="$2" cmd="$3" secret="${4:-}" nom pull='IfNotPresent' phase='' i
+  # ATTENTE_RESEAU_S : delai de prise en compte de l'adresse d'un pod neuf par les politiques reseau.
+  local ns="$1" image="$2" cmd="sleep ${ATTENTE_RESEAU_S:-20}; $3" secret="${4:-}" cm="${5:-}" nom pull='IfNotPresent' phase='' i
   nom="xp02-sonde-$(openssl rand -hex 3)"
   [[ "$image" == "$SONDE_IMAGE" ]] && pull='Never'
-  jq -n --arg ns "$ns" --arg nom "$nom" --arg image "$image" --arg pull "$pull" --arg cmd "$cmd" --arg secret "$secret" '
+  jq -n --arg ns "$ns" --arg nom "$nom" --arg image "$image" --arg pull "$pull" --arg cmd "$cmd" --arg secret "$secret" --arg cm "$cm" '
     { apiVersion: "v1", kind: "Pod",
       metadata: { name: $nom, namespace: $ns, labels: { "app.kubernetes.io/part-of": "xp02" } },
-      spec: { restartPolicy: "Never", automountServiceAccountToken: false,
+      spec: ({ restartPolicy: "Never", automountServiceAccountToken: false,
         securityContext: { runAsNonRoot: true, runAsUser: 65534, seccompProfile: { type: "RuntimeDefault" } },
         containers: [ { name: "sonde", image: $image, imagePullPolicy: $pull,
           command: ["/bin/sh", "-c"], args: [$cmd],
           securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] } } }
-          + (if $secret == "" then {} else { envFrom: [ { secretRef: { name: $secret } } ] } end) ] } }' |
+          + (if $secret == "" then {} else { envFrom: [ { secretRef: { name: $secret } } ] } end)
+          + (if $cm == "" then {} else { volumeMounts: [ { name: "sonde", mountPath: "/sonde", readOnly: true } ] } end) ] }
+        + (if $cm == "" then {} else { volumes: [ { name: "sonde", configMap: { name: $cm } } ] } end)) }' |
     kubectl apply -f - >/dev/null
   for i in $(seq 1 120); do
     phase="$(kubectl -n "$ns" get pod "$nom" -o jsonpath='{.status.phase}')"
@@ -135,16 +134,36 @@ pod_jetable() {
 }
 
 sonde() {
-  local scenario="${1:?scenario}"
+  local scenario="${1:?scenario}" image="$SONDE_IMAGE" cmd cm='' pause=0
+  cmd="python -I /sonde/sonde.py $scenario"
   charger_env
-  k3d image import -c "$(nom_cluster)" "$SONDE_IMAGE" >/dev/null 2>&1
+  if [[ "$PLATEFORME" == k3d ]]; then
+    k3d image import -c "$(nom_cluster)" "$SONDE_IMAGE" >/dev/null 2>&1
+  else
+    # EKS : aucun registre pour l'image locale ; image de base epinglee, sonde.py en ConfigMap,
+    # pika installe au demarrage du pod avec verification d'empreinte (requirements.txt).
+    cm=xp02-sonde
+    image="$SONDE_BASE_IMAGE"
+    kubectl -n pdm-test create configmap "$cm" --from-file=sonde.py=sonde/sonde.py \
+      --from-file=requirements.txt=sonde/requirements.txt --dry-run=client -o json |
+      jq '.metadata.labels = { "app.kubernetes.io/part-of": "xp02" }' | kubectl apply -f - >/dev/null
+    cmd="HOME=/tmp pip install -q --no-cache-dir --disable-pip-version-check --require-hashes --only-binary=:all: --target /tmp/sonde -r /sonde/requirements.txt && cp /sonde/sonde.py /tmp/sonde/ && python -E -s /tmp/sonde/sonde.py $scenario"
+  fi
+  # Consommateur lent de XC6 en pause : il lirait controle.demandes avant le temoin de lecture.
+  if kubectl -n controle-test get scaledobject consommateur-lent >/dev/null 2>&1; then
+    kubectl -n controle-test annotate scaledobject consommateur-lent autoscaling.keda.sh/paused-replicas=0 --overwrite >/dev/null
+    kubectl -n controle-test wait --for=delete pod -l app=consommateur-lent --timeout=120s >/dev/null 2>&1 || true
+    pause=1
+  fi
   # Secret temporaire (identites de toutes les sondes), supprime des la fin de la sonde.
   {
     for u in "${UTILISATEURS[@]}"; do v="$(variable_mdp "$u")"; printf '%s=%s\n' "$v" "${!v}"; done
     printf 'AMQP_HOTE=rabbitmq.%s.svc\n' "$NS_BROKER"
   } | secret_stdin pdm-test xp02-sonde
-  pod_jetable pdm-test "$SONDE_IMAGE" "python -I /sonde/sonde.py $scenario" xp02-sonde || true
+  pod_jetable pdm-test "$image" "$cmd" xp02-sonde "$cm" || true
   kubectl -n pdm-test delete secret xp02-sonde --ignore-not-found >/dev/null
+  [[ -z "$cm" ]] || kubectl -n pdm-test delete configmap "$cm" --ignore-not-found >/dev/null
+  [[ $pause -eq 0 ]] || kubectl -n controle-test annotate scaledobject consommateur-lent autoscaling.keda.sh/paused-replicas- >/dev/null
 }
 
 reseau() {
@@ -222,11 +241,13 @@ down() {
   helm uninstall keda -n keda >/dev/null 2>&1 || true
   kubectl delete namespace keda collector-canal interactions-test lecture-test --ignore-not-found --wait=true >/dev/null
   for ns in pdm-test controle-test ns-intrus; do
-    kubectl -n "$ns" delete pod,secret -l app.kubernetes.io/part-of=xp02 --ignore-not-found >/dev/null 2>&1 || true
+    kubectl -n "$ns" delete pod,secret,configmap,networkpolicy -l app.kubernetes.io/part-of=xp02 --ignore-not-found >/dev/null 2>&1 || true
   done
-  kubectl get crd -o name | grep 'keda.sh' | xargs -r kubectl delete >/dev/null 2>&1 || true
+  kubectl get crd -o name | grep 'keda.sh' | xargs -r kubectl --context "$KUBE_CONTEXTE" delete >/dev/null 2>&1 || true
   journal "XP02 retire du cluster $c (namespaces partages pdm-test, controle-test, ns-intrus conserves)"
 }
+
+[[ "${1:-}" == cluster-essai ]] || exiger_contexte
 
 case "${1:-}" in
   cluster-essai) shift; cluster_essai "$@" ;;

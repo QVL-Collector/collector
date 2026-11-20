@@ -45,9 +45,10 @@ scripts/compose.sh down                     # supprime conteneurs, réseaux, vol
 
 ## k3d (protocole § B5)
 
-Contexte kubectl courant sur le cluster k3d de XP01 (ou le cluster jetable de XP02 : `../XP02-canal-rabbitmq/scripts/k3d.sh cluster-essai up`).
+Contexte kube explicite, jamais le contexte courant : `KUBE_CONTEXTE=k3d-<nom>` (cluster k3d de XP01, ou cluster jetable de XP02 : `../XP02-canal-rabbitmq/scripts/k3d.sh cluster-essai up`).
 
 ```bash
+export KUBE_CONTEXTE=k3d-<nom>
 scripts/k3d.sh up                           # image importée, Secrets, realm en ConfigMap, pile prête
 scripts/k3d.sh k2                           # K2 : création du pod -> Ready, 2 mesures, base neuve
 PLATEFORME=k3d scripts/verifier.sh k3       # K3 depuis l'appelant de transactions-test
@@ -57,6 +58,27 @@ scripts/k3d.sh down
 ```
 
 Sans proxy sur k3d, le poste joint Keycloak par `port-forward` (`localhost:18080`, ouvert par `verifier.sh`) : l'émetteur de débogage y est `http://localhost:18080/realms/collector`.
+
+## EKS (protocole § C)
+
+Sur le cluster de XP01 allumé (`up.sh eks`), contexte `collector-xp01` (défaut de `KUBE_CONTEXTE` pour `PLATEFORME=eks`).
+
+- IaC : `xp03 = true` dans `../XP01-orchestrateur/ephemere/xp01.auto.tfvars` ajoute le groupe cible `collector-xp01-kc` (NodePort 30081), la règle de refus des traversées et encodages (priorité 20, expression régulière), la liste blanche de `auth.collector.qvl-project.com` (priorité 30), les règles de groupes de sécurité ALB ↔ nœuds et HSTS sur l'écouteur 443. Faux par défaut : rien ne change pour XP01.
+- Image optimisée poussée dans un dépôt ECR de session `collector-xp03/keycloak` (référencée par empreinte, supprimé par `down`) ; base `keycloak` (compte dédié) dans le RDS de XP01, recréée à chaque mesure K2 par un pod `psql` jetable (`BASE=pod` : PostgreSQL du pod comme en k3d).
+- `k8s/40-eks.yaml` : Service NodePort `keycloak-alb` (8080 seul, `externalTrafficPolicy: Local`), entrée de Keycloak depuis les sous-réseaux publics de l'ALB, sortie vers RDS.
+
+```bash
+scripts/eks.sh up                           # ECR, Secrets, base RDS, realm, pile prête
+scripts/eks.sh k2                           # K2 : 2 mesures, base RDS neuve
+PLATEFORME=eks scripts/verifier.sh xe4      # XE4 + ME8 par l'ALB, depuis le poste
+PLATEFORME=eks scripts/verifier.sh xe3      # 80 -> 301, HSTS, hôte inconnu 404, testssl.sh
+PLATEFORME=eks scripts/verifier.sh k3       # ~5,5 min
+PLATEFORME=eks scripts/verifier.sh ma12
+PLATEFORME=eks scripts/verifier.sh ma
+scripts/eks.sh reseau                       # G7-4, NodePort 30081 refusé depuis ns-intrus, témoin ALB
+scripts/eks.sh k1 900 repos                 # K1 au repos (15 min), puis k1 300 pic pendant la charge
+scripts/eks.sh down                         # objets XP03, dépôt ECR, .env
+```
 
 ## Constats de préparation (2026-10-26, à blanc)
 

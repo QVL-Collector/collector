@@ -71,6 +71,35 @@ NS_BROKER="collector-canal"
 POD_BROKER="rabbitmq-0"
 CONTENEUR_COMPOSE="xp02-rabbitmq-1"
 
+# Contexte kube toujours explicite, jamais le contexte courant : k3d-* pour k3d, *collector* pour EKS
+# (alias collector-xp01 pose par up.sh de XP01 si KUBE_CONTEXTE est vide).
+KUBE_CONTEXTE="${KUBE_CONTEXTE:-}"
+
+exiger_contexte() {
+  [[ "$PLATEFORME" != eks || -n "$KUBE_CONTEXTE" ]] || KUBE_CONTEXTE="collector-xp01"
+  case "$PLATEFORME:$KUBE_CONTEXTE" in
+    k3d:k3d-*) ;;
+    eks:k3d-*) echec "PLATEFORME=eks avec le contexte k3d '$KUBE_CONTEXTE'" ;;
+    eks:*collector*) ;;
+    *) echec "KUBE_CONTEXTE='$KUBE_CONTEXTE' refuse pour PLATEFORME=$PLATEFORME (attendu : k3d-* ou *collector*)" ;;
+  esac
+  command kubectl config get-contexts -o name | tr -d '\r' | grep -qx "$KUBE_CONTEXTE" ||
+    echec "contexte '$KUBE_CONTEXTE' absent du kubeconfig${KUBECONFIG:+ ($KUBECONFIG)}"
+  export KUBE_CONTEXTE
+}
+
+kubectl() {
+  [[ -n "$KUBE_CONTEXTE" ]] || echec "KUBE_CONTEXTE vide : contexte kube explicite obligatoire"
+  command kubectl --context "$KUBE_CONTEXTE" "$@"
+}
+
+helm() {
+  [[ -n "$KUBE_CONTEXTE" ]] || echec "KUBE_CONTEXTE vide : contexte kube explicite obligatoire"
+  command helm --kube-context "$KUBE_CONTEXTE" "$@"
+}
+
+[[ "$PLATEFORME" != k3d && "$PLATEFORME" != eks ]] || exiger_contexte
+
 rmq() {
   # Commande rabbitmqctl / rabbitmq-diagnostics dans le broker de la plateforme courante.
   case "$PLATEFORME" in

@@ -209,3 +209,20 @@ variable "retention_journaux_jours" {
   type        = number
   default     = 1
 }
+
+variable "xp03" {
+  description = "Session EKS de XP03 : groupe cible et NodePort de Keycloak, règles d'ALB de auth.<domaine> (liste blanche MA7, refus ME8), HSTS (XE3). Faux : aucune ressource XP03."
+  type        = bool
+  default     = false
+}
+
+variable "nodeport_keycloak" {
+  description = "NodePort fixe du Service keycloak-alb de XP03 (cible de l'ALB, port 8080 seul)."
+  type        = number
+  default     = 30081
+
+  validation {
+    condition     = var.nodeport_keycloak >= 30000 && var.nodeport_keycloak <= 32767
+    error_message = "NodePort entre 30000 et 32767."
+  }
+}

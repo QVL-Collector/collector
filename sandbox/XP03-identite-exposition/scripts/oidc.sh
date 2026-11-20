@@ -11,7 +11,12 @@ urlenc() { jq -rn --arg v "$1" '$v|@uri'; }
 curl_pub() {
   # Acces par le proxy local (navigateur ou poste) ; autorite locale de Caddy, jamais -k.
   # --ssl-no-revoke : le curl Schannel de Windows ne peut pas verifier la revocation d'une autorite locale.
-  curl -sS --cacert "$(chemin_hote "$CA_LOCALE")" --ssl-no-revoke "$@"
+  # EKS : certificat ACM public, magasin du systeme ; revocation verifiee quand elle est joignable.
+  if [[ "$PLATEFORME" == eks ]]; then
+    curl -sS --ssl-revoke-best-effort "$@"
+  else
+    curl -sS --cacert "$(chemin_hote "$CA_LOCALE")" --ssl-no-revoke "$@"
+  fi
 }
 
 curl_interne() {

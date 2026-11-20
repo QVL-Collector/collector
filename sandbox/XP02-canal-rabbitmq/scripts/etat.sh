@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Releve d'etat du broker avant / apres chaque test (protocole XP02, "Sorties").
-# Usage : PLATEFORME=compose|k3d scripts/etat.sh <libelle>
+# Usage : PLATEFORME=compose|k3d|eks scripts/etat.sh <libelle>
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 libelle="${1:?libelle requis (ex. avant-xc1)}"

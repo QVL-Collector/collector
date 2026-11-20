@@ -3,6 +3,9 @@ locals {
   eks = var.orchestrateur == "eks"
   ecs = var.orchestrateur == "ecs"
 
+  xp03      = local.eks && var.xp03
+  hote_auth = "auth.${var.domaine}"
+
   etiquettes = {
     projet  = "collector"
     couche  = "ephemere"

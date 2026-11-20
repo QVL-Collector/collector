@@ -136,6 +136,24 @@ resource "aws_vpc_security_group_ingress_rule" "noeuds_nodeport" {
   to_port                      = var.nodeport_test
 }
 
+resource "aws_vpc_security_group_ingress_rule" "noeuds_nodeport_keycloak" {
+  count = local.xp03 ? 1 : 0
+
+  security_group_id            = aws_eks_cluster.principal[0].vpc_config[0].cluster_security_group_id
+  description                  = "NodePort de Keycloak (XP03) depuis le seul ALB"
+  referenced_security_group_id = aws_security_group.alb.id
+  ip_protocol                  = "tcp"
+  from_port                    = var.nodeport_keycloak
+  to_port                      = var.nodeport_keycloak
+}
+
+resource "aws_autoscaling_attachment" "noeuds_keycloak" {
+  count = local.xp03 ? 1 : 0
+
+  autoscaling_group_name = aws_eks_node_group.principal[0].resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.keycloak[0].arn
+}
+
 resource "aws_autoscaling_attachment" "noeuds" {
   count = local.eks ? 1 : 0
 

@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tir-g5-region
+  namespace: default
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: { app: tir-g5-region }
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector: { matchLabels: { app: xp01-test } }
+      containers:
+        - name: k6
+          image: grafana/k6:0.57.0
+          args: ["run", "--summary-export=/tmp/resume.json", "/scripts/g5.js"]
+          env:
+            - { name: CIBLE, value: "http://xp01-test.default.svc.cluster.local/" }
+            - { name: DEBIT, value: "8" }
+          resources:
+            requests: { cpu: 250m, memory: 128Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 12345
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: scripts, mountPath: /scripts, readOnly: true }
+      volumes:
+        - name: scripts
+          configMap: { name: tir-g5-script }

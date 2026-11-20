@@ -69,3 +69,32 @@ spec:
       ports:
         - { protocol: UDP, port: 53 }
         - { protocol: TCP, port: 53 }
+---
+# EKS : XP01 ferme la sortie de controle-test vers le VPC (sortie-sans-imds-ni-vpc, 10.40.0.0/16),
+# donc vers l'adresse VPC du broker ; ouverture limitee au 5672 du broker (consommateur lent, PerfTest)
+# et au DNS (sans la politique de XP01, celle-ci suffirait sinon a fermer le DNS de controle-test).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-vers-canal
+  namespace: controle-test
+  labels: { app.kubernetes.io/part-of: xp02 }
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: collector-canal }
+          podSelector:
+            matchLabels: { app: rabbitmq }
+      ports:
+        - { protocol: TCP, port: 5672 }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }

@@ -3,7 +3,7 @@
 # Producteur svc-pdm -> controle.demandes (confirmations, persistant) ; consommateur svc-controle.
 # Les deux utilisent la topologie existante (--predeclared --skip-binding-queues) : aucun droit
 # configure n'est requis. Releve toutes les 10 s : memoire et CPU du conteneur du broker.
-# Usage : PLATEFORME=compose|k3d scripts/xc8-vague.sh [duree_s=300] [debit_msg_s=200]
+# Usage : PLATEFORME=compose|k3d|eks scripts/xc8-vague.sh [duree_s=300] [debit_msg_s=200]
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 charger_env
 
@@ -64,6 +64,9 @@ arreter() {
 }
 trap arreter EXIT
 
+noeuds() { kubectl get nodes --no-headers | wc -l | tr -d ' '; }
+[[ "$PLATEFORME" == compose ]] || noeuds_repos="$(noeuds)"
+
 journal "Repos : 3 releves"
 max_repos=0
 for _ in 1 2 3; do
@@ -85,4 +88,8 @@ done
 
 csv XC8 repos "$max_repos" Mio "<=512 demande, <=1024 limite" "$([[ $max_repos -le 512 ]] && echo oui || echo non)" "max de 3 releves"
 csv XC8 vague "$max_vague" Mio "<=1024 limite" "$([[ $max_vague -le 1024 ]] && echo oui || echo non)" "$debit msg/s pendant $duree s, PerfTest"
+if [[ "$PLATEFORME" != compose ]]; then
+  noeuds_vague="$(noeuds)"
+  csv XC8 noeuds "$noeuds_repos -> $noeuds_vague" noeuds "aucun ajout" "$([[ $noeuds_vague -le $noeuds_repos ]] && echo oui || echo non)" "avant repos -> fin de vague"
+fi
 journal "Memoire max : repos ${max_repos} Mio, vague ${max_vague} Mio (detail : $releves)"

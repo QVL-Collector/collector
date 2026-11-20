@@ -91,7 +91,7 @@ q_secrets() { aws_json secretsmanager list-secrets | jq -r '.SecretList[].Name';
 
 q_journaux() {
   aws_json logs describe-log-groups |
-    jq -r '.logGroups[] | select(.logGroupName | test("^/(aws/eks|aws/ecs|ecs|collector|aws/rds)/")) |
+    jq -r '.logGroups[] | select(.logGroupName | test("^/(aws/eks|aws/ecs|ecs|collector|aws/rds)/")) | select(.logGroupName | test("^/collector/(app|audit)$") | not) |
       "\(.logGroupName) retention=\(.retentionInDays // "infinie")"'
 }
 
@@ -114,6 +114,8 @@ q_dns() {
     jq -r '.ResourceRecordSets[] | select(.Type != "NS" and .Type != "SOA" and .Type != "CAA") |
       select((.Type == "CNAME" and (.Name | startswith("_"))) | not) | "\(.Name) \(.Type)"'
 }
+
+q_ecr() { aws_json ecr describe-repositories | jq -r '.repositories[] | select(.repositoryName | startswith("collector")) | .repositoryName'; }
 
 q_buckets() { aws_json s3api list-buckets | jq -r --arg p "$NOM-" '.Buckets[].Name | select(startswith($p))'; }
 
@@ -146,6 +148,7 @@ verifier "cloudwatch:alarme" q_alarmes
 verifier "scheduler" q_planifications
 verifier "route53:enregistrement" q_dns
 verifier "s3:bucket" q_buckets
+verifier "ecr:depot" q_ecr
 
 if [ "$TROUVES" -eq 0 ]; then
   printf 'Inventaire vide hors couche persistante.\n'
