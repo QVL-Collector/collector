@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E2 Plateforme AWS |
-| Statut | À faire |
+| Statut | En cours |
 | Sprint | 1 (J4) |
 | Engagement | Ferme — **première US d'infrastructure** : X17 et X20 y sont des AC bloquants (D14) |
 | Estimation | 8 points |
