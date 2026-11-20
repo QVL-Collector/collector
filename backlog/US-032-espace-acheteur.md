@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E6 Réservation |
-| Statut | À faire |
+| Statut | Livrée |
 | Sprint | 3 (J5 bis) |
 | Engagement | Coupable (ordre de coupe S3 n° 1, D02 : l'écran de confirmation d'US-030 suffit à la démonstration) |
 | Estimation | 2 points |
@@ -55,18 +55,18 @@ En tant qu'acheteur, je veux retrouver mes réservations avec leur montant et le
 
 Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 
-- [ ] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
-- [ ] Revue de code faite, retours traités.
-- [ ] Martin a testé et prononcé « je valide la livraison de la feature ».
-- [ ] Documentation touchée à jour.
-- [ ] Statut, date de validation et liens des rapports renseignés ci-dessous.
-- [ ] Aucune donnée sensible ni credential ajouté au dépôt.
+- [x] Tous les AC sont couverts par des tests verts en CI (`ci-ok`).
+- [x] Revue de code faite, retours traités.
+- [x] Martin a testé et prononcé « je valide la livraison de la feature ».
+- [x] Documentation touchée à jour.
+- [x] Statut, date de validation et liens des rapports renseignés ci-dessous.
+- [x] Aucune donnée sensible ni credential ajouté au dépôt.
 
 ## Suivi
 
 | Étape | Lien / date |
 |---|---|
-| Rapport de test | |
-| Rapport de revue de code | |
-| Validation Martin | AAAA-MM-JJ |
-| Livraison (PR / merge) | |
+| Rapport de test | [US-032-rapport-tests.md](../docs/rapports/tests/US-032-rapport-tests.md) |
+| Rapport de revue de code | [US-032-revue-code.md](../docs/rapports/revues/US-032-revue-code.md) |
+| Validation Martin | 2026-11-20 |
+| Livraison (PR / merge) | [PR #47](https://github.com/QVL-Collector/collector/pull/47) |
