@@ -8,15 +8,20 @@ Les règles de travail du projet (rôles, circuits, statuts, Definition of Done,
 ## État actuel
 
 - **Phase** : décisions techniques closes (J2, D01 à D14). Jalon en cours : J3, sonde du compte AWS, bac à sable et documents de process.
-- **Décisions** : Session S3 close : [D03](docs/decisions/D03-hebergement-orchestration.md) en statut Candidate (EKS, repli ECS Fargate, comparatif en bac à sable), [D04](docs/decisions/D04-stack.md) décidée (Go, React + TypeScript + MUI). Contraintes de l'environnement : [environnement-learner-lab.md](docs/00-cadrage/environnement-learner-lab.md). Prochaine étape : S4 (D05 à D11). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
-- **Code** : aucun service, front ou infrastructure pour l'instant.
+- **Décisions** : Session S3 close : [D03](docs/decisions/D03-hebergement-orchestration.md) en statut Confirmée (XP01 : EKS, repli ECS Fargate), [D04](docs/decisions/D04-stack.md) décidée (Go, React + TypeScript + MUI). Contraintes de l'environnement : [environnement-learner-lab.md](docs/00-cadrage/environnement-learner-lab.md). Prochaine étape : S4 (D05 à D11). Suivi dans [docs/decisions/INDEX.md](docs/decisions/INDEX.md).
+- **Code** : front React en cours (US-010) ; IaC AWS dans [infra/](infra/README.md) (couche persistante, couche éphémère EKS, chart du front) et scripts d'allumage et d'extinction dans [tools/](tools/README.md) (US-004).
 
 ## Démarrer / arrêter
 
-> À compléter après la décision D11 (IaC, allumage/extinction, garde-fou coût).
+Rien ne tourne en continu : l'environnement AWS est allumé pour un usage précis, puis éteint ([D11](docs/decisions/D11-iac-allumage-cout.md)).
 
-Principe déjà acté : rien ne tourne en continu. L'environnement est allumé pour un usage précis, puis éteint.
-Scripts prévus dans [tools/](tools/) : `up.sh`, `down.sh`, `status.sh`, `demo.sh`.
+```bash
+bash tools/bootstrap.sh            # une fois (couche persistante), rejouable sans effet
+bash tools/up.sh --fin-lab 17:05   # heure de fin lue sur le compteur du lab
+bash tools/down.sh                 # à terminer avant « End Lab »
+```
+
+`bash tools/status.sh` affiche l'état et le coût estimé ; `bash tools/alb.sh ouvrir|fermer` ouvre l'ALB à Internet après un contrôle vert. IaC dans [infra/](infra/README.md), scripts dans [tools/](tools/README.md). `demo.sh` est à venir.
 
 ## Contribuer : hook pre-commit et CI
 
@@ -64,7 +69,7 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 | [docs/00-cadrage/environnement-learner-lab.md](docs/00-cadrage/environnement-learner-lab.md) | Contraintes de l'environnement AWS Academy Learner Lab (recherche documentaire du 2026-10-09, à confirmer par la sonde du premier jour) | Disponible |
 | [docs/decisions/D01-fonctionnalite-poc.md](docs/decisions/D01-fonctionnalite-poc.md) | D01 : exigences reformulées et fonctionnalité métier du POC | Disponible |
 | [docs/decisions/D02-decoupage-applicatif.md](docs/decisions/D02-decoupage-applicatif.md) | D02 : architecture cible V1, découpage applicatif, périmètre du POC | Disponible |
-| [docs/decisions/D03-hebergement-orchestration.md](docs/decisions/D03-hebergement-orchestration.md) | D03 : hébergement et orchestration AWS (Candidate : EKS, repli ECS Fargate) | Disponible |
+| [docs/decisions/D03-hebergement-orchestration.md](docs/decisions/D03-hebergement-orchestration.md) | D03 : hébergement et orchestration AWS (Confirmée (XP01) : EKS, repli ECS Fargate) | Disponible |
 | [docs/decisions/D04-stack.md](docs/decisions/D04-stack.md) | D04 : stack back et front (Go ; React, TypeScript et MUI) | Disponible |
 | [docs/decisions/](docs/decisions/) | Décisions D05 à D14 (`Dxx-*.md`) | À venir |
 | [docs/decisions/INDEX.md](docs/decisions/INDEX.md) | Index et statut des décisions | Disponible |
@@ -108,8 +113,8 @@ Les documents marqués « à venir » sont prévus mais pas encore rédigés.
 | [web/](web/) | Front React : socle et catalogue public (US-010) | En cours |
 | [tests/acceptance/](tests/acceptance/) | Tests d'acceptation (issus des AC des US) | À venir |
 | [tests/charge/](tests/charge/) | Scénarios de test de charge | À venir |
-| [infra/](infra/) | IaC et déploiement (selon D03 et D11) | À venir |
-| [tools/](tools/) | `up.sh`, `down.sh`, `status.sh`, `demo.sh` | À venir |
+| [infra/](infra/README.md) | IaC Terraform (couches persistante et éphémère), chart du front, socle Kubernetes (D03, D08, D11) | En cours |
+| [tools/](tools/README.md) | `bootstrap.sh`, `up.sh`, `down.sh`, `status.sh`, `alb.sh`, contrôle après déploiement ; `demo.sh` à venir | En cours |
 | [.github/workflows/ci.yml](.github/workflows/ci.yml) | Pipeline de PR et de `main`, vérification requise `ci-ok` (D10) | Disponible |
 | [tools/ci/](tools/ci/), [tools/git-hooks/](tools/git-hooks/), [tools/github/](tools/github/) | Filtre de chemins et outils de CI, hook pre-commit, réglages du dépôt GitHub | Disponible |
 

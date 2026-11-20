@@ -1,0 +1,40 @@
+Rapport TLS de collector.qvl-project.com, session 20261120T1146Z, 2026-11-20T12:27:22Z
+
+HTTP : 301 -> https://collector.qvl-project.com:443/controle?x=1
+
+tls1 :
+New, (NONE), Cipher is (NONE)
+Protocol: TLSv1
+    Protocol  : TLSv1
+    Cipher    : 0000
+
+tls1_1 :
+New, (NONE), Cipher is (NONE)
+Protocol: TLSv1.1
+    Protocol  : TLSv1.1
+    Cipher    : 0000
+
+tls1_2 :
+New, TLSv1.2, Cipher is ECDHE-RSA-AES128-GCM-SHA256
+Protocol: TLSv1.2
+    Protocol  : TLSv1.2
+    Cipher    : ECDHE-RSA-AES128-GCM-SHA256
+
+Certificat :
+subject=CN=collector.qvl-project.com
+issuer=C=US, O=Amazon, CN=Amazon RSA 2048 M01
+notAfter=May 11 23:59:59 2027 GMT
+X509v3 Subject Alternative Name: 
+    DNS:collector.qvl-project.com, DNS:*.collector.qvl-project.com
+
+En-têtes de https://collector.qvl-project.com/ :
+HTTP/1.1 200 OK
+Date: Fri, 20 Nov 2026 12:27:28 GMT
+Content-Type: text/html
+Content-Length: 896
+Connection: keep-alive
+Server: nginx/1.31.7
+Last-Modified: Thu, 01 Oct 2026 23:04:24 GMT
+ETag: "6abee6f8-380"
+Accept-Ranges: bytes
+Strict-Transport-Security: max-age=31536000; includeSubDomains

@@ -336,6 +336,7 @@ La décision de Martin est enregistrée ci-dessus ; ses conséquences :
 
 - **Code** : intergiciels d'en-têtes et de débit dans `libs/platform/` ; préfixe de route par service ; configuration nginx versionnée avec le front.
 - **Coût** : environ 10 $ par an hors crédits ; 0,50 $ par mois sur les crédits ; rien par session au-delà de D03.
+- **Exceptions Trivy (2026-11-20, décision de Martin, US-004)** : AWS-0053 (ALB public) et AWS-0040 (API EKS publique) inscrites dans `.trivyignore` à échéance de 30 jours : voulues, limitées au /32 du poste hors démonstration (ME5, MS1), MX3 vérifié hors plage et rejoué par le contrôle après déploiement ; le Learner Lab n'offre ni VPN ni bastion. AWS-0039 n'est pas une exception : clé KMS persistante `alias/collector-secrets-eks` pour les Secrets du cluster.
 
 ## À savoir défendre en soutenance
 

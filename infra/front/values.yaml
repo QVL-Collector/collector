@@ -1,0 +1,23 @@
+image: ""
+
+replicas: 2
+
+conteneur:
+  port: 8080
+
+service:
+  port: 80
+  nodePort: 30080
+
+ressources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    memory: 64Mi
+
+hpa:
+  min: 2
+  max: 6
+  cibleCpu: 70
+  descenteStabilisationS: 300

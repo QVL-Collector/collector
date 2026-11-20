@@ -39,6 +39,9 @@ crash.*.log
 # Bac à sable : fichiers de session, journaux d'apply, sauvegardes d'état
 sandbox/**/.session/
 sandbox/**/.etat-sauvegardes/
+# Environnement AWS : fichiers de session, journaux d'apply, sauvegardes d'état
+tools/.session/
+infra/.etat-sauvegardes/
 override.tf
 override.tf.json
 *_override.tf
