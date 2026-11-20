@@ -149,5 +149,5 @@ Relevés : [`docs/mesures/XP02-canal-rabbitmq.csv`](../mesures/XP02-canal-rabbit
 
 - **Relecture architecture** :
 - **Relecture sécurité** (droits du canal, politiques réseau) :
-- **Verdict de Martin** :
+- **Verdict de Martin** (2026-11-20) : **conforme avec réserves**. RabbitMQ retenu sur EKS (XC1 à XC3, XC5 à XC7, XC9, G7-2). Réserves : XC8, CPU du broker sous vague (305 à 619m pour 250m demandés) : demande CPU du broker portée à 500m dans le chart du canal ; XC4, le client `go/` doit rejeter par `Reject(true)` au lieu de `Nack`.
 - **Mise à jour de D05** :
