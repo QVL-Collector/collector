@@ -36,13 +36,14 @@ afficher_session() {
     return 0
   fi
   ligne "session" "$SESSION_TF"
+  [ "${EXTINCTION_INCOMPLETE:-0}" != "1" ] || ligne "extinction" "INCOMPLÈTE : relancer down.sh, up.sh refusé d'ici là"
   if [ -n "${FIN_LAB:-}" ]; then
     reste=$(((FIN_LAB - $(maintenant)) / 60))
     ligne "fin du lab" "$(heure_locale "$FIN_LAB"), reste $reste min ; down.sh au plus tard à $(heure_locale $((FIN_LAB - 30 * 60)))"
   fi
   if [ -n "${DEBUT_ALLUMAGE:-}" ]; then
     ecoule=$((($(maintenant) - DEBUT_ALLUMAGE + 59) / 60))
-    cout="$(awk -v m="$ecoule" -v h="$COUT_HORAIRE_USD" 'BEGIN { printf "%.2f", m / 60 * h }')"
+    cout="$(cout_estime "$ecoule")"
     cumul="$(awk -v c="$(cumul_couts)" -v s="$cout" 'BEGIN { printf "%.2f", c + s }')"
     ligne "allumé depuis" "$ecoule min"
     ligne "coût estimé de la session" "$cout \$ ($COUT_HORAIRE_USD \$/h)"
@@ -51,15 +52,11 @@ afficher_session() {
 }
 
 controler_persistant() {
-  local zone certificat blocage retention groupe attendu
+  local blocage retention groupe attendu
   printf 'Couche persistante\n'
-  zone="$(aws_json route53 list-hosted-zones-by-name --dns-name "$DOMAINE" --max-items 1 |
-    jq -r --arg d "$DOMAINE." '.HostedZones[] | select(.Name == $d) | .Id')"
-  if [ -n "$zone" ]; then ligne "route53:zone" "présente"; else ecart "route53:zone" "absente (bootstrap.sh)"; fi
+  if [ -n "$(zone_collector)" ]; then ligne "route53:zone" "présente"; else ecart "route53:zone" "absente (bootstrap.sh)"; fi
 
-  certificat="$(aws_json acm list-certificates --certificate-statuses ISSUED |
-    jq -r --arg d "$DOMAINE" '[.CertificateSummaryList[] | select(.DomainName == $d)] | length')"
-  if [ "$certificat" -ge 1 ]; then ligne "acm:certificat" "ISSUED"; else ecart "acm:certificat" "non ISSUED"; fi
+  if [ -n "$(certificat_emis)" ]; then ligne "acm:certificat" "ISSUED"; else ecart "acm:certificat" "non ISSUED"; fi
 
   if aws s3api head-bucket --bucket "$BUCKET_PHOTOS" >/dev/null 2>&1; then
     blocage="$(aws_json s3api get-public-access-block --bucket "$BUCKET_PHOTOS" 2>/dev/null |

@@ -28,7 +28,7 @@ spec:
           image: {{ .Values.image }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.conteneur.port }}
           readinessProbe:
             httpGet:
               path: /
@@ -55,7 +55,7 @@ spec:
     app.kubernetes.io/name: front
   ports:
     - name: http
-      port: 80
+      port: {{ .Values.service.port }}
       targetPort: http
       nodePort: {{ .Values.service.nodePort }}
 ---

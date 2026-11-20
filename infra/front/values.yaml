@@ -2,9 +2,12 @@ image: ""
 
 replicas: 2
 
-service:
-  nodePort: 30080
+conteneur:
   port: 8080
+
+service:
+  port: 80
+  nodePort: 30080
 
 ressources:
   requests:

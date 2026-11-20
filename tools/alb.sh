@@ -24,8 +24,8 @@ esac
 appliquer() {
   local ouvert="$1" preuve="$2"
   variables_tf "$(ip_poste)"
-  tf apply -auto-approve -input=false -var="alb_ouvert=$ouvert" -var="preuve_controle=$preuve" | masquer
-  sauvegarder_etat "alb-$ACTION"
+  tf apply -auto-approve -input=false -var="alb_ouvert=$ouvert" -var="preuve_controle=$preuve" | masquer_ip
+  sauvegarder_etat "$DOSSIER_TF" ephemere "alb-$ACTION"
 }
 
 exiger_outils aws terraform jq curl sed awk sha256sum

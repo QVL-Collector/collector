@@ -13,8 +13,6 @@ set -euo pipefail
   exit 2
 }
 
-tfp() { terraform -chdir="$DOSSIER_PERSISTANT" "$@"; }
-
 creer_bucket_photos() {
   if aws s3api head-bucket --bucket "$BUCKET_PHOTOS" >/dev/null 2>&1; then
     journal "bucket des photos présent"
@@ -56,27 +54,20 @@ appliquer_persistant() {
     echec "plan refusé : destruction ou remplacement de $destructions (corriger la configuration ou persistant.auto.tfvars)"
   fi
 
-  sauvegarder_persistant avant-bootstrap
+  sauvegarder_etat "$DOSSIER_PERSISTANT" persistant avant-bootstrap
   journal "application de la couche persistante (imports, créations, mises à jour, aucune destruction)"
   tfp apply -input=false "$plan" | masquer
   rm -f "$plan"
-  sauvegarder_persistant bootstrap
-}
-
-sauvegarder_persistant() {
-  local source="$DOSSIER_PERSISTANT/terraform.tfstate"
-  [ -f "$source" ] || return 0
-  mkdir -p "$DOSSIER_SAUVEGARDES"
-  cp "$source" "$DOSSIER_SAUVEGARDES/persistant.tfstate.$(date -u +%Y%m%dT%H%M%SZ).$1"
+  sauvegarder_etat "$DOSSIER_PERSISTANT" persistant bootstrap
 }
 
 verifier_delegation() {
   local attendus publics
-  attendus="$(tfp output -json serveurs_noms | jq -r '.[]' | sed 's/\.$//' | sort | tr '\n' ' ')"
+  attendus="$(tfp output -json serveurs_noms | jq -r '.[]' | sed 's/\.$//' | LC_ALL=C sort | tr '\n' ' ' | sed 's/ $//')"
   publics="$(curl -fsS --max-time 10 "https://dns.google/resolve?name=$DOMAINE&type=NS" |
     jq -r '[.Answer[]? | select(.type == 2) | .data | sub("\\.$"; "")] | sort | join(" ")' || true)"
   journal "serveurs de noms de la zone : $attendus"
-  if [ "$publics " = "$attendus" ]; then
+  if [ "$publics" = "$attendus" ]; then
     journal "délégation Cloudflare vers Route 53 constatée"
   else
     journal "ATTENTION : délégation non constatée ; poser ces NS dans Cloudflare pour $DOMAINE (D08 ME10)"
@@ -84,10 +75,7 @@ verifier_delegation() {
 }
 
 verifier_certificat() {
-  local statut
-  statut="$(aws_json acm list-certificates --certificate-statuses ISSUED |
-    jq -r --arg d "$DOMAINE" '[.CertificateSummaryList[] | select(.DomainName == $d)] | length')"
-  [ "$statut" -ge 1 ] || echec "certificat $DOMAINE non ISSUED : vérifier la délégation et le CNAME de validation"
+  [ -n "$(certificat_emis)" ] || echec "certificat $DOMAINE non ISSUED : vérifier la délégation et le CNAME de validation"
   journal "certificat $DOMAINE et *.$DOMAINE ISSUED"
 }
 

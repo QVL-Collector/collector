@@ -1,5 +1,3 @@
-# Le bucket est créé en CLI par tools/bootstrap.sh (SCP du lab : aws_s3_bucket échoue, D07) ; Terraform le configure.
-
 locals {
   bucket_photos = "collector-photos-${substr(sha256(data.aws_caller_identity.courante.account_id), 0, 10)}"
   arn_photos    = "arn:aws:s3:::${local.bucket_photos}"

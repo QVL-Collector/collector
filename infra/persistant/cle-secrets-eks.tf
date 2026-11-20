@@ -1,6 +1,3 @@
-# Clé de chiffrement d'enveloppe des Secrets Kubernetes (Trivy AWS-0039, décision de Martin du 2026-11-20).
-# Persistante : une clé par session laisserait une clé en suppression différée facturée. Lue par infra/ephemere via son alias.
-
 locals {
   arn_compte = "arn:aws:iam::${data.aws_caller_identity.courante.account_id}"
 }

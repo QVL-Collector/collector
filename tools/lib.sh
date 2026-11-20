@@ -43,7 +43,7 @@ masquer() { sed -E 's/[0-9]{12}/<compte>/g'; }
 
 masquer_ip() { sed -E 's/[0-9]{12}/<compte>/g; s/([0-9]{1,3}\.){3}[0-9]{1,3}/<ip>/g'; }
 
-jq() { command jq "$@" | tr -d '\r'; } # jq de Windows termine ses lignes par CRLF (XP01 session 1)
+jq() { command jq "$@" | tr -d '\r'; }
 
 journal() { printf '[%s] %s\n' "$(date -u +%H:%M:%SZ)" "$*" | masquer >&2; }
 
@@ -63,11 +63,21 @@ aws_json() { aws "$@" --output json | tr -d '\r'; }
 
 tf() { terraform -chdir="$DOSSIER_TF" "$@"; }
 
+tfp() { terraform -chdir="$DOSSIER_PERSISTANT" "$@"; }
+
+chemin_natif() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
+
+NUL="$(if command -v cygpath >/dev/null 2>&1; then printf nul; else printf /dev/null; fi)"
+
 maintenant() { date -u +%s; }
 
 utc_scheduler() { date -u -d "@$1" +%Y-%m-%dT%H:%M:%S; }
 
 heure_locale() { date -d "@$1" +%H:%M; }
+
+nouvelle_session() { date -u +%Y%m%dT%H%MZ; }
+
+cout_estime() { awk -v m="$1" -v h="$COUT_HORAIRE_USD" 'BEGIN { printf "%.2f", m / 60 * h }'; }
 
 sonde_identite() {
   local identite arn region
@@ -93,6 +103,21 @@ ip_poste() {
   printf '%s/32' "$ip"
 }
 
+zone_collector() {
+  aws_json route53 list-hosted-zones-by-name --dns-name "$DOMAINE" --max-items 1 |
+    jq -r --arg d "$DOMAINE." '.HostedZones[] | select(.Name == $d) | .Id'
+}
+
+certificat_emis() {
+  aws_json acm list-certificates --certificate-statuses ISSUED |
+    jq -r --arg d "$DOMAINE" '.CertificateSummaryList[] | select(.DomainName == $d) | .CertificateArn' | head -n 1
+}
+
+supprimer_sonde_externe() {
+  aws lambda delete-function --function-name "$SONDE_EXTERNE" >/dev/null 2>&1 || true
+  aws logs delete-log-group --log-group-name "/aws/lambda/$SONDE_EXTERNE" >/dev/null 2>&1 || true
+}
+
 charger_session() {
   if [ -f "$FICHIER_SESSION" ]; then
     # shellcheck source=/dev/null
@@ -104,19 +129,20 @@ ecrire_session() {
   mkdir -p "$DOSSIER_SESSION"
   {
     printf 'SESSION_TF=%q\n' "$SESSION_TF"
-    printf 'DEBUT_LAB=%q\n' "$DEBUT_LAB"
-    printf 'FIN_LAB=%q\n' "$FIN_LAB"
-    printf 'DEBUT_ALLUMAGE=%q\n' "$DEBUT_ALLUMAGE"
+    printf 'DEBUT_LAB=%q\n' "${DEBUT_LAB:-}"
+    printf 'FIN_LAB=%q\n' "${FIN_LAB:-}"
+    printf 'DEBUT_ALLUMAGE=%q\n' "${DEBUT_ALLUMAGE:-}"
+    printf 'EXTINCTION_INCOMPLETE=%q\n' "${EXTINCTION_INCOMPLETE:-0}"
   } >"$FICHIER_SESSION"
 }
 
 etat_vide() { [ -z "$(tf state list 2>/dev/null || true)" ]; }
 
 sauvegarder_etat() {
-  local source="$DOSSIER_TF/terraform.tfstate"
+  local source="$1/terraform.tfstate"
   [ -f "$source" ] || return 0
   mkdir -p "$DOSSIER_SAUVEGARDES"
-  cp "$source" "$DOSSIER_SAUVEGARDES/ephemere.tfstate.$(date -u +%Y%m%dT%H%M%SZ).$1"
+  cp "$source" "$DOSSIER_SAUVEGARDES/$2.tfstate.$(date -u +%Y%m%dT%H%M%SZ).$3"
 }
 
 phase() {
@@ -139,21 +165,11 @@ cumul_couts() {
 variables_tf() {
   export TF_VAR_session="$SESSION_TF"
   export TF_VAR_ip_admin="$1"
-  export TF_VAR_alb_ouvert=false
-  export TF_VAR_preuve_controle=""
 }
 
 ALB_FERME=(-var=alb_ouvert=false -var=preuve_controle=)
 
-contexte_k8s() {
-  case "$1" in
-    k3d-* | *collector*) ;;
-    *) echec "contexte kubectl hors liste blanche (k3d-*, *collector*) : $1" ;;
-  esac
-}
-
 k() {
-  contexte_k8s "$NOM"
   kubectl --context "$NOM" --request-timeout=20s "$@" | tr -d '\r'
 }
 

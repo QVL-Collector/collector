@@ -1,5 +1,3 @@
-# Reprise des ressources créées en CLI par XP00 (S6, S7, S9) : appliquées une seule fois, sans recréation.
-
 import {
   to = aws_route53_zone.collector
   id = var.id_zone

@@ -112,8 +112,7 @@ q_planifications() {
 
 q_dns() {
   local zone
-  zone="$(aws_json route53 list-hosted-zones-by-name --dns-name "$DOMAINE" --max-items 1 |
-    jq -r --arg d "$DOMAINE." '.HostedZones[] | select(.Name == $d) | .Id')"
+  zone="$(zone_collector)"
   [ -n "$zone" ] || return 0
   aws_json route53 list-resource-record-sets --hosted-zone-id "$zone" |
     jq -r '.ResourceRecordSets[] | select(.Type != "NS" and .Type != "SOA" and .Type != "CAA") |

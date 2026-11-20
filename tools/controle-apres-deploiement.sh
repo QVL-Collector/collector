@@ -42,8 +42,7 @@ resultat() {
 sortie() { printf '%s' "$SORTIES" | jq -r --arg c "$1" '.[$c].value // empty | if type == "array" then .[] else . end'; }
 
 nettoyer() {
-  aws lambda delete-function --function-name "$SONDE_EXTERNE" >/dev/null 2>&1 || true
-  aws logs delete-log-group --log-group-name "/aws/lambda/$SONDE_EXTERNE" >/dev/null 2>&1 || true
+  supprimer_sonde_externe
   [ -z "$TRAVAIL" ] || rm -rf "$TRAVAIL"
 }
 
@@ -60,9 +59,6 @@ poignee_tls() {
     printf 'refus'
   fi
 }
-
-chemin_natif() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
-NUL="$(if command -v cygpath >/dev/null 2>&1; then printf nul; else printf /dev/null; fi)"
 
 controler_tls() {
   local code redirection entetes version attendu option etat certificat
@@ -159,6 +155,10 @@ controler_adresses_publiques() {
   done <<<"$adresses"
   [ "$inattendues" -gt 0 ] ||
     resultat X17 adresses-publiques ok "${#IPS_ALB[@]} de l'ALB, ${#IPS_NAT[@]} de la NAT, aucune autre"
+  [ "${#IPS_ALB[@]}" -ge 2 ] ||
+    resultat X17 balayage-alb ko "${#IPS_ALB[@]} adresse(s) de l'ALB identifiée(s), 2 attendues (une par zone)"
+  [ "${#IPS_NAT[@]}" -eq 1 ] ||
+    resultat X17 balayage-nat ko "${#IPS_NAT[@]} adresse(s) de NAT identifiée(s), 1 attendue"
 
   for ip in "${IPS_ALB[@]}" "${IPS_NAT[@]}"; do balayer "$ip" & done
   wait
@@ -210,14 +210,23 @@ controler_configuration_reseau() {
 }
 
 controler_hors_plage() {
-  local archive="$TRAVAIL/sonde.zip" cibles reponse ip ligne nom etat attendu
-  command -v python >/dev/null 2>&1 || {
-    resultat X17 hors-plage nv "python absent : archive de la sonde Lambda non construite"
+  local archive="$TRAVAIL/sonde.zip" cibles reponse ip ligne nom etat attendu interpreteur="" candidat
+  for candidat in python3 python; do
+    if "$candidat" -c 'import zipfile' >/dev/null 2>&1; then
+      interpreteur="$candidat"
+      break
+    fi
+  done
+  [ -n "$interpreteur" ] || {
+    resultat X17 hors-plage nv "python3 ou python absent : archive de la sonde Lambda non construite"
     return 0
   }
-  python -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w"); z.write(sys.argv[2], "sonde.py"); z.close()' \
-    "$archive" "$(chemin_natif "$RACINE_TOOLS/sonde-hors-plage/sonde.py")"
-  nettoyer_sonde_seule
+  "$interpreteur" -c 'import sys, zipfile; z = zipfile.ZipFile(sys.argv[1], "w"); z.write(sys.argv[2], "sonde.py"); z.close()' \
+    "$archive" "$(chemin_natif "$RACINE_TOOLS/sonde-hors-plage/sonde.py")" || {
+    resultat X17 hors-plage nv "archive de la sonde non construite"
+    return 0
+  }
+  supprimer_sonde_externe
   if ! aws lambda create-function --function-name "$SONDE_EXTERNE" --runtime python3.13 --handler sonde.handler \
     --role "$LAB_ROLE_ARN" --zip-file "fileb://$archive" --timeout 90 \
     --tags projet=collector,couche=ephemere,outil=controle >/dev/null ||
@@ -255,12 +264,7 @@ controler_hors_plage() {
       resultat X17 hors-plage ko "$ligne, attendu $attendu"
     fi
   done <<<"$reponse"
-  nettoyer_sonde_seule
-}
-
-nettoyer_sonde_seule() {
-  aws lambda delete-function --function-name "$SONDE_EXTERNE" >/dev/null 2>&1 || true
-  aws logs delete-log-group --log-group-name "/aws/lambda/$SONDE_EXTERNE" >/dev/null 2>&1 || true
+  supprimer_sonde_externe
 }
 
 controler_load_balancers() {
@@ -372,15 +376,12 @@ controler_sortie_imds() {
   manquants="$(k get ns -o json | jq -r --arg s "$NAMESPACES_SYSTEME" '($s | split(" ")) as $sys | .items[].metadata.name |
     select(. as $n | $sys | index($n) | not)' |
     while read -r ns; do
-      k get networkpolicy -n "$ns" -o json | jq -e '[.items[] | select((.spec.podSelector | length) == 0 and
-        (.spec.policyTypes | index("Egress")) and
-        ([.spec.egress[]?.to[]?.ipBlock | select(. != null and .cidr == "0.0.0.0/0") | (.except // []) | index("169.254.169.254/32")] | all))] |
-        length > 0' >/dev/null || printf '%s ' "$ns"
+      k get networkpolicy -n "$ns" -o json | jq -e -f "$RACINE_TOOLS/sortie-sans-imds.jq" >/dev/null || printf '%s ' "$ns"
     done)"
   if [ -z "$manquants" ]; then
-    resultat X17 sortie-sans-imds ok "politique de sortie sans 169.254.169.254/32 dans chaque namespace applicatif"
+    resultat X17 sortie-sans-imds ok "toute sortie exclut l'IMDS dans chaque namespace applicatif (union des politiques)"
   else
-    resultat X17 sortie-sans-imds ko "namespaces sans politique : $manquants"
+    resultat X17 sortie-sans-imds ko "namespaces dont les politiques laissent joindre l'IMDS : $manquants"
   fi
 }
 
@@ -418,7 +419,7 @@ chercher() {
 }
 
 etat_ephemere() { tf show -json; }
-etat_persistant() { terraform -chdir="$DOSSIER_PERSISTANT" show -json; }
+etat_persistant() { tfp show -json; }
 
 releases_helm() {
   local espace release

@@ -13,7 +13,7 @@ locals {
   cidr_publics = [for i in range(2) : cidrsubnet(var.cidr_vpc, 8, i)]
   cidr_prives  = [for i in range(2) : cidrsubnet(var.cidr_vpc, 4, i + 1)]
 
-  sources_alb  = var.alb_ouvert ? ["0.0.0.0/0"] : [var.ip_admin]
+  source_alb   = var.alb_ouvert ? "0.0.0.0/0" : var.ip_admin
   hsts         = "max-age=31536000; includeSubDomains"
   nom_journaux = "/aws/eks/${local.nom}/cluster"
 }

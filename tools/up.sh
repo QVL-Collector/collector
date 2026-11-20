@@ -33,10 +33,11 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+HEURE_VALIDE='^([01][0-9]|2[0-3]):[0-5][0-9]$'
 if [ -n "$HEURE_FIN" ]; then
-  [[ "$HEURE_FIN" =~ ^[0-2][0-9]:[0-5][0-9]$ ]] || echec "--fin-lab HH:MM (heure locale lue sur le compteur du lab)"
+  [[ "$HEURE_FIN" =~ $HEURE_VALIDE ]] || echec "--fin-lab HH:MM (heure locale lue sur le compteur du lab)"
 else
-  [[ "$HEURE_LAB" =~ ^[0-2][0-9]:[0-5][0-9]$ ]] ||
+  [[ "$HEURE_LAB" =~ $HEURE_VALIDE ]] ||
     echec "--fin-lab HH:MM (compteur du lab, préféré : XP01 X14) ou --debut-lab HH:MM obligatoire"
 fi
 
@@ -49,11 +50,13 @@ calculer_fenetre() {
     DEBUT_LAB=$((FIN_LAB - DUREE_LAB_MIN * 60))
   else
     DEBUT_LAB="$(date -d "$(date +%Y-%m-%d) $HEURE_LAB" +%s)"
-    [ "$DEBUT_LAB" -le "$maintenant_s" ] || echec "heure de « Start Lab » dans le futur"
+    [ "$DEBUT_LAB" -le "$maintenant_s" ] || DEBUT_LAB=$((DEBUT_LAB - 24 * 3600))
     FIN_LAB=$((DEBUT_LAB + DUREE_LAB_MIN * 60))
   fi
   RESTANT_MIN=$(((FIN_LAB - maintenant_s) / 60))
   [ "$RESTANT_MIN" -gt 0 ] || echec "session du lab déjà expirée : relancer « Start Lab »"
+  [ "$RESTANT_MIN" -le "$DUREE_LAB_MIN" ] ||
+    echec "fin du lab dans $RESTANT_MIN min, au-delà des $DUREE_LAB_MIN min d'une session : heure saisie erronée ?"
   journal "fin de session du lab à $(heure_locale "$FIN_LAB"), reste $RESTANT_MIN min"
 }
 
@@ -69,14 +72,9 @@ controler_budget() {
   fi
 }
 
-controler_persistant() {
-  local zone certificat
-  zone="$(aws_json route53 list-hosted-zones-by-name --dns-name "$DOMAINE" --max-items 1 |
-    jq -r --arg d "$DOMAINE." '.HostedZones[] | select(.Name == $d) | .Id')"
-  [ -n "$zone" ] || echec "couche persistante absente : zone $DOMAINE introuvable (appliquer infra/persistant)"
-  certificat="$(aws_json acm list-certificates --certificate-statuses ISSUED |
-    jq -r --arg d "$DOMAINE" '.CertificateSummaryList[] | select(.DomainName == $d) | .CertificateArn' | head -n 1)"
-  [ -n "$certificat" ] || echec "couche persistante incomplète : certificat $DOMAINE non ISSUED"
+exiger_persistant() {
+  [ -n "$(zone_collector)" ] || echec "couche persistante absente : zone $DOMAINE introuvable (bash tools/bootstrap.sh)"
+  [ -n "$(certificat_emis)" ] || echec "couche persistante incomplète : certificat $DOMAINE non ISSUED"
   journal "couche persistante présente : zone et certificat ISSUED"
 }
 
@@ -166,6 +164,26 @@ armer_garde_fou() {
   return "$ko"
 }
 
+signaler_hors_etat() {
+  local connus categorie ident hors=0
+  connus="$(tf show -json 2>/dev/null |
+    jq -r '[.. | objects | (.id?, .name?, .arn?, .identifier?) | strings] | unique[]' || true)"
+  while read -r categorie ident _; do
+    [ -n "$ident" ] || continue
+    [ "$categorie" != "scheduler" ] || continue
+    ident="${ident%.}"
+    if ! grep -qxF -- "$ident" <<<"$connus"; then
+      journal "ATTENTION : hors état Terraform : $categorie $ident"
+      hors=$((hors + 1))
+    fi
+  done < <("$RACINE_TOOLS/inventaire.sh" 2>/dev/null | sed -n 's/^  //p')
+  if [ "$hors" -eq 0 ]; then
+    journal "reprise : toute ressource inventoriée est suivie par l'état"
+  else
+    journal "reprise : $hors ressource(s) hors état (nœuds et interfaces gérés par EKS attendus) ; tout orphelin se supprime ou s'importe (D11)"
+  fi
+}
+
 rappel_fin() {
   local limite_down=$((FIN_LAB - 30 * 60))
   journal "RAPPEL : lancer down.sh au plus tard à $(heure_locale "$limite_down") ; il doit finir AVANT « End Lab » ($(heure_locale "$FIN_LAB"))."
@@ -189,6 +207,9 @@ if [ "$PROLONGER" -eq 1 ]; then
   exit 0
 fi
 
+[ "${EXTINCTION_INCOMPLETE:-0}" != "1" ] ||
+  echec "extinction précédente incomplète : relancer down.sh jusqu'à un inventaire vide avant tout up (AC4)"
+
 [ "$RESTANT_MIN" -ge "$MARGE_UP_MIN" ] ||
   echec "refus d'allumer : $RESTANT_MIN min restantes, minimum $MARGE_UP_MIN (D11). Relancer « Start Lab »."
 
@@ -202,16 +223,18 @@ exiger_outils kubectl helm
 statut_version="$(aws_json eks describe-cluster-versions --cluster-versions "$VERSION_EKS" | jq -r '.clusterVersions[0].versionStatus // empty')"
 [ "$statut_version" = "STANDARD_SUPPORT" ] || echec "EKS $VERSION_EKS hors support standard ($statut_version)"
 
-controler_persistant
+exiger_persistant
 
 T0="$(maintenant)"
 if etat_vide; then
   journal "état vide : G2, inventaire strict avant allumage (AC4)"
   "$RACINE_TOOLS/status.sh" --strict || echec "inventaire non vide : nettoyer ou importer les orphelins avant up"
-  SESSION_TF="$(date -u +%Y%m%dT%H%MZ)"
+  SESSION_TF="$(nouvelle_session)"
   DEBUT_ALLUMAGE="$T0"
 else
   [ -n "${SESSION_TF:-}" ] || echec "état non vide sans fichier de session : lancer down.sh d'abord"
+  journal "état non vide : reprise d'un up interrompu, inventaire comparé à l'état (D11)"
+  signaler_hors_etat
   DEBUT_ALLUMAGE="${DEBUT_ALLUMAGE:-$T0}"
 fi
 
@@ -224,7 +247,7 @@ phase up controles "$(($(maintenant) - T0))" "identité, fenêtre, budget, persi
 
 if ! etat_vide; then
   journal "état existant : rafraîchissement avant apply (destruction programmée ou expiration possible)"
-  tf apply -refresh-only -auto-approve -input=false "${ALB_FERME[@]}" | masquer
+  tf apply -refresh-only -auto-approve -input=false "${ALB_FERME[@]}" | masquer_ip
 fi
 
 mkdir -p "$DOSSIER_SESSION"
@@ -236,7 +259,7 @@ set +e
 tf apply -auto-approve -input=false -json "${ALB_FERME[@]}" |
   tee "$JOURNAL_APPLY" |
   command jq -r --unbuffered 'select(.type == "apply_complete" or .type == "apply_errored" or .type == "diagnostic" or .type == "change_summary") | .["@message"]' |
-  masquer
+  masquer_ip
 STATUT_APPLY="${PIPESTATUS[0]}"
 set -e
 
@@ -255,7 +278,7 @@ jq -r 'select(.type == "apply_complete") | [.["@timestamp"], .hook.resource.addr
 
 [ "$STATUT_APPLY" -eq 0 ] || echec "apply en échec : corriger puis relancer up.sh (rafraîchissement automatique), ou down.sh"
 phase up apply "$(($(maintenant) - T_APPLY))" "apply terminé"
-sauvegarder_etat up
+sauvegarder_etat "$DOSSIER_TF" ephemere up
 
 aws eks update-kubeconfig --name "$NOM" --alias "$NOM" --profile "$AWS_PROFILE" >/dev/null
 kubectl --context "$NOM" wait --for=condition=Ready nodes --all --timeout=10m >/dev/null
@@ -270,7 +293,7 @@ journal "attente du premier HTTPS 200 sur $URL (30 min au plus)"
 CODE="000"
 LIMITE=$(($(maintenant) + 30 * 60))
 while [ "$(maintenant)" -lt "$LIMITE" ]; do
-  CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || true)"
+  CODE="$(curl -s -o "$NUL" -w '%{http_code}' --max-time 10 "$URL" || true)"
   [ "$CODE" = "200" ] && break
   sleep 10
 done

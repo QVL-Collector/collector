@@ -7,14 +7,14 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb" {
-  for_each = { for paire in setproduct(["80", "443"], local.sources_alb) : "${paire[0]}-${paire[1]}" => paire }
+  for_each = toset(["80", "443"])
 
   security_group_id = aws_security_group.alb.id
-  description       = var.alb_ouvert ? "Port ${each.value[0]} ouvert a Internet (demonstration)" : "Port ${each.value[0]} depuis le poste seul"
-  cidr_ipv4         = each.value[1]
+  description       = var.alb_ouvert ? "Port ${each.key} ouvert a Internet (demonstration)" : "Port ${each.key} depuis le poste seul"
+  cidr_ipv4         = local.source_alb
   ip_protocol       = "tcp"
-  from_port         = tonumber(each.value[0])
-  to_port           = tonumber(each.value[0])
+  from_port         = tonumber(each.key)
+  to_port           = tonumber(each.key)
 
   lifecycle {
     precondition {
