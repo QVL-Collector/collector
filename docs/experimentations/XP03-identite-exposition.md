@@ -183,5 +183,5 @@ Contrôles complémentaires du realm (`verifier.sh ma`, compose) : 18/18 (MA1, M
 - **Relecture architecture** :
 - **Relecture sécurité** (IAM, TLS, realm) :
 - **Décision de Martin sur XE4 (2026-11-20)** : les 4 chemins de traversée encodée rejetés en 400 par l'ALB lui-même (`Server: awselb/2.0`, avant toute évaluation des règles, rien n'atteint Keycloak) comptent comme refus valides ; seuil amendé en « 404, ou 400 émis par l'ALB ». XE4 réussi sur EKS.
-- **Verdict de Martin** :
+- **Verdict de Martin** (2026-11-20) : **conforme**. Keycloak et la liste blanche de l'ALB retenus sur EKS (XE1 à XE4, K2, K3, MA, G7-4). K1 mesuré au repos seulement : à rejouer au pic dans US-016 ; MX2 couvert par la sonde Lambda d'US-004 (AC8).
 - **Mise à jour de D06 et D08** (dont décision du troisième nœud au repos) :
