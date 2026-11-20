@@ -63,3 +63,31 @@ variable "courriel_alertes_budget" {
     error_message = "courriel_alertes_budget est une adresse de courriel."
   }
 }
+
+variable "retention_journaux_app" {
+  description = "Rétention du groupe de journaux applicatif, en jours (D09 MO7)."
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = contains([1, 3, 5, 7], var.retention_journaux_app)
+    error_message = "Rétention applicative courte : 1, 3, 5 ou 7 jours."
+  }
+}
+
+variable "retention_journaux_audit" {
+  description = "Rétention du groupe de journaux d'audit, en jours (D09 MO7, ES-23) : 30 jours dans le POC."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.retention_journaux_audit == 30
+    error_message = "Rétention d'audit fixée à 30 jours dans le POC (D09)."
+  }
+}
+
+variable "alias_cle_secrets_eks" {
+  description = "Alias de la clé KMS des Secrets EKS, lu par infra/ephemere (AWS-0039)."
+  type        = string
+  default     = "alias/collector-secrets-eks"
+}
