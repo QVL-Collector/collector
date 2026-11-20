@@ -224,6 +224,41 @@ export const fr = {
     },
   },
   orders: {
+    navigation: 'Mes réservations',
+    list: {
+      documentTitle: 'Mes réservations · Collector',
+      title: 'Mes réservations',
+      subtitle:
+        'Retrouvez les articles réservés à votre nom, leur montant et le temps qu’il vous reste pour payer.',
+      listTitle: 'Vos réservations',
+      listLabel: 'Réservations',
+      paginationLabel: 'Pagination de mes réservations',
+      loading: 'Chargement de vos réservations en cours',
+      loaded_one: '{{count}} réservation',
+      loaded_other: '{{count}} réservations',
+      total: 'Montant total',
+      timeLeft: 'Expire {{relative}}',
+      lastMinute: 'Expire dans moins d’une minute',
+      deadlineReached: 'Échéance atteinte, mise à jour de l’état en cours…',
+      expired: 'La réservation de « {{title}} » a expiré.',
+      viewDetail: 'Voir la réservation',
+      viewDetailLabel: 'Voir la réservation « {{title}} »',
+      forbiddenDescription: 'Votre compte n’a pas le rôle requis pour consulter ces réservations.',
+      empty: {
+        title: 'Aucune réservation pour le moment',
+        description:
+          'Réservez un article depuis le catalogue : il vous est garanti le temps du paiement.',
+        action: 'Parcourir le catalogue',
+      },
+      error: {
+        title: 'Vos réservations sont momentanément indisponibles',
+        description: 'Vérifiez votre connexion, puis réessayez.',
+        retry: 'Réessayer',
+      },
+      unauthenticated: {
+        description: 'Reconnectez-vous pour consulter vos réservations.',
+      },
+    },
     pendingDocumentTitle: 'Votre commande · Collector',
     pendingTitle: 'Votre commande',
     loading: 'Chargement de votre commande en cours',

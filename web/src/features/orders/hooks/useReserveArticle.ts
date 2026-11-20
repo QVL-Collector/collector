@@ -38,6 +38,7 @@ export function useReserveArticle({
     mutationFn: () => client.reserveArticle(articleId),
     onSuccess: (order: Order) => {
       queryClient.setQueryData(ordersQueryKeys.detail(order.id), order);
+      void queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists() });
       void navigate(orderPath(order.id));
       refreshCatalogue();
     },

@@ -4,6 +4,7 @@ import type { UserIdentity } from '../../auth/useUserIdentity';
 import { AccountBadge } from '../../ui/components/AccountBadge';
 import { ResponsiveActionButton } from '../../ui/components/ResponsiveActionButton';
 import { AdminSpaceLink } from './AdminSpaceLink';
+import { BuyerSpaceLink } from './BuyerSpaceLink';
 import { NotificationsSpaceLink } from './NotificationsSpaceLink';
 import { SellerSpaceLink } from './SellerSpaceLink';
 import type { AccountControlLabels } from './useAccountControl';
@@ -11,6 +12,7 @@ import type { AccountControlLabels } from './useAccountControl';
 type SignedInAccountProps = {
   readonly identity: UserIdentity;
   readonly labels: AccountControlLabels;
+  readonly canOpenBuyerSpace: boolean;
   readonly canOpenSellerSpace: boolean;
   readonly canOpenAdminSpace: boolean;
   readonly compact: boolean;
@@ -21,6 +23,7 @@ type SignedInAccountProps = {
 export function SignedInAccount({
   identity,
   labels,
+  canOpenBuyerSpace,
   canOpenSellerSpace,
   canOpenAdminSpace,
   compact,
@@ -37,6 +40,7 @@ export function SignedInAccount({
       minWidth={0}
     >
       {canOpenAdminSpace && <AdminSpaceLink label={labels.adminSpace} compact={compact} />}
+      {canOpenBuyerSpace && <BuyerSpaceLink label={labels.buyerSpace} compact={compact} />}
       {canOpenSellerSpace && <SellerSpaceLink label={labels.sellerSpace} compact={compact} />}
       {canOpenSellerSpace && (
         <NotificationsSpaceLink label={labels.notifications} compact={compact} />

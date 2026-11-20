@@ -2,6 +2,7 @@ import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router';
+import { liftOnHoverSx } from '../animations/liftOnHoverSx';
 
 type LinkCardProps = {
   readonly to: string;
@@ -11,19 +12,7 @@ type LinkCardProps = {
 
 export function LinkCard({ to, state, children }: LinkCardProps) {
   return (
-    <Card
-      component="article"
-      variant="outlined"
-      sx={{
-        height: '100%',
-        transition: (theme) => theme.transitions.create(['transform', 'box-shadow']),
-        '&:hover, &:focus-within': { transform: 'translateY(-0.125rem)', boxShadow: 3 },
-        '@media (prefers-reduced-motion: reduce)': {
-          transition: 'none',
-          '&:hover, &:focus-within': { transform: 'none' },
-        },
-      }}
-    >
+    <Card component="article" variant="outlined" sx={[liftOnHoverSx, { height: '100%' }]}>
       <CardActionArea component={RouterLink} to={to} state={state} sx={{ height: '100%' }}>
         {children}
       </CardActionArea>

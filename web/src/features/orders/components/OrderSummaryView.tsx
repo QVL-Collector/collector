@@ -1,4 +1,5 @@
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
+import ShoppingBagOutlined from '@mui/icons-material/ShoppingBagOutlined';
 import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 import Stack from '@mui/material/Stack';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +7,7 @@ import { LinkButton } from '../../../ui/components/LinkButton';
 import { cataloguePath } from '../../catalogue/cataloguePaths';
 import type { Order, OrderStatus } from '../domain/order';
 import { useOrderSummary } from '../hooks/useOrderSummary';
+import { buyerSpacePath } from '../ordersPaths';
 import { OrderAmountsCard } from './OrderAmountsCard';
 import { OrderCommissionCard } from './OrderCommissionCard';
 import { OrderStatusPanel } from './OrderStatusPanel';
@@ -39,6 +41,12 @@ export function OrderSummaryView({ order }: OrderSummaryViewProps) {
           label={t('orders.viewArticle')}
           icon={<VisibilityOutlined />}
           variant={articleLinkVariants[summary.status]}
+        />
+        <LinkButton
+          to={buyerSpacePath}
+          label={t('orders.navigation')}
+          icon={<ShoppingBagOutlined />}
+          variant="text"
         />
         <LinkButton
           to={cataloguePath}

@@ -5,6 +5,7 @@ import { publishedArticlePath } from '../../catalogue/cataloguePaths';
 import type { Order, OrderStatus } from '../domain/order';
 
 export type OrderSummary = {
+  readonly articleTitle: string;
   readonly status: OrderStatus;
   readonly statusLabel: string;
   readonly deadlineTitle: string;
@@ -26,6 +27,7 @@ export function useOrderSummary(order: Order): OrderSummary {
   const formatMoney = useMoneyFormatter();
   const formatDateTime = useDateTimeFormatter();
   return {
+    articleTitle: order.title,
     status: order.status,
     statusLabel: t(`orders.statuses.${order.status}`),
     deadlineTitle: t(`orders.deadlines.${order.status}.title`),

@@ -10,10 +10,12 @@ export type AccountControlLabels = {
   readonly sellerSpace: string;
   readonly adminSpace: string;
   readonly notifications: string;
+  readonly buyerSpace: string;
 };
 
 export type AccountControlModel = {
   readonly identity: UserIdentity | null;
+  readonly canOpenBuyerSpace: boolean;
   readonly canOpenSellerSpace: boolean;
   readonly canOpenAdminSpace: boolean;
   readonly compact: boolean;
@@ -38,6 +40,7 @@ export function useAccountControl(): AccountControlModel {
   const { busy, failedAction, failureVisible, signIn, signOut, dismissFailure } = useAuthActions();
   return {
     identity,
+    canOpenBuyerSpace: identity?.roles.includes('acheteur') ?? false,
     canOpenSellerSpace: identity?.roles.includes('vendeur') ?? false,
     canOpenAdminSpace: identity?.roles.includes('admin') ?? false,
     compact,
@@ -49,6 +52,7 @@ export function useAccountControl(): AccountControlModel {
       sellerSpace: t('seller.navigation'),
       adminSpace: t('admin.navigation'),
       notifications: t('notifications.navigation'),
+      buyerSpace: t('orders.navigation'),
     },
     failureMessage: failedAction === null ? '' : t(failureMessageKeys[failedAction]),
     failureVisible,
