@@ -74,6 +74,8 @@ func (id ReservationID) String() string {
 	return uuid.UUID(id).String()
 }
 
+const MaxTitleLength = 200
+
 type Status string
 
 const (
@@ -84,6 +86,7 @@ const (
 type Reservation struct {
 	ID          ReservationID
 	Article     ArticleID
+	Title       string
 	ExpiresAt   time.Time
 	Price       montants.Money
 	ShippingFee montants.Money
@@ -98,6 +101,7 @@ type Placement struct {
 type Order struct {
 	ID          ID
 	Article     ArticleID
+	Title       string
 	Buyer       BuyerID
 	Reservation ReservationID
 	Status      Status
@@ -116,4 +120,32 @@ func (o Order) AsOf(now time.Time) Order {
 type Recorded struct {
 	Order   Order
 	Created bool
+}
+
+const (
+	DefaultPageSize = 20
+	MaxPageSize     = 50
+	MaxPageNumber   = 10_000
+)
+
+type PageRequest struct {
+	Number int
+	Size   int
+}
+
+func (p PageRequest) Offset() int {
+	return (p.Number - 1) * p.Size
+}
+
+type OrderPage struct {
+	Orders []Order
+	Total  int
+}
+
+func (p OrderPage) AsOf(now time.Time) OrderPage {
+	current := make([]Order, 0, len(p.Orders))
+	for _, order := range p.Orders {
+		current = append(current, order.AsOf(now))
+	}
+	return OrderPage{Orders: current, Total: p.Total}
 }

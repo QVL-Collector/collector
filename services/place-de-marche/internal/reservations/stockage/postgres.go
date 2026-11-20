@@ -32,7 +32,7 @@ SET reservation_id = CASE WHEN ` + heldByBuyer + ` THEN reservation_id ELSE gen_
     reserve_par = $2
 WHERE id = $1 AND etat = 'publie' AND NOT vendu AND prix_centimes IS NOT NULL AND vendeur_id <> $2
   AND (reserve_jusqu_a IS NULL OR reserve_jusqu_a <= now() OR reserve_par = $2)
-RETURNING reservation_id, reserve_jusqu_a, prix_centimes, coalesce(frais_port_centimes, 0)`
+RETURNING reservation_id, titre, reserve_jusqu_a, prix_centimes, coalesce(frais_port_centimes, 0)`
 
 const recordReservationQuery = `
 INSERT INTO reservation (id, article_id, acheteur_id, echeance, prix_centimes, frais_port_centimes)
@@ -101,19 +101,21 @@ func refuseIfActiveElsewhere(ctx context.Context, tx pgx.Tx, request reservation
 func holdArticle(ctx context.Context, tx pgx.Tx, request reservations.Request) (reservations.Reservation, error) {
 	var (
 		id               uuid.UUID
+		title            string
 		expiresAt        time.Time
 		priceCents       int64
 		shippingFeeCents int64
 	)
 	err := tx.QueryRow(ctx, reserveQuery,
 		uuid.UUID(request.Article), uuid.UUID(request.Buyer), request.Duration.Seconds(),
-	).Scan(&id, &expiresAt, &priceCents, &shippingFeeCents)
+	).Scan(&id, &title, &expiresAt, &priceCents, &shippingFeeCents)
 	if err != nil {
 		return reservations.Reservation{}, err
 	}
 	return reservations.Reservation{
 		ID:          reservations.ID(id),
 		Article:     request.Article,
+		Title:       title,
 		Buyer:       request.Buyer,
 		ExpiresAt:   expiresAt,
 		Price:       euros(priceCents),

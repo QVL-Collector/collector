@@ -24,7 +24,7 @@ Corps `{"articleId": "<uuid>"}`. Seul `articleId` est lu : tout autre champ (pri
 
 1. Jeton de service : `x/oauth2/clientcredentials`, client `transactions`, portée `reserver`, authentification `client_secret_basic`. Le jeton (5 min) est mis en cache et renouvelé 10 s avant son expiration ; aucune redirection n'est suivie avec lui.
 2. Appel `POST {PLACE_DE_MARCHE_URL_INTERNE}/interne/v1/articles/{articleId}/reservations`, sans corps : `Authorization: Bearer <jeton de service>`, `X-Collector-User-Token: <jeton de l'acheteur>` (le jeton reçu, tel quel), `X-Correlation-Id` repris. Délai 5 s. Le jeton de l'acheteur n'est jamais journalisé (`token.Credential` masqué dans `fmt` et `slog`).
-3. Montants calculés par le paquet pur `internal/montants` à partir du prix et des frais de port lus par la Place de marché ; échéance reprise telle quelle.
+3. Montants calculés par le paquet pur `internal/montants` à partir du prix et des frais de port lus par la Place de marché ; échéance reprise telle quelle. `titre` lu dans la même réponse et figé dans la commande (US-032) : une modification ultérieure de l'annonce ne le change pas. Titre absent, blanc ou au-delà de 200 caractères : réponse illisible, donc 503.
 4. `INSERT … ON CONFLICT (reservation_id) DO NOTHING` : une commande par réservation. Le nouvel essai reçoit la même réservation, donc la même commande, relue par `reservation_id` et `acheteur_id`.
 
 | Réponse de la Place de marché | Réponse de Transactions |
@@ -40,6 +40,7 @@ Corps `{"articleId": "<uuid>"}`. Seul `articleId` est lu : tout autre champ (pri
 {
   "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
   "articleId": "8a2d4f6b-1c3e-4a5b-9d7f-0e2c4a6b8d1f",
+  "titre": "Montre Lip Nautic-Ski 1970",
   "statut": "en_attente_paiement",
   "prix": { "montantCentimes": 12000, "devise": "EUR" },
   "fraisDePort": { "montantCentimes": 590, "devise": "EUR" },
@@ -51,9 +52,17 @@ Corps `{"articleId": "<uuid>"}`. Seul `articleId` est lu : tout autre champ (pri
 }
 ```
 
+### `GET /transactions/v1/commandes` (US-032)
+
+Commandes dont l'acheteur est le sujet du jeton, jamais lu dans la requête, de la plus récente à la plus ancienne (`creeLe` puis `id` décroissants). `page` (défaut 1, au plus 10 000) et `taille` (défaut 20, au plus 50), bornes de la Place de marché ; paramètre répété, vide ou non entier : 400 `invalide`, hors bornes : 400 `hors_limites` (`urn:collector:probleme:saisie-invalide`). Réponse `{elements, page, taille, total}`, `elements` toujours un tableau, vide au-delà du total. Décompte et page lus dans une même transaction `READ ONLY` `REPEATABLE READ`. Statut dérivé à la lecture, comme le détail. Pas de limitation de débit.
+
 ### `GET /transactions/v1/commandes/{id}`
 
 Commande dont l'acheteur est le sujet du jeton ; sinon 404, comme une commande inexistante ou un identifiant mal formé.
+
+### Déploiement (US-032)
+
+La Place de marché (champ `titre` dans la réponse de « réserver ») doit être déployée **avant** Transactions. Un Transactions à jour face à une Place de marché antérieure répond 503 à toute réservation (titre absent) ; l'ordre inverse est sans effet (champ inconnu ignoré).
 
 ### Expiration (US-031)
 
@@ -105,7 +114,7 @@ Puis, connecté en `transactions_migration` sur `transactions` : `REVOKE CREATE 
 - `transactions_migration` : propriétaire de la base et du schéma, seul à exécuter du DDL ; secret livré au seul Job de migration.
 - `transactions_execution` : propriétaire d'aucun objet ; nom fixe, la première migration lui accorde `SELECT` et `INSERT` sur les tables (`ALTER DEFAULT PRIVILEGES`). Ni `UPDATE`, ni `DELETE` : une commande ne change pas d'état en base dans le POC (« expirée » se lit sur l'échéance, voir « Expiration »).
 
-Table `commande` (migration 00001) : `reservation_id` unique (`commande_une_par_reservation`), montants en centimes `bigint`, devise `EUR`, `CHECK` sur `total_paye = prix + frais_port` et `commission + montant_vendeur = total_paye`.
+Table `commande` (migration 00001) : `reservation_id` unique (`commande_une_par_reservation`), montants en centimes `bigint`, devise `EUR`, `CHECK` sur `total_paye = prix + frais_port` et `commission + montant_vendeur = total_paye`. Migration 00002 (US-032) : colonne `titre` (`CHECK` 1 à 200 caractères), commandes existantes reprises avec « Article sans titre », puis défaut retiré (tout `INSERT` fournit le titre) ; index `commande_par_acheteur_idx (acheteur_id, cree_le DESC, id DESC)` pour la liste.
 
 ## Exposition et cloisonnement (AC7, session AWS)
 

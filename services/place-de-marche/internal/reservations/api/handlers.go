@@ -113,6 +113,7 @@ type moneyResponse struct {
 type reservationResponse struct {
 	ID          string        `json:"reservationId"`
 	ArticleID   string        `json:"articleId"`
+	Title       string        `json:"titre"`
 	ExpiresAt   time.Time     `json:"echeance"`
 	Price       moneyResponse `json:"prix"`
 	ShippingFee moneyResponse `json:"fraisDePort"`
@@ -122,6 +123,7 @@ func toReservationResponse(reservation reservations.Reservation) reservationResp
 	return reservationResponse{
 		ID:          reservation.ID.String(),
 		ArticleID:   reservation.Article.String(),
+		Title:       reservation.Title,
 		ExpiresAt:   reservation.ExpiresAt.UTC(),
 		Price:       moneyResponseOf(reservation.Price),
 		ShippingFee: moneyResponseOf(reservation.ShippingFee),

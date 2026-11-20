@@ -86,7 +86,7 @@ components:
     Reservation:
       type: object
       additionalProperties: false
-      required: [reservationId, articleId, echeance, prix, fraisDePort]
+      required: [reservationId, articleId, titre, echeance, prix, fraisDePort]
       properties:
         reservationId:
           type: string
@@ -95,6 +95,11 @@ components:
         articleId:
           type: string
           format: uuid
+        titre:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Titre de l'article au moment de la réservation, figé par Transactions dans la commande
         echeance:
           type: string
           format: date-time
