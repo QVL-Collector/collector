@@ -8,7 +8,7 @@ image: rabbitmq:4.3.7-management@sha256:79fb281ef7e0a15e3c5e0e12e66e944cebbf14a1
 secretInterne: rabbitmq-interne
 
 ressources:
-  requests: { cpu: 250m, memory: 512Mi }
+  requests: { cpu: 500m, memory: 512Mi }
   limits: { memory: 1Gi }
 
 # Stockage ephemere (D05) : survit au redemarrage du conteneur, pas a la replanification du pod.
