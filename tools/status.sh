@@ -39,7 +39,7 @@ afficher_session() {
   [ "${EXTINCTION_INCOMPLETE:-0}" != "1" ] || ligne "extinction" "INCOMPLÈTE : relancer down.sh, up.sh refusé d'ici là"
   if [ -n "${FIN_LAB:-}" ]; then
     reste=$(((FIN_LAB - $(maintenant)) / 60))
-    ligne "fin du lab" "$(heure_locale "$FIN_LAB"), reste $reste min ; down.sh au plus tard à $(heure_locale $((FIN_LAB - 30 * 60)))"
+    ligne "fin du lab" "$(heure_locale "$FIN_LAB"), reste $reste min ; down.sh au plus tard à $(heure_locale "$(echeance_lourde "$FIN_LAB")")"
   fi
   if [ -n "${DEBUT_ALLUMAGE:-}" ]; then
     ecoule=$((($(maintenant) - DEBUT_ALLUMAGE + 59) / 60))

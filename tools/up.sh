@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Allumage de la couche éphémère (D11) : contrôles, apply horodaté, destruction programmée, front, HTTPS 200,
-# puis contrôle après déploiement (US-004 AC11). L'ALB reste restreint au poste (ME5) : ouverture par alb.sh seul.
+# Allumage de la couche éphémère (D11) : contrôles, apply horodaté, destruction programmée (G1) et rappel sur le poste (G7)
+# armés dès la fin de l'apply, front, HTTPS 200, contrôle après déploiement (US-004 AC11). ALB restreint au poste (ME5).
 #   ./up.sh --fin-lab HH:MM|--debut-lab HH:MM [--chart DOSSIER --valeurs FICHIER] [--repetition-soutenance]
-#   ./up.sh --prolonger --fin-lab HH:MM|--debut-lab HH:MM   (réarme la destruction programmée après « Start Lab »)
+#   ./up.sh --prolonger --fin-lab HH:MM|--debut-lab HH:MM   (réarme G1 et G7 après « Start Lab »)
 
 set -euo pipefail
 # shellcheck source=lib.sh
@@ -60,18 +60,6 @@ calculer_fenetre() {
   journal "fin de session du lab à $(heure_locale "$FIN_LAB"), reste $RESTANT_MIN min"
 }
 
-controler_budget() {
-  local cumul plafond
-  cumul="$(cumul_couts)"
-  plafond="$(awk -v b="$BUDGET_USD" -v p="$SEUIL_G5_PCT" 'BEGIN { printf "%.2f", b * p / 100 }')"
-  journal "G5 : cumul estimé $cumul \$, seuil d'arrêt $plafond \$ ($SEUIL_G5_PCT % de $BUDGET_USD \$)"
-  if awk -v c="$cumul" -v p="$plafond" 'BEGIN { exit !(c >= p) }'; then
-    [ "$REPETITION" -eq 1 ] ||
-      echec "G5 : seuil d'arrêt atteint, seules les répétitions de soutenance sont autorisées (--repetition-soutenance)"
-    journal "G5 : seuil atteint, allumage autorisé pour une répétition de soutenance"
-  fi
-}
-
 exiger_persistant() {
   [ -n "$(zone_collector)" ] || echec "couche persistante absente : zone $DOMAINE introuvable (bash tools/bootstrap.sh)"
   [ -n "$(certificat_emis)" ] || echec "couche persistante incomplète : certificat $DOMAINE non ISSUED"
@@ -85,83 +73,6 @@ purger_bucket_photos() {
   }
   journal "purge du bucket des photos (D07)"
   aws s3 rm "s3://$BUCKET_PHOTOS" --recursive --only-show-errors
-}
-
-planifier() {
-  local nom="$1" echeance="$2" cible="$3" entree="$4" cible_json
-  cible_json="$(jq -nc --arg arn "arn:aws:scheduler:::aws-sdk:$cible" --arg role "$LAB_ROLE_ARN" --arg entree "$entree" \
-    '{Arn: $arn, RoleArn: $role, Input: $entree, RetryPolicy: {MaximumRetryAttempts: 3, MaximumEventAgeInSeconds: 900}}')"
-  if ! aws scheduler create-schedule \
-    --group-name "$GROUPE_PLANIF" \
-    --name "$nom" \
-    --schedule-expression "at($(utc_scheduler "$echeance"))" \
-    --schedule-expression-timezone UTC \
-    --flexible-time-window Mode=OFF \
-    --action-after-completion DELETE \
-    --target "$cible_json" >/dev/null; then
-    journal "ATTENTION : planification $nom refusée ($cible)"
-    return 1
-  fi
-  journal "planification $nom armée à $(heure_locale "$echeance") ($cible)"
-}
-
-armer_garde_fou() {
-  local sorties t30 t10 essai ko=0
-  local cluster_eks node_group id_rds arn_alb id_nat id_eip
-  sorties="$(tf output -json 2>/dev/null || printf '{}')"
-  lire() { printf '%s' "$sorties" | jq -r --arg c "$1" '.[$c].value // empty'; }
-  cluster_eks="$(lire nom_cluster_eks)"
-  node_group="$(lire nom_node_group)"
-  id_rds="$(lire id_rds)"
-  arn_alb="$(lire arn_alb)"
-  id_nat="$(lire id_nat)"
-  id_eip="$(lire id_allocation_eip)"
-
-  t30=$((FIN_LAB - 30 * 60))
-  t10=$((FIN_LAB - 10 * 60))
-  if [ "$t10" -le "$(($(maintenant) + 120))" ]; then
-    journal "ATTENTION : échéance T-10 trop proche pour armer le garde-fou"
-    return 1
-  fi
-
-  aws scheduler delete-schedule-group --name "$GROUPE_PLANIF" >/dev/null 2>&1 || true
-  for essai in 1 2 3 4 5 6 7; do
-    if aws scheduler create-schedule-group --name "$GROUPE_PLANIF" \
-      --tags Key=projet,Value=collector Key=couche,Value=ephemere >/dev/null 2>&1; then
-      break
-    fi
-    if [ "$essai" -eq 7 ]; then
-      journal "ATTENTION : groupe de planifications $GROUPE_PLANIF non recréé"
-      return 1
-    fi
-    sleep 10
-  done
-
-  if [ -n "$node_group" ]; then
-    planifier "${NOM}-t30-node-group" "$t30" "eks:deleteNodegroup" \
-      "$(jq -nc --arg c "$cluster_eks" --arg n "$node_group" '{ClusterName: $c, NodegroupName: $n}')" || ko=1
-  fi
-  if [ -n "$id_rds" ]; then
-    planifier "${NOM}-t30-rds" "$t30" "rds:deleteDBInstance" \
-      "$(jq -nc --arg i "$id_rds" '{DbInstanceIdentifier: $i, SkipFinalSnapshot: true, DeleteAutomatedBackups: true}')" || ko=1
-  fi
-  if [ -n "$arn_alb" ]; then
-    planifier "${NOM}-t30-alb" "$t30" "elasticloadbalancingv2:deleteLoadBalancer" \
-      "$(jq -nc --arg a "$arn_alb" '{LoadBalancerArn: $a}')" || ko=1
-  fi
-  if [ -n "$id_nat" ]; then
-    planifier "${NOM}-t30-nat" "$t30" "ec2:deleteNatGateway" \
-      "$(jq -nc --arg n "$id_nat" '{NatGatewayId: $n}')" || ko=1
-  fi
-  if [ -n "$cluster_eks" ]; then
-    planifier "${NOM}-t10-cluster-eks" "$t10" "eks:deleteCluster" \
-      "$(jq -nc --arg c "$cluster_eks" '{Name: $c}')" || ko=1
-  fi
-  if [ -n "$id_eip" ]; then
-    planifier "${NOM}-t10-eip" "$t10" "ec2:releaseAddress" \
-      "$(jq -nc --arg a "$id_eip" '{AllocationId: $a}')" || ko=1
-  fi
-  return "$ko"
 }
 
 signaler_hors_etat() {
@@ -185,12 +96,16 @@ signaler_hors_etat() {
 }
 
 rappel_fin() {
-  local limite_down=$((FIN_LAB - 30 * 60))
+  local limite_down
+  limite_down="$(echeance_lourde "$FIN_LAB")"
   journal "RAPPEL : lancer down.sh au plus tard à $(heure_locale "$limite_down") ; il doit finir AVANT « End Lab » ($(heure_locale "$FIN_LAB"))."
   journal "RAPPEL : lab arrêté, LabRole perd ses droits et la destruction programmée échoue (XP00 S8b) : tout ce qui reste allumé est facturé."
 }
 
-exiger_outils aws terraform jq curl sed awk sha256sum
+exiger_outils aws terraform jq curl sed awk sha256sum iconv base64
+if [ "$PROLONGER" -eq 0 ]; then
+  autoriser_allumage_g5 "$REPETITION" || echec "G5 : allumage refusé"
+fi
 sonde_identite
 charger_session
 calculer_fenetre
@@ -202,6 +117,7 @@ if [ "$PROLONGER" -eq 1 ]; then
   fi
   ecrire_session
   armer_garde_fou || echec "garde-fou incomplet : voir les avertissements ci-dessus"
+  programmer_rappel_session
   journal "garde-fou réarmé ; fin de session à $(heure_locale "$FIN_LAB")"
   rappel_fin
   exit 0
@@ -213,7 +129,6 @@ fi
 [ "$RESTANT_MIN" -ge "$MARGE_UP_MIN" ] ||
   echec "refus d'allumer : $RESTANT_MIN min restantes, minimum $MARGE_UP_MIN (D11). Relancer « Start Lab »."
 
-controler_budget
 CHART="${CHART:-$DEPOT/infra/front}"
 VALEURS="${VALEURS:-$DEPOT/infra/front/valeurs-aws.yaml}"
 exiger_outils kubectl helm
@@ -255,6 +170,14 @@ JOURNAL_APPLY="$DOSSIER_SESSION/apply-$(date -u +%Y%m%dT%H%M%SZ).jsonl"
 T_APPLY="$(maintenant)"
 journal "lancement de terraform apply (ALB restreint au poste, ME5)"
 
+# shellcheck disable=SC2034
+GARDE_FOU_TENTE=0
+# shellcheck disable=SC2034
+APPLY_LANCE=1
+trap armer_en_sortie EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 set +e
 tf apply -auto-approve -input=false -json "${ALB_FERME[@]}" |
   tee "$JOURNAL_APPLY" |
@@ -263,8 +186,7 @@ tf apply -auto-approve -input=false -json "${ALB_FERME[@]}" |
 STATUT_APPLY="${PIPESTATUS[0]}"
 set -e
 
-journal "G1 : armement de la destruction programmée (T-30, T-10)"
-armer_garde_fou || journal "ATTENTION : garde-fou non armé, surveiller l'échéance à la main"
+armer_garde_fous
 
 jq -r 'select(.type == "apply_complete") | [.["@timestamp"], .hook.resource.addr] | @tsv' "$JOURNAL_APPLY" |
   while IFS=$'\t' read -r horodatage adresse; do
@@ -311,7 +233,7 @@ fi
 journal "contrôle après déploiement : TLS, X17, XE4, X20 (AC7 à AC9, AC11)"
 STATUT_CONTROLE=0
 "$RACINE_TOOLS/controle-apres-deploiement.sh" || STATUT_CONTROLE=1
-journal "session prête ; destruction programmée à $(heure_locale $((FIN_LAB - 30 * 60))) et $(heure_locale $((FIN_LAB - 10 * 60)))"
+journal "session prête ; destruction programmée à $(heure_locale "$(echeance_lourde "$FIN_LAB")") et $(heure_locale "$(echeance_finale "$FIN_LAB")")"
 rappel_fin
 [ "$STATUT_CONTROLE" -eq 0 ] ||
   echec "contrôle après déploiement rouge : ALB restreint au poste, ouverture refusée (AC10) ; corriger puis relancer le contrôle"

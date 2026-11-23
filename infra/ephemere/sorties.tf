@@ -10,14 +10,6 @@ output "sous_reseaux_prives" {
   value = aws_subnet.prive[*].id
 }
 
-output "id_nat" {
-  value = aws_nat_gateway.unique.id
-}
-
-output "id_allocation_eip" {
-  value = aws_eip.nat.allocation_id
-}
-
 output "arn_alb" {
   value = aws_lb.public.arn
 }
@@ -73,10 +65,6 @@ output "arn_groupe_cible_front" {
 
 output "id_rds" {
   value = aws_db_instance.principale.identifier
-}
-
-output "nom_cluster_eks" {
-  value = aws_eks_cluster.principal.name
 }
 
 output "nom_node_group" {

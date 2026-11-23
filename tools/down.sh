@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Extinction de la couche éphémère (D11) : Flux, releases Helm, photos, secrets de session, destroy avec reprise,
-# planifications, inventaire strict (G2), ligne de coût (G5). À terminer AVANT « End Lab » (XP00 S8b).
+# planifications (G1), inventaire strict (G2), ligne de coût (G5), rappel du poste annulé (G7). À terminer AVANT « End Lab » (XP00 S8b).
 #   ./down.sh
 
 set -euo pipefail
@@ -101,10 +101,7 @@ noter_cout() {
     return 0
   }
   duree_min=$((($(maintenant) - debut + 59) / 60))
-  cout="$(cout_estime "$duree_min")"
-  mkdir -p "$(dirname "$CSV_COUTS")"
-  [ -f "$CSV_COUTS" ] || printf '%s\n' 'date;duree_allumee_min;cout_estime_usd' >"$CSV_COUTS"
-  printf '%s;%s;%s\n' "$(date -u +%Y-%m-%d)" "$duree_min" "$cout" >>"$CSV_COUTS"
+  cout="$(ajouter_cout "$duree_min")"
   DEBUT_ALLUMAGE="$(maintenant)"
   ecrire_session
   cumul="$(cumul_couts)"
@@ -125,7 +122,8 @@ fi
 phase down destroy "$(($(maintenant) - T0))" "fin du destroy (statut $STATUT_DESTROY)"
 sauvegarder_etat "$DOSSIER_TF" ephemere down
 
-aws scheduler delete-schedule-group --name "$GROUPE_PLANIF" >/dev/null 2>&1 || true
+journal "G1 : suppression des planifications restantes (AC4)"
+supprimer_planifications || journal "ATTENTION : planifications non supprimées, l'inventaire tranchera"
 kubectl config delete-context "$NOM" >/dev/null 2>&1 || true
 
 journal "G2 : inventaire strict (status.sh --strict, AC4)"
@@ -140,4 +138,5 @@ noter_cout
 [ "$STATUT_DESTROY" -eq 0 ] || echec "destroy en échec : relancer down.sh avant « End Lab » ; up.sh refusé tant qu'un down.sh n'a pas abouti"
 [ "$STATUT_INVENTAIRE" -eq 0 ] || echec "inventaire non vide : nettoyer les ressources listées puis relancer down.sh avant « End Lab » ; up.sh refusé d'ici là"
 rm -f "$FICHIER_SESSION"
+annuler_rappel_poste
 journal "extinction terminée, inventaire vide hors couche persistante : « End Lab » possible"
