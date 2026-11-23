@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArticleFormField } from './articleForm';
 
 export type Focusable = {
@@ -12,8 +12,13 @@ export type ArticleFieldFocus = {
   readonly focusField: (field: ArticleFormField) => void;
 };
 
+type FocusRequest = {
+  readonly field: ArticleFormField;
+};
+
 export function useArticleFieldFocus(): ArticleFieldFocus {
   const elements = useRef(new Map<ArticleFormField, Focusable>());
+  const [request, setRequest] = useState<FocusRequest | null>(null);
   const refs = useMemo(() => {
     const callbackFor =
       (field: ArticleFormField): FieldRefCallback =>
@@ -32,8 +37,13 @@ export function useArticleFieldFocus(): ArticleFieldFocus {
       shippingCost: callbackFor('shippingCost'),
     };
   }, []);
+  useEffect(() => {
+    if (request !== null) {
+      elements.current.get(request.field)?.focus();
+    }
+  }, [request]);
   const focusField = useCallback((field: ArticleFormField) => {
-    elements.current.get(field)?.focus();
+    setRequest({ field });
   }, []);
   return { refs, focusField };
 }

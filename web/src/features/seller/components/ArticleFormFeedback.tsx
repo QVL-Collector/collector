@@ -39,7 +39,7 @@ export function ArticleFormFeedback({
       );
     case 'invalid':
       return (
-        <Alert severity="error" sx={revealSx(0)}>
+        <Alert key={feedback.attempt} severity="error" sx={revealSx(0)}>
           {t('seller.form.invalid', { count: feedback.count })}
         </Alert>
       );

@@ -20,7 +20,7 @@ import { useSaveArticle, type SaveTarget } from './useSaveArticle';
 export type FormFeedback =
   | { readonly kind: 'none' }
   | { readonly kind: 'saved'; readonly revision: number; readonly underControl: boolean }
-  | { readonly kind: 'invalid'; readonly count: number }
+  | { readonly kind: 'invalid'; readonly count: number; readonly attempt: number }
   | { readonly kind: 'conflict'; readonly revision: number }
   | { readonly kind: 'unavailable' };
 
@@ -67,7 +67,11 @@ export function useArticleEditor({
 
   const showFieldErrors = (errors: ArticleFieldErrors) => {
     setFieldErrors(errors);
-    setFeedback({ kind: 'invalid', count: countFieldErrors(errors) });
+    setFeedback((current) => ({
+      kind: 'invalid',
+      count: countFieldErrors(errors),
+      attempt: current.kind === 'invalid' ? current.attempt + 1 : 1,
+    }));
     const firstField = firstInvalidField(errors);
     if (firstField !== null) {
       focusField(firstField);
