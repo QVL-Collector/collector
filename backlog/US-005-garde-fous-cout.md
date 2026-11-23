@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E2 Plateforme AWS |
-| Statut | À faire |
+| Statut | En cours |
 | Sprint | 1 (J4) |
 | Engagement | Ferme |
 | Estimation | 2 points |
@@ -77,3 +77,29 @@ Reprise de [PILOTAGE.md](../docs/PILOTAGE.md) § 5, cochée au fil du circuit.
 | Rapport de revue de code | |
 | Validation Martin | AAAA-MM-JJ |
 | Livraison (PR / merge) | |
+
+### Avancement au 2026-11-20 (sans action AWS)
+
+Une grande partie venait d'US-004 (`up.sh`, `down.sh`, `lib.sh`). Écart AC par AC et compléments sur la branche :
+
+| AC | Déjà couvert | Complété |
+|---|---|---|
+| AC1 | Armement juste après l'`apply`, même en échec (`set +e` autour de l'`apply`) | Piège `EXIT` (Ctrl-C, `TERM`, terminal fermé) qui arme sur ce qui a été créé ; cibles lues dans l'état (`terraform show -json`) et non plus dans les sorties, absentes après un `apply` partiel ; refus si T-30 est à moins de 2 min |
+| AC2 | Six planifications (node group, RDS, ALB, NAT à T-30 ; cluster, adresse à T-10), champs en casse Scheduler (session 1 d'XP01) | Cibles par adresse Terraform exacte (MI5) ; clé KMS, bucket et reste de la couche persistante jamais ciblés (testé) ; ressources restantes non facturables listées dans `tools/README.md` |
+| AC3 | `up.sh --prolonger` réarme G1 sur la nouvelle fin | Rappel G7 reprogrammé aussi |
+| AC4 | `down.sh` supprimait le groupe sans vérifier | `supprimer_planifications` : suppression puis attente de la disparition du groupe (évite un groupe « DELETING » qui ferait échouer l'inventaire strict) ; rappel du poste annulé une fois l'extinction réussie |
+| AC5 | Ligne `date;duree_allumee_min;cout_estime_usd` et cumul affiché par `down.sh` | Écriture factorisée (`ajouter_cout`), ajout sûr après une dernière ligne sans fin de ligne |
+| AC6 | Refus à 70 % sauf `--repetition-soutenance` | Contrôle déplacé avant tout appel AWS ; décision factorisée (`autoriser_allumage_g5`) et testée (34,99 $ autorisé, 35,00 $ refusé, répétition autorisée, CRLF) |
+| AC7 | Rappel seulement affiché dans le terminal | Rappel programmé 45 min avant la fin, sans privilège : tâche planifiée de l'utilisateur sous Windows (boîte de dialogue), `at` + `notify-send` ou `wall` sous Linux ; armé avec G1, donc même si la suite du `up` échoue |
+| AC8 | Format sans compte, adresse ni session | Relecture automatisée du `couts.csv` du dépôt dans le test |
+
+Vérifications hors AWS : `bash -n` ; `shellcheck --severity=warning` (image épinglée de `tools/ci/outils.yml`) vert sur `tools/*.sh` et `tools/tests/*.sh` ; `actionlint` vert ; `bash tools/tests/garde-fous-cout.sh` (86 cas après la revue de code, dont l'armement et le piège de sortie avec Scheduler et Terraform simulés) et `bash tools/tests/sortie-sans-imds.sh` verts, désormais joués en CI (job « Workflows et scripts ») ; script PowerShell du rappel analysé sans erreur par le parseur PowerShell (sans enregistrement de tâche).
+
+Reste à prouver en session AWS (X15) :
+
+- **AC1, AC2** : session courte avec `--fin-lab` proche (≈ 80 min), sans `down` : planifications créées sous `LabRole` (`iam:PassRole` vers Scheduler), exécution à T-30 puis T-10, puis `status.sh --strict` (ressources facturables parties ; reste VPC, groupes de sécurité, journaux) ; vérifier la casse acceptée par Scheduler (`DbInstanceIdentifier`, `elasticloadbalancingv2`) et que le cluster se supprime bien après le node group (sinon avancer T-30 de 5 min, D11). Un `down.sh` termine la session avant « End Lab ».
+- **AC1 (interruption)** : Ctrl-C pendant l'`apply` : le piège arme les planifications sur les ressources déjà créées.
+- **AC3** : `up.sh --prolonger --fin-lab HH:MM` après un nouveau « Start Lab » : `aws scheduler list-schedules --group-name collector` montre les nouvelles échéances.
+- **AC4** : après `down.sh`, aucune planification ni groupe (`inventaire.sh --strict`) et tâche `Collector-rappel-fin-lab` absente.
+- **AC7** : tâche planifiée créée sans élévation sur le poste et boîte de dialogue affichée à l'heure (`Get-ScheduledTask Collector-rappel-fin-lab`).
+- **AC5, AC8** : ligne réelle ajoutée au `down.sh`, relue avant commit (contrôle manuel tracé).
