@@ -95,7 +95,7 @@ jobs:
         run: bash tools/ci/secrets.sh
       - name: Publier le rapport SARIF (gitleaks)
         if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/gitleaks.sarif') != ''
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: rapports/gitleaks.sarif
           category: gitleaks
@@ -125,7 +125,7 @@ jobs:
         run: bash tools/ci/semgrep.sh
       - name: Publier le rapport SARIF (Semgrep)
         if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/semgrep.sarif') != ''
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: rapports/semgrep.sarif
           category: semgrep
@@ -172,13 +172,13 @@ jobs:
           fi
       - name: Publier le rapport SARIF (Trivy config)
         if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/trivy-config.sarif') != ''
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: rapports/trivy-config.sarif
           category: trivy-config
       - name: Publier le rapport SARIF (Trivy fs)
         if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles('rapports/trivy-web.sarif') != ''
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: rapports/trivy-web.sarif
           category: trivy-web
@@ -275,13 +275,13 @@ jobs:
         run: bash tools/ci/trivy.sh image "collector/${NOM}:ci" "${NOM}"
       - name: Publier le rapport SARIF (govulncheck)
         if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles(format('rapports/govulncheck-{0}.sarif', steps.nom.outputs.nom)) != ''
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: rapports/govulncheck-${{ steps.nom.outputs.nom }}.sarif
           category: govulncheck-${{ steps.nom.outputs.nom }}
       - name: Publier le rapport SARIF (Trivy image)
         if: always() && env.SARIF_PUBLIABLE == 'true' && hashFiles(format('rapports/trivy-{0}.sarif', steps.nom.outputs.nom)) != ''
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: rapports/trivy-${{ steps.nom.outputs.nom }}.sarif
           category: trivy-image-${{ steps.nom.outputs.nom }}
