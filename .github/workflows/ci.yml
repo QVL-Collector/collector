@@ -74,6 +74,13 @@ jobs:
         run: |
           mapfile -t scripts < <(git ls-files '*.sh' 'tools/git-hooks/*' | grep -v '^sandbox/')
           docker compose -f tools/ci/outils.yml run --rm shellcheck --severity=warning "${scripts[@]}"
+      - name: Tests des scripts sans AWS
+        run: |
+          for test in tools/tests/*.sh; do
+            echo "::group::$test"
+            bash "$test"
+            echo "::endgroup::"
+          done
 
   secrets:
     name: Secrets (gitleaks)
