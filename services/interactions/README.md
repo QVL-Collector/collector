@@ -88,4 +88,4 @@ Une migration exécutée sans que `interactions_execution` existe échoue.
 
 ## Limites d'entrée
 
-Messages du canal : 64 Kio au plus, validés contre leur schéma avant décodage (MC6). Les messages ne sont jamais journalisés en clair : seuls l'identifiant du message, l'article, la révision et l'issue le sont.
+Messages du canal : 64 Kio au plus, validés contre leur schéma avant décodage (MC6). Les messages ne sont jamais journalisés en clair : seuls l'identifiant du message, l'article, la révision et l'issue le sont. Chaque journal d'une décision porte le `correlation_id` de son enveloppe et le `trace_id` de l'en-tête AMQP `traceparent` (US-014, [`libs/platform/logging`](../../libs/platform/logging/README.md)).

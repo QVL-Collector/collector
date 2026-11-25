@@ -1,43 +1,19 @@
 package logging
 
 import (
-	"context"
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/google/uuid"
 )
 
-const (
-	CorrelationHeader = "X-Correlation-Id"
-	unknownRoute      = "inconnue"
-)
-
-type correlationContextKey struct{}
-
-func WithCorrelationID(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, correlationContextKey{}, id)
-}
-
-func CorrelationID(ctx context.Context) (string, bool) {
-	id, found := ctx.Value(correlationContextKey{}).(string)
-	return id, found
-}
-
-func CorrelationIDOrNew(ctx context.Context) string {
-	if id, found := CorrelationID(ctx); found {
-		return id
-	}
-	return uuid.NewString()
-}
+const unknownRoute = "inconnue"
 
 func Middleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
-		id := correlationIDOf(r.Header)
+		routed := r.WithContext(Resume(r.Context(), r.Header.Get(CorrelationHeader), r.Header.Get(TraceParentHeader)))
+		id, _ := CorrelationID(routed.Context())
 		w.Header().Set(CorrelationHeader, id)
-		routed := r.WithContext(WithCorrelationID(r.Context(), id))
 		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(recorder, routed)
 		logger.LogAttrs(routed.Context(), slog.LevelInfo, "requête traitée",
@@ -48,14 +24,6 @@ func Middleware(logger *slog.Logger, next http.Handler) http.Handler {
 			slog.Duration("duree", time.Since(started)),
 		)
 	})
-}
-
-func correlationIDOf(header http.Header) string {
-	received, err := uuid.Parse(header.Get(CorrelationHeader))
-	if err != nil {
-		return uuid.NewString()
-	}
-	return received.String()
 }
 
 func routeOf(r *http.Request) string {

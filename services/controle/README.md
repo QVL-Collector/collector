@@ -75,3 +75,5 @@ Détection des coordonnées (`internal/coordonnees`) : texte normalisé (NFKD, a
 | `JOURNAL_NIVEAU` | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
 
 Les messages ne sont jamais journalisés en clair : seuls l'identifiant du message, l'article, la révision, l'issue et le motif le sont.
+
+Corrélation (US-014, format dans [`libs/platform/logging`](../../libs/platform/logging/README.md)) : chaque journal d'une demande porte le `correlation_id` de son enveloppe et le `trace_id` de l'en-tête AMQP `traceparent`, tiré s'il manque ; le résultat publié reprend les deux. Le journal Info `controle.demande_controlee` n'est pas un événement d'audit : l'audit est émis par la Place de marché quand elle applique le résultat.

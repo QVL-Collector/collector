@@ -11,6 +11,10 @@ import (
 const (
 	serviceKey     = "service"
 	correlationKey = "correlation_id"
+	traceKey       = "trace_id"
+	spanKey        = "span_id"
+	eventKey       = "event"
+	auditKey       = "audit"
 )
 
 func New(service string, out io.Writer, level slog.Leveler) *slog.Logger {
@@ -29,6 +33,11 @@ func ParseLevel(raw string) (slog.Level, error) {
 	return level, nil
 }
 
+func Audit(ctx context.Context, logger *slog.Logger, message, event string, attrs ...slog.Attr) {
+	marked := append([]slog.Attr{slog.String(eventKey, event), slog.Bool(auditKey, true)}, attrs...)
+	logger.LogAttrs(ctx, slog.LevelInfo, message, marked...)
+}
+
 type contextHandler struct {
 	slog.Handler
 }
@@ -36,6 +45,9 @@ type contextHandler struct {
 func (h contextHandler) Handle(ctx context.Context, record slog.Record) error {
 	if id, found := CorrelationID(ctx); found {
 		record.AddAttrs(slog.String(correlationKey, id))
+	}
+	if current, found := currentSpan(ctx); found {
+		record.AddAttrs(slog.String(traceKey, current.TraceID().String()), slog.String(spanKey, current.SpanID().String()))
 	}
 	return h.Handler.Handle(ctx, record)
 }

@@ -9,6 +9,7 @@ import (
 
 	"collector/libs/platform/httpjson"
 	"collector/libs/platform/httpserver"
+	"collector/libs/platform/logging"
 	"collector/libs/platform/problem"
 	"collector/libs/platform/token"
 	"collector/services/place-de-marche/internal/annonces"
@@ -248,17 +249,16 @@ func (h handlers) decide(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handlers) logDecision(ctx context.Context, decision annonces.Decision) {
-	attributes := []any{
-		slog.String("event", "annonces.decision_admin"),
+	attrs := []slog.Attr{
 		slog.String("admin_id", decision.Admin.String()),
 		slog.String("article_id", decision.Article.String()),
 		slog.Int("revision", int(decision.Revision)),
 		slog.String("decision", string(decision.Verdict)),
 	}
 	if decision.Reason != nil {
-		attributes = append(attributes, slog.String("motif", string(*decision.Reason)))
+		attrs = append(attrs, slog.String("motif", string(*decision.Reason)))
 	}
-	h.logger.InfoContext(ctx, "décision d'administration appliquée", attributes...)
+	logging.Audit(ctx, h.logger, "décision d'administration appliquée", "annonces.decision_admin", attrs...)
 }
 
 func sellerOf(w http.ResponseWriter, r *http.Request) (annonces.SellerID, bool) {

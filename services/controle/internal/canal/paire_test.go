@@ -1,6 +1,7 @@
 package canal
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"io/fs"
@@ -66,7 +67,7 @@ func controler(t *testing.T, corps []byte) (resultatLu, []byte) {
 		t.Fatalf("demande non conforme au contrat : %v", err)
 	}
 	verdict := responder.rules.Evaluate(demande.submission())
-	publie, err := responder.resultMessage(demande, verdict, enveloppe.CorrelationID)
+	publie, err := responder.resultMessage(context.Background(), demande, verdict, enveloppe.CorrelationID)
 	if err != nil {
 		t.Fatalf("résultat : %v", err)
 	}

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"collector/libs/platform/logging"
 )
 
 const (
@@ -23,6 +25,7 @@ type Message struct {
 	ID            string
 	Type          string
 	CorrelationID string
+	TraceParent   string
 	Timestamp     time.Time
 	Body          []byte
 }
@@ -138,6 +141,14 @@ func (p *Publisher) publishing(message Message) amqp.Publishing {
 		CorrelationId: message.CorrelationID,
 		Timestamp:     message.Timestamp,
 		UserId:        p.userID,
+		Headers:       traceHeaders(message.TraceParent),
 		Body:          message.Body,
 	}
+}
+
+func traceHeaders(traceParent string) amqp.Table {
+	if traceParent == "" {
+		return nil
+	}
+	return amqp.Table{logging.TraceParentHeader: traceParent}
 }

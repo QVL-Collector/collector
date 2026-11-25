@@ -28,7 +28,7 @@ func (e *DecisionEncoder) Encode(ctx context.Context, decision annonces.Publicat
 	if err != nil {
 		return outbox.Event{}, fmt.Errorf("décision de publication de %s : %w", decision.Article, err)
 	}
-	return outbox.NewEvent(envelope, EventExchange, decisionRoutingKey, body), nil
+	return outbox.NewEvent(ctx, envelope, EventExchange, decisionRoutingKey, body), nil
 }
 
 func toDecisionData(decision annonces.PublicationDecision) decisionData {

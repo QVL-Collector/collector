@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"collector/libs/platform/logging"
 	"collector/services/place-de-marche/internal/annonces"
 )
 
@@ -73,7 +74,7 @@ func (s *Safeguard) sweep(ctx context.Context) {
 
 func (s *Safeguard) logResent(ctx context.Context, resent []annonces.ResentReview) {
 	for _, review := range resent {
-		s.logger.WarnContext(ctx, "contrôle sans résultat après le délai, demande réémise",
+		s.logger.WarnContext(logging.Restore(ctx, review.CorrelationID, review.TraceParent), "contrôle sans résultat après le délai, demande réémise",
 			slog.String("event", "controle.demande_relancee"),
 			slog.String("article_id", review.Article.ID.String()),
 			slog.Int("revision", int(review.Article.Revision)),

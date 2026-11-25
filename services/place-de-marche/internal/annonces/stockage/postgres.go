@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"collector/libs/platform/logging"
 	"collector/libs/platform/outbox"
 	"collector/services/place-de-marche/internal/annonces"
 	"collector/services/place-de-marche/internal/comptes"
@@ -49,7 +50,8 @@ const reviewRequestedAssignments = `demande_controle_le = now(), relances = 0`
 const reviseQuery = `
 WITH revise AS (
 	UPDATE article
-	SET ` + contentAssignments + `, etat = $10, motif = NULL, revision = revision + 1, modifie_le = now(), ` + reviewRequestedAssignments + `
+	SET ` + contentAssignments + `, etat = $10, motif = NULL, revision = revision + 1, modifie_le = now(), ` + reviewRequestedAssignments + `,
+		demande_controle_correlation_id = $11::text::uuid, demande_controle_traceparent = NULLIF($12::text, '')
 	WHERE ` + sellerWritable + `
 	RETURNING *
 )
@@ -59,7 +61,8 @@ FROM revise AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
 const submitQuery = `
 WITH soumis AS (
 	UPDATE article
-	SET etat = $5, motif = NULL, revision = revision + 1, modifie_le = now(), ` + reviewRequestedAssignments + `
+	SET etat = $5, motif = NULL, revision = revision + 1, modifie_le = now(), ` + reviewRequestedAssignments + `,
+		demande_controle_correlation_id = $6::text::uuid, demande_controle_traceparent = NULLIF($7::text, '')
 	WHERE ` + sellerWritable + `
 	RETURNING *
 )
@@ -84,8 +87,14 @@ relance AS (
 	WHERE a.id = en_retard.id
 	RETURNING a.*
 )
-SELECT ` + articleColumns + `, a.relances, ` + resendDelaySeconds + `
+SELECT ` + articleColumns + `, a.relances, ` + resendDelaySeconds + `,
+	coalesce(a.demande_controle_correlation_id::text, ''), coalesce(a.demande_controle_traceparent, '')
 FROM relance AS a LEFT JOIN categorie AS c ON c.id = a.categorie_id`
+
+const rememberReviewContextQuery = `
+UPDATE article
+SET demande_controle_correlation_id = $2::text::uuid, demande_controle_traceparent = NULLIF($3::text, '')
+WHERE id = $1`
 
 const applyReviewQuery = `
 UPDATE article
@@ -234,11 +243,13 @@ func updateDraftInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.Se
 }
 
 func (s *Store) reviseInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision, content annonces.Content) (annonces.Article, error) {
+	ctx = withReviewCorrelation(ctx)
 	columns := contentColumns(content)
+	correlationID, traceParent := reviewContextOf(ctx)
 	row := tx.QueryRow(ctx, reviseQuery,
 		uuid.UUID(id), uuid.UUID(seller), int(expected), statusColumns(annonces.ReviewOnEditStatuses()),
 		columns.title, columns.description, columns.categoryID, columns.priceCents, columns.shippingFeeCents,
-		string(annonces.StatusUnderReview),
+		string(annonces.StatusUnderReview), correlationID, traceParent,
 	)
 	revised, err := scanArticle(row)
 	if err != nil {
@@ -249,6 +260,7 @@ func (s *Store) reviseInTransaction(ctx context.Context, tx pgx.Tx, seller annon
 
 func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Article, error) {
 	var submitted annonces.Article
+	ctx = withReviewCorrelation(ctx)
 	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		submitted, err = submitInTransaction(ctx, tx, seller, id, expected)
@@ -267,10 +279,22 @@ func (s *Store) Submit(ctx context.Context, seller annonces.SellerID, id annonce
 }
 
 func submitInTransaction(ctx context.Context, tx pgx.Tx, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) (annonces.Article, error) {
+	correlationID, traceParent := reviewContextOf(ctx)
 	row := tx.QueryRow(ctx, submitQuery,
 		uuid.UUID(id), uuid.UUID(seller), int(expected), statusColumns(annonces.SellerHeldStatuses()), string(annonces.StatusUnderReview),
+		correlationID, traceParent,
 	)
 	return scanArticle(row)
+}
+
+func withReviewCorrelation(ctx context.Context) context.Context {
+	return logging.WithCorrelationID(ctx, logging.CorrelationIDOrNew(ctx))
+}
+
+func reviewContextOf(ctx context.Context) (string, string) {
+	correlationID, _ := logging.CorrelationID(ctx)
+	traceParent, _ := logging.TraceParent(ctx)
+	return correlationID, traceParent
 }
 
 func (s *Store) requestReview(ctx context.Context, tx pgx.Tx, article annonces.Article) error {
@@ -287,6 +311,14 @@ func (s *Store) requestReview(ctx context.Context, tx pgx.Tx, article annonces.A
 		return err
 	}
 	return outbox.Enqueue(ctx, tx, event)
+}
+
+func rememberReviewContext(ctx context.Context, tx pgx.Tx, id annonces.ArticleID) error {
+	correlationID, traceParent := reviewContextOf(ctx)
+	if _, err := tx.Exec(ctx, rememberReviewContextQuery, uuid.UUID(id), correlationID, traceParent); err != nil {
+		return fmt.Errorf("mémorisation de la corrélation de la demande de contrôle : %w", err)
+	}
+	return nil
 }
 
 func (s *Store) sellerStatus(ctx context.Context, tx pgx.Tx, seller annonces.SellerID) (annonces.SellerStatus, error) {
@@ -363,8 +395,8 @@ func (s *Store) ResendOverdueReviews(ctx context.Context, backoff annonces.Resen
 		if err != nil {
 			return err
 		}
-		for _, review := range resent {
-			if err = s.requestReview(ctx, tx, review.Article); err != nil {
+		for i, review := range resent {
+			if resent[i], err = s.resendReview(ctx, tx, review); err != nil {
 				return err
 			}
 		}
@@ -374,6 +406,21 @@ func (s *Store) ResendOverdueReviews(ctx context.Context, backoff annonces.Resen
 		return nil, fmt.Errorf("relance des contrôles en retard : %w", err)
 	}
 	return resent, nil
+}
+
+func (s *Store) resendReview(ctx context.Context, tx pgx.Tx, review annonces.ResentReview) (annonces.ResentReview, error) {
+	remembered := review.CorrelationID != "" && review.TraceParent != ""
+	ctx = logging.Resume(ctx, review.CorrelationID, review.TraceParent)
+	if !remembered {
+		if err := rememberReviewContext(ctx, tx, review.Article.ID); err != nil {
+			return annonces.ResentReview{}, err
+		}
+	}
+	if err := s.requestReview(ctx, tx, review.Article); err != nil {
+		return annonces.ResentReview{}, err
+	}
+	review.CorrelationID, review.TraceParent = reviewContextOf(ctx)
+	return review, nil
 }
 
 func overdueReviewsInTransaction(ctx context.Context, tx pgx.Tx, backoff annonces.ResendBackoff, limit int) ([]annonces.ResentReview, error) {
@@ -391,17 +438,15 @@ func overdueReviewsInTransaction(ctx context.Context, tx pgx.Tx, backoff annonce
 func scanResentReview(row pgx.Row) (annonces.ResentReview, error) {
 	var (
 		r           articleRow
-		resends     int
+		resent      annonces.ResentReview
 		nextSeconds float64
 	)
-	if err := row.Scan(append(r.targets(), &resends, &nextSeconds)...); err != nil {
+	if err := row.Scan(append(r.targets(), &resent.Resends, &nextSeconds, &resent.CorrelationID, &resent.TraceParent)...); err != nil {
 		return annonces.ResentReview{}, err
 	}
-	return annonces.ResentReview{
-		Article: r.article(),
-		Resends: resends,
-		NextIn:  time.Duration(nextSeconds * float64(time.Second)),
-	}, nil
+	resent.Article = r.article()
+	resent.NextIn = time.Duration(nextSeconds * float64(time.Second))
+	return resent, nil
 }
 
 func (s *Store) explainSubmitRefusal(ctx context.Context, seller annonces.SellerID, id annonces.ArticleID, expected annonces.Revision) error {
