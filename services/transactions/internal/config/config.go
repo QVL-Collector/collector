@@ -14,9 +14,11 @@ import (
 const (
 	envAPIAddress            = "ADRESSE_API"
 	envManagementAddress     = "ADRESSE_GESTION"
+	envMetricsAddress        = "ADRESSE_METRIQUES"
 	envMarketplaceURL        = "PLACE_DE_MARCHE_URL_INTERNE"
 	defaultAPIAddress        = ":8080"
 	defaultManagementAddress = ":9090"
+	defaultMetricsAddress    = ":9091"
 	defaultAudience          = "transactions"
 	defaultServiceClient     = "transactions"
 	reservationScope         = "reserver"
@@ -27,6 +29,7 @@ type Lookup func(name string) string
 type Server struct {
 	APIAddress         string
 	ManagementAddress  string
+	MetricsAddress     string
 	Database           database.Config
 	Token              token.Config
 	ServiceCredentials serviceclient.Credentials
@@ -58,6 +61,7 @@ func LoadServer(lookup Lookup) (Server, error) {
 	return Server{
 		APIAddress:         valueOrDefault(lookup(envAPIAddress), defaultAPIAddress),
 		ManagementAddress:  valueOrDefault(lookup(envManagementAddress), defaultManagementAddress),
+		MetricsAddress:     valueOrDefault(lookup(envMetricsAddress), defaultMetricsAddress),
 		Database:           databaseConfig,
 		Token:              tokenConfig,
 		ServiceCredentials: credentials,

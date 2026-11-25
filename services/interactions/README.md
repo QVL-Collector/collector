@@ -6,13 +6,14 @@ Interactions minimal du POC ([D02](../../docs/decisions/D02-decoupage-applicatif
 
 | Commande | Rôle | Compte de base attendu |
 |---|---|---|
-| `interactions serve` (par défaut) | API sur `ADRESSE_API`, santé sur `ADRESSE_GESTION`, consommateur des décisions de publication | `interactions_execution` |
+| `interactions serve` (par défaut) | API sur `ADRESSE_API`, santé sur `ADRESSE_GESTION`, métriques sur `ADRESSE_METRIQUES`, consommateur des décisions de publication | `interactions_execution` |
 | `interactions migrate` | Applique les migrations embarquées, puis s'arrête (Job Helm `pre-install`, `pre-upgrade`) | `interactions_migration` |
 
 | Port | Contenu | Exposition |
 |---|---|---|
 | 8080 | `/interactions/v1/...` | Routé par l'ALB |
 | 9090 | `GET /sante` (vivant), `GET /disponibilite` (base joignable ; ni Keycloak ni le broker interrogés) | Jamais routé ; sondes Kubernetes |
+| 9091 | `GET /metrics` : requêtes HTTP du port 8080 et canal ([catalogue](../../libs/platform/metrics/README.md), US-015) | Jamais routé ; ouvert au seul Prometheus |
 
 ## Notifications des décisions de publication (US-028)
 
@@ -65,6 +66,7 @@ Aucun contenu saisi par un utilisateur (ni titre, ni description) : le front con
 | `CANAL_EMETTEUR_ATTENDU` | `serve` | `marche` | Seul `user-id` accepté sur la file des décisions (MC2) |
 | `ADRESSE_API` | `serve` | `:8080` | Écoute de l'API |
 | `ADRESSE_GESTION` | `serve` | `:9090` | Écoute de la santé |
+| `ADRESSE_METRIQUES` | `serve` | `:9091` | Écoute des métriques |
 | `JOURNAL_NIVEAU` | toutes | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
 
 ## Base et rôles PostgreSQL attendus

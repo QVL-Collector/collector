@@ -101,6 +101,7 @@ func (r *Relay) cycle(ctx context.Context, publisher *broker.Publisher, paused b
 	}
 	delay := broker.DefaultBackoff.Delay(*failures)
 	*failures++
+	relayRetries.Add(ctx, 1)
 	r.logger.WarnContext(ctx, "outbox en échec, nouvel essai différé",
 		slog.String("event", "outbox.essai_differe"),
 		slog.Int("echecs_consecutifs", *failures),

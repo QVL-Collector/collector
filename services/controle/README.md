@@ -55,11 +55,12 @@ Détection des coordonnées (`internal/coordonnees`) : texte normalisé (NFKD, a
 - Faux positifs : numéros de cartes ou de tomes en suite (`01 02 03 04 05`), référence de 10 chiffres au format d'un numéro (`n°0102030405`), nom de réseau seul (« Messenger » dans un titre), point collé suivi d'une extension (`France.Net`, `Prince.Fr`), date écrite avec des espaces suivie de chiffres (`01 02 2003 12`).
 - Non couverts : chiffres arabes-indiens et autres systèmes de chiffres, homoglyphes cyrilliques ou grecs, « O » pour zéro, numéro accolé à une date complète (`06.12.2019.78`), adresse dont le point est collé au mot qui précède puis suivi d'une espace (`site. fr`).
 
-## Port
+## Ports
 
 | Port | Contenu | Exposition |
 |---|---|---|
 | 9090 | `GET /sante` (vivant), `GET /disponibilite` (connecté au broker) | Jamais routé ; sondes Kubernetes |
+| 9091 | `GET /metrics` : canal, demandes consommées, écartées, relancées et résultats publiés ([catalogue](../../libs/platform/metrics/README.md), US-015) | Jamais routé ; ouvert au seul Prometheus |
 
 ## Variables d'environnement
 
@@ -72,6 +73,7 @@ Détection des coordonnées (`internal/coordonnees`) : texte normalisé (NFKD, a
 | `CANAL_MOT_DE_PASSE` | obligatoire | Secret de cette identité, généré à chaque `up` (MC5) |
 | `CANAL_EMETTEUR_ATTENDU` | `marche` | Seul `user-id` accepté sur la file des demandes (MC2) |
 | `ADRESSE_GESTION` | `:9090` | Écoute de la santé |
+| `ADRESSE_METRIQUES` | `:9091` | Écoute des métriques |
 | `JOURNAL_NIVEAU` | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
 
 Les messages ne sont jamais journalisés en clair : seuls l'identifiant du message, l'article, la révision, l'issue et le motif le sont.

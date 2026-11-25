@@ -16,6 +16,7 @@ const (
 	envAPIAddress              = "ADRESSE_API"
 	envInternalAddress         = "ADRESSE_INTERNE"
 	envManagementAddress       = "ADRESSE_GESTION"
+	envMetricsAddress          = "ADRESSE_METRIQUES"
 	envResultPublisher         = "CANAL_EMETTEUR_ATTENDU"
 	envReservationDuration     = "RESERVATION_DUREE"
 	envReservationCeiling      = "RESERVATION_DUREE_MAX"
@@ -24,6 +25,7 @@ const (
 	defaultAPIAddress          = ":8080"
 	defaultInternalAddress     = ":8081"
 	defaultManagementAddress   = ":9090"
+	defaultMetricsAddress      = ":9091"
 	defaultAudience            = "place-de-marche"
 	defaultReservationDuration = 10 * time.Minute
 	defaultReservationCeiling  = 30 * time.Minute
@@ -47,6 +49,7 @@ type Server struct {
 	APIAddress        string
 	InternalAddress   string
 	ManagementAddress string
+	MetricsAddress    string
 	Database          database.Config
 	Token             token.Config
 	Channel           Channel
@@ -79,6 +82,7 @@ func LoadServer(lookup Lookup) (Server, error) {
 		APIAddress:        valueOrDefault(lookup(envAPIAddress), defaultAPIAddress),
 		InternalAddress:   valueOrDefault(lookup(envInternalAddress), defaultInternalAddress),
 		ManagementAddress: valueOrDefault(lookup(envManagementAddress), defaultManagementAddress),
+		MetricsAddress:    valueOrDefault(lookup(envMetricsAddress), defaultMetricsAddress),
 		Database:          databaseConfig,
 		Token:             tokenConfig,
 		Channel: Channel{

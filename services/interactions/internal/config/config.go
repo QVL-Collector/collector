@@ -11,10 +11,12 @@ import (
 const (
 	envAPIAddress            = "ADRESSE_API"
 	envManagementAddress     = "ADRESSE_GESTION"
+	envMetricsAddress        = "ADRESSE_METRIQUES"
 	envDecisionPublisher     = "CANAL_EMETTEUR_ATTENDU"
 	defaultDecisionPublisher = "marche"
 	defaultAPIAddress        = ":8080"
 	defaultManagementAddress = ":9090"
+	defaultMetricsAddress    = ":9091"
 	defaultAudience          = "interactions"
 )
 
@@ -28,6 +30,7 @@ type Channel struct {
 type Server struct {
 	APIAddress        string
 	ManagementAddress string
+	MetricsAddress    string
 	Database          database.Config
 	Token             token.Config
 	Channel           Channel
@@ -49,6 +52,7 @@ func LoadServer(lookup Lookup) (Server, error) {
 	return Server{
 		APIAddress:        valueOrDefault(lookup(envAPIAddress), defaultAPIAddress),
 		ManagementAddress: valueOrDefault(lookup(envManagementAddress), defaultManagementAddress),
+		MetricsAddress:    valueOrDefault(lookup(envMetricsAddress), defaultMetricsAddress),
 		Database:          databaseConfig,
 		Token:             tokenConfig,
 		Channel: Channel{
