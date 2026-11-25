@@ -164,7 +164,7 @@ Données de la Place de marché. Seule l'horloge de la base fait foi (`now()`), 
 #### Option F1 — Dépôt par l'API de la Place de marché, stockage privé dans S3
 
 - **Description** :
-  - le front envoie la photo à l'API vendeur (multipart, corps borné par `http.MaxBytesReader`, nombre de photos plafonné) ;
+  - le front envoie la photo à l'API vendeur (corps binaire brut, sans multipart, borné par `http.MaxBytesReader`, nombre de photos plafonné) ;
   - la Place de marché vérifie le contenu (JPEG ou PNG, dimensions lues avant décodage, plafond de pixels), ré-encode en JPEG sans métadonnées, génère un nom aléatoire et écrit l'objet dans le bucket privé. L'original n'est jamais stocké ;
   - lecture : pour un article publié seulement, la Place de marché émet des URL présignées de lecture à courte durée (10 min par exemple) ; l'image vient alors directement de S3, origine distincte et sans cookie ; le tir de charge ne fait pas transiter les fichiers par le service (point laissé ouvert par D01) ;
   - bucket : Block Public Access, chiffrement SSE-S3, politique refusant les requêtes sans TLS, aucune règle CORS (le navigateur n'écrit jamais dans S3).
@@ -360,7 +360,7 @@ Risques principaux :
 1. Ordre amorçage, Secrets et crochet `pre-install` mal réglé : la première installation échoue à chaque session.
 2. Amorçage des photos par HTTP bloqué tant que D06 n'est pas livré : prévoir la sous-commande `seed`.
 3. Équivalent local de S3 à figer [?].
-4. Orientation EXIF non couverte par la bibliothèque standard.
+4. Orientation EXIF non couverte par la bibliothèque standard (traitée en US-020, voir « Suivi »).
 5. Durée de destruction de RDS dans `down` [?].
 
 ## Décision de Martin
@@ -373,6 +373,11 @@ Risques principaux :
 > - Photos déposées par l'API de la Place de marché, ré-encodées, stockées dans un bucket S3 privé, lues par URL présignée courte. Pas d'antivirus. F1 reste conditionnée au critère X6 (accès S3 par le rôle du nœud, D14).
 
 Date : 2026-10-26
+
+**Suivi**
+
+- 2026-11-25 (US-020) : dépôt en corps binaire brut au lieu de multipart : même borne `http.MaxBytesReader`, même détection par le contenu, sans analyseur multipart ni fichier temporaire ; progression côté front par XHR.
+- 2026-11-25 (US-020) : orientation EXIF appliquée au ré-encodage par un lecteur interne de l'étiquette 0x0112 (segment APP1 du JPEG, borné aux segments précédant les données), sans dépendance ; aucune métadonnée conservée en sortie.
 
 ## Conséquences
 
