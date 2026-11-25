@@ -28,7 +28,7 @@ func (e *RequestEncoder) Encode(ctx context.Context, request annonces.ReviewRequ
 	if err != nil {
 		return outbox.Event{}, fmt.Errorf("demande de contrôle de %s : %w", request.Article.ID, err)
 	}
-	return outbox.NewEvent(envelope, RequestExchange, routingKeyV1, body), nil
+	return outbox.NewEvent(ctx, envelope, RequestExchange, routingKeyV1, body), nil
 }
 
 func toRequestData(request annonces.ReviewRequest) requestData {

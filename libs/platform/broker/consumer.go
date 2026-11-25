@@ -7,6 +7,8 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"collector/libs/platform/logging"
 )
 
 const (
@@ -106,6 +108,7 @@ func (c Consumer) loop(ctx context.Context, handle Handler, deliveries <-chan am
 }
 
 func (c Consumer) process(ctx context.Context, handle Handler, delivery amqp.Delivery, closed closures) error {
+	ctx = deliveryContext(ctx, delivery)
 	if delivery.UserId != c.ExpectedPublisher {
 		return c.discard(ctx, delivery, causeUnexpectedPublisher)
 	}
@@ -128,6 +131,11 @@ func (c Consumer) process(ctx context.Context, handle Handler, delivery amqp.Del
 			return err
 		}
 	}
+}
+
+func deliveryContext(ctx context.Context, delivery amqp.Delivery) context.Context {
+	traceParent, _ := delivery.Headers[logging.TraceParentHeader].(string)
+	return logging.Resume(ctx, delivery.CorrelationId, traceParent)
 }
 
 func wait(ctx context.Context, closed closures, d time.Duration) error {

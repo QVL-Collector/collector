@@ -71,9 +71,11 @@ type ResendBackoff struct {
 }
 
 type ResentReview struct {
-	Article Article
-	Resends int
-	NextIn  time.Duration
+	Article       Article
+	Resends       int
+	NextIn        time.Duration
+	CorrelationID string
+	TraceParent   string
 }
 
 type ReviewOutcome struct {

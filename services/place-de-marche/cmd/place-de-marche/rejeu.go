@@ -9,9 +9,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"collector/libs/platform/logging"
 	"collector/libs/platform/outbox"
 )
 
@@ -27,6 +27,7 @@ func replayOutbox(ctx context.Context, logger *slog.Logger, operands []string) e
 	if err != nil {
 		return err
 	}
+	ctx = logging.StartOperation(ctx)
 	return withDatabase(ctx, func(pool *pgxpool.Pool) error {
 		replayed, err := outbox.Replay(ctx, pool, window)
 		if err != nil {
@@ -34,7 +35,6 @@ func replayOutbox(ctx context.Context, logger *slog.Logger, operands []string) e
 		}
 		logger.InfoContext(ctx, "outbox rejouée",
 			slog.String("event", "outbox.rejeu"),
-			slog.String("correlation_id", uuid.NewString()),
 			slog.Time("depuis", window.From),
 			slog.Time("jusqu_a", window.To),
 			slog.Int64("lignes", replayed),

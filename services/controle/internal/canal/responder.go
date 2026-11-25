@@ -42,7 +42,7 @@ func (r *Responder) handle(ctx context.Context, delivery broker.Delivery, publis
 		return r.discard(ctx, delivery, errUnexpectedContract), nil
 	}
 	verdict := r.rules.Evaluate(request.submission())
-	result, err := r.resultMessage(request, verdict, envelope.CorrelationID)
+	result, err := r.resultMessage(ctx, request, verdict, envelope.CorrelationID)
 	if err != nil {
 		return r.discard(ctx, delivery, err), nil
 	}
@@ -61,7 +61,7 @@ func (r *Responder) handle(ctx context.Context, delivery broker.Delivery, publis
 	return broker.Ack, nil
 }
 
-func (r *Responder) resultMessage(request requestData, verdict regles.Verdict, correlationID string) (broker.Message, error) {
+func (r *Responder) resultMessage(ctx context.Context, request requestData, verdict regles.Verdict, correlationID string) (broker.Message, error) {
 	envelope, err := message.NewEnvelope(resultContract, correlationID, toResultData(request, verdict), time.Now())
 	if err != nil {
 		return broker.Message{}, err
@@ -70,12 +70,14 @@ func (r *Responder) resultMessage(request requestData, verdict regles.Verdict, c
 	if err != nil {
 		return broker.Message{}, err
 	}
+	traceParent, _ := logging.TraceParent(ctx)
 	return broker.Message{
 		Exchange:      resultExchange,
 		RoutingKey:    routingKeyV1,
 		ID:            envelope.ID,
 		Type:          envelope.Type,
 		CorrelationID: envelope.CorrelationID,
+		TraceParent:   traceParent,
 		Timestamp:     envelope.EmittedAt,
 		Body:          body,
 	}, nil

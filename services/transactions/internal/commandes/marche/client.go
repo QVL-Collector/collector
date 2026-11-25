@@ -57,9 +57,7 @@ func (c *Client) reservationRequest(ctx context.Context, article commandes.Artic
 	}
 	request.Header.Set(token.UserTokenHeader, buyer.Reveal())
 	request.Header.Set("Accept", "application/json")
-	if correlation, found := logging.CorrelationID(ctx); found {
-		request.Header.Set(logging.CorrelationHeader, correlation)
-	}
+	logging.Propagate(ctx, request.Header)
 	return request, nil
 }
 

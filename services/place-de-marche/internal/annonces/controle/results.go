@@ -71,14 +71,17 @@ func (h *ResultHandler) logOutcome(ctx context.Context, outcome annonces.ReviewO
 		)
 		return
 	}
-	h.logger.InfoContext(ctx, "résultat de contrôle appliqué",
-		slog.String("event", "controle.resultat_applique"),
+	attrs := []slog.Attr{
 		slog.String("message_id", outcome.MessageID),
 		slog.String("article_id", outcome.Article.String()),
 		slog.Int("revision", int(outcome.Revision)),
-		slog.String("etat", string(outcome.Status)),
+		slog.String("issue", string(outcome.Status)),
 		slog.Int("version_regles", outcome.RulesVersion),
-	)
+	}
+	if outcome.Reason != nil {
+		attrs = append(attrs, slog.String("motif", string(*outcome.Reason)))
+	}
+	logging.Audit(ctx, h.logger, "résultat de contrôle appliqué", "controle.resultat_applique", attrs...)
 }
 
 func toOutcome(messageID string, data resultData) (annonces.ReviewOutcome, error) {

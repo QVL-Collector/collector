@@ -22,7 +22,7 @@ const (
 )
 
 const selectPendingQuery = `
-SELECT id::text, echange, cle_routage, type_message, correlation_id::text, corps, cree_le
+SELECT id::text, echange, cle_routage, type_message, correlation_id::text, coalesce(traceparent, ''), corps, cree_le
 FROM outbox
 WHERE publie_le IS NULL
 ORDER BY cree_le, id
@@ -161,7 +161,7 @@ func pendingEvents(ctx context.Context, tx pgx.Tx) ([]Event, error) {
 	}
 	events, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (Event, error) {
 		var event Event
-		err := row.Scan(&event.ID, &event.Exchange, &event.RoutingKey, &event.Type, &event.CorrelationID, &event.Body, &event.CreatedAt)
+		err := row.Scan(&event.ID, &event.Exchange, &event.RoutingKey, &event.Type, &event.CorrelationID, &event.TraceParent, &event.Body, &event.CreatedAt)
 		return event, err
 	})
 	if err != nil {
