@@ -1,5 +1,3 @@
-# k3d seulement : PostgreSQL de session à la place de RDS (base neuve à chaque pod), joint par les seuls namespaces
-# des services et l'amorçage. Mot de passe maître dans le Secret base-maitre, posé par tools/up-flux.sh.
 apiVersion: v1
 kind: Namespace
 metadata:

@@ -426,3 +426,33 @@ serie_etat() {
   }
   jq -r '.serial' "$source"
 }
+
+NS_FLUX="collector"
+FLUX_CLI="ghcr.io/fluxcd/flux-cli:v2.10.1@sha256:0253c5c82a8d98858f33dfe722afdfde83aa17dce05571f5846c26ea40d71b50"
+FLUX_IMAGES=(
+  "ghcr.io/fluxcd/source-controller:v1.10.2|ghcr.io/fluxcd/source-controller:v1.10.2@sha256:1405a9e460833df9aff920664243c0df271f42be05e0bf38db31d2b7e9ebbaab"
+  "ghcr.io/fluxcd/helm-controller:v1.7.2|ghcr.io/fluxcd/helm-controller:v1.7.2@sha256:cc944eff709767f9a4d22de6b52dfa330f872962465868ed7787320b056b84f8"
+)
+
+contexte_autorise() {
+  case "$1" in
+    k3d-* | *collector*) ;;
+    *) echec "contexte kubectl hors liste blanche (k3d-*, *collector*) : $1" ;;
+  esac
+}
+
+manifestes_flux() {
+  local paire remplacements=()
+  for paire in "${FLUX_IMAGES[@]}"; do remplacements+=(-e "s|image: ${paire%%|*}\$|image: ${paire#*|}|"); done
+  if command -v flux >/dev/null 2>&1; then
+    flux install --components=source-controller,helm-controller --namespace="$NS_FLUX" --watch-all-namespaces=false --export
+  else
+    docker run --rm "$FLUX_CLI" install --components=source-controller,helm-controller \
+      --namespace="$NS_FLUX" --watch-all-namespaces=false --export
+  fi | tr -d '\r' | sed "${remplacements[@]}" | awk 'BEGIN { RS = "---\n"; ORS = "" }
+    /\nkind: (ClusterRoleBinding|NetworkPolicy|Namespace)\n/ || /\n  name: crd-controller-/ { next }
+    /\nkind: Deployment\n/ && /\n  name: helm-controller\n/ {
+      sub(/- --enable-leader-election\n/, "- --enable-leader-election\n        - --default-service-account=deployeur\n        - --no-cross-namespace-refs=true\n")
+    }
+    NF { print "---\n" $0 }'
+}

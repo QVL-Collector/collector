@@ -16,6 +16,14 @@ def regle_sans_imds:
   (.to | type == "array" and length > 0)
   and all(.to[]; .ipBlock == null or (.ipBlock | bloc_sans_imds));
 
+def regle_imds_seule: .to == [{"ipBlock": {"cidr": "169.254.169.254/32"}}];
+
+def exception_aws:
+  .metadata.namespace == "place-de-marche"
+  and (.spec.podSelector.matchLabels // {})["collector/acces-aws"] == "true";
+
+def regle_admise($politique): regle_sans_imds or (($politique | exception_aws) and regle_imds_seule);
+
 def de_sortie: (.spec.policyTypes // (if .spec.egress then ["Ingress", "Egress"] else ["Ingress"] end)) | index("Egress") != null;
 
 def tous_les_pods:
@@ -24,4 +32,4 @@ def tous_les_pods:
 
 [.items[] | select(de_sortie)] as $sorties
 | ($sorties | any(tous_les_pods))
-  and all($sorties[] | (.spec.egress // [])[]; regle_sans_imds)
+  and all($sorties[] | . as $p | (.spec.egress // [])[] | regle_admise($p); .)

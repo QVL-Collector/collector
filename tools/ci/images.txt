@@ -1,0 +1,6 @@
+place-de-marche|services/place-de-marche/Dockerfile|.|services/place-de-marche/ libs/ contracts/
+controle|services/controle/Dockerfile|.|services/controle/ libs/ contracts/
+interactions|services/interactions/Dockerfile|.|services/interactions/ libs/ contracts/
+transactions|services/transactions/Dockerfile|.|services/transactions/ libs/
+front|web/Dockerfile|web|web/
+keycloak|infra/identite/Dockerfile|.|infra/identite/Dockerfile infra/identite/realm-collector.json

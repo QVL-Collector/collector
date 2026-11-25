@@ -1,25 +1,18 @@
-# Valeurs communes de l'application. Aucun secret : chaque Secret est posé par tools/up-flux.sh dans le namespace
-# de son service, avant le chart (D07 MD2, D10). Les images viennent du fichier d'empreintes de la branche env/demo.
-
 domaine: collector.qvl-project.com
 
 registreAttendu: ghcr.io/qvl-collector/
 
-# Rempli par deploy/demo/empreintes.yaml (env/demo) : <service>: <registre>/<service>@sha256:<64 hex>.
 images: {}
 
 journalNiveau: info
 
-# Sources admises vers les NodePorts (sous-réseaux publics de l'ALB) ; vide : aucune entrée depuis l'extérieur.
 exposition:
   sources: []
 
 base:
   port: 5432
   tlsExige: true
-  # ConfigMap (clé ca.pem) du paquet d'autorités RDS, posé par up dans chaque namespace qui joint la base.
   autorites: autorites-rds
-  # Pairs NetworkPolicy vers PostgreSQL (ipBlock des sous-réseaux de RDS, ou base locale sur k3d).
   destinations: []
 
 canal:
@@ -51,9 +44,7 @@ placeDeMarche:
   reservation:
     duree: 10m
     dureeMax: 30m
-  # MS3, X16 : seul pod qui obtient l'IMDS (rôle du nœud) et la sortie HTTPS vers S3, pour les photos (D07).
   accesAws: false
-  # Rejeu de l'outbox (MC9) : Job rendu seulement si depuis est renseigné (RFC3339), lancé par l'exploitation.
   rejeu:
     depuis: ""
     jusquA: ""
@@ -96,5 +87,4 @@ migrations:
   ressources:
     requests: { cpu: 50m, memory: 32Mi }
     limits: { memory: 128Mi }
-  # Attente de la base avant goose : une politique réseau n'admet un pod neuf qu'après quelques secondes (k3d, EKS).
   imageAttente: postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db

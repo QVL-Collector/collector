@@ -1,7 +1,3 @@
-{{- /*
-Flux autorisés (US-006 AC1, AC6) ; le refus par défaut et le DNS sont posés avec les namespaces (infra/k8s/application.yaml),
-avant tout crochet de migration. Chaque politique ne fait qu'ouvrir : elles s'additionnent au refus par défaut.
-*/ -}}
 {{- if not .Values.base.destinations }}
 {{- fail "base.destinations est obligatoire : une liste vide ouvrirait la sortie vers toute adresse" }}
 {{- end }}

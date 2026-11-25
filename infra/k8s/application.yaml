@@ -1,7 +1,11 @@
-# Namespaces de l'application (MS4 : un par service) et refus par défaut, appliqués par tools/up-flux.sh avant les
-# Secrets et avant Flux : aucun namespace applicatif n'existe sans politique (US-006 AC1). Les flux autorisés viennent
-# du chart infra/application ; le canal porte ses propres politiques (infra/canal). front : voir socle.yaml.
-# collector : objets Flux (GitRepository, HelmRelease), compte deployeur et versions Helm ; aucune charge.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: front
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -201,8 +205,6 @@ spec:
         - { protocol: UDP, port: 53 }
         - { protocol: TCP, port: 53 }
 ---
-# Premier crochet de migration : il s'exécute avant les politiques du chart. Port PostgreSQL seul, IMDS exclue ;
-# base-locale : k3d, où un ipBlock ne couvre pas les adresses des pods.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

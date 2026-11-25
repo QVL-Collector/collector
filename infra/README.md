@@ -29,14 +29,13 @@ La zone, le certificat, son CNAME de validation et le budget ont été créés e
 
 | Chemin | Contenu |
 |---|---|
-| `k8s/socle.yaml` | Namespaces applicatifs (Pod Security `restricted`) et politique `sortie-sans-imds` par namespace ; appliqué par `up.sh` avant les charts |
+| `k8s/socle.yaml` | Politique `sortie-sans-imds` du namespace `default` ; appliqué par `up-flux.sh` avant tout chart |
 | `k8s/secrets-autorises.txt` | Secrets que chaque application peut monter (X20) ; tout autre montage rend le contrôle rouge |
-| `k8s/application.yaml` | Namespaces de l'application (un par service, `collector` pour Flux et les versions Helm), refus par défaut entrée et sortie, DNS ; appliqué par `tools/up-flux.sh` avant les Secrets (US-006 AC1, US-007) |
-| `k8s/base-locale.yaml` | k3d seulement : PostgreSQL de session à la place de RDS |
+| `k8s/application.yaml` | Namespaces de l'application (un par service, `front` compris ; `collector` pour Flux, le compte `deployeur` et les versions Helm), Pod Security `restricted`, refus par défaut en entrée et en sortie, DNS, sortie 5432 des pods de migration (le premier crochet précède les politiques du chart ; `base-locale` couvre k3d, où un `ipBlock` ne couvre pas les adresses des pods) ; appliqué par `tools/up-flux.sh` avant les Secrets (US-006 AC1, US-007) |
+| `k8s/base-locale.yaml` | k3d seulement : PostgreSQL de session à la place de RDS, mot de passe maître dans le Secret `base-maitre` posé par `up-flux.sh` |
 | `application/` | Chart de l'application : quatre services, front, Keycloak, migrations, flux réseau autorisés ([README](application/README.md)) |
-| `flux/` | Compte `deployeur` et ses liaisons par namespace, sources (`main` + `env/demo`), `HelmRelease` du canal et de l'application avec retour arrière (US-007) |
-| `ephemere/application.tf` | Règles de l'ALB vers les API et `auth.` (liste blanche XP03), activées par `application_active` ; jamais `/interne/`, ni le port 8081 |
-| `front/` | Chart du front nginx (US-004 AC2) : Deployment non root, Service NodePort cible de l'ALB, HPA 2 à 6 ; `values.yaml` : `conteneur.port` (port d'écoute de nginx), `service.port` et `service.nodePort` ; `valeurs-aws.yaml` : image épinglée par empreinte (MS9), remplacée par l'image du front publiée par la CI dès qu'elle est poussée (D10), descente HPA en 60 s (X7 bis de XP01 : 10 min 16 s avec les 300 s par défaut) |
+| `flux/` | `controleurs.yaml` : `Role` des contrôleurs Flux limitée à `collector` (à la place de `crd-controller` et de `cluster-admin`) et sortie DNS, 443, 6443 sans IMDS ; `deployeur.yaml` : compte `deployeur` des `HelmRelease`, `ClusterRole` liée par `RoleBinding` dans chaque namespace applicatif, Secrets dans `collector` seul, usurpation réservée au contrôleur Helm ; `sources.yaml` : `main` (chart) avec `env/demo` (empreintes) incluse, épinglées par `up-flux.sh` sur les commits vérifiés ; `releases.yaml` : canal puis application, retour arrière automatique (US-007) |
+| `ephemere/application.tf` | Règles de l'ALB vers les API (`/marche/*`, `/interactions/*`, `/transactions/*`) et `auth.` (liste blanche et refus des traversées de XP03), `application_active` vrai par défaut ; `/interne` en 404, aucun chemin `interne` admis par validation ; NodePorts en sortie `nodeports_application`, lus par `up-flux.sh` |
 
 ## Contrôles hors AWS
 
@@ -44,6 +43,6 @@ La zone, le certificat, son CNAME de validation et le budget ont été créés e
 terraform -chdir=infra/persistant init -backend=false && terraform -chdir=infra/persistant validate
 terraform -chdir=infra/ephemere init -backend=false && terraform -chdir=infra/ephemere validate
 terraform fmt -check -recursive infra
-helm lint infra/front -f infra/front/valeurs-aws.yaml
+helm lint infra/application -f infra/application/valeurs-aws.yaml -f <empreintes>
 bash tools/ci/trivy.sh config infra infra
 ```

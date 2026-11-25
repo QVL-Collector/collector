@@ -340,6 +340,12 @@ jobs:
           path: web/coverage/coverage-summary.json
           retention-days: 90
           if-no-files-found: ignore
+      - name: Construire l'image du front sans la pousser, Trivy image
+        if: github.event_name != 'push'
+        working-directory: .
+        run: |
+          docker build --file web/Dockerfile --tag collector/web:ci web
+          bash tools/ci/trivy.sh image collector/web:ci web-image
 
   e2e:
     name: Front (parcours et accessibilité, Playwright)
@@ -438,13 +444,14 @@ jobs:
     name: Publication (images signées, env/demo)
     needs: [ci-ok]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: publication
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     concurrency:
       group: publication
       cancel-in-progress: false
     permissions:
-      contents: write # écriture de la seule branche env/demo (MP5)
+      contents: read # env/demo écrite par la clé de déploiement de l'environnement publication, limité à main (MP5)
       packages: write # poussée des images sur GHCR (R1)
       id-token: write # signature cosign sans clé, identité OIDC de ce workflow (MP6)
     steps:
@@ -455,7 +462,7 @@ jobs:
       - name: Construire, analyser, publier, signer, vérifier, écrire env/demo
         env:
           GH_TOKEN: ${{ github.token }}
-          AVANT: ${{ github.event.before }}
+          ENV_DEMO_CLE: ${{ secrets.ENV_DEMO_CLE }}
           COMMIT: ${{ github.sha }}
         run: bash tools/ci/publier.sh
       - name: Conserver les SBOM

@@ -4,10 +4,12 @@
 # Usage :
 #   tools/github/configurer-depot.sh <proprietaire>/<depot>            applique les réglages puis les relève
 #   tools/github/configurer-depot.sh <proprietaire>/<depot> --relever  relève seulement (lecture), pour la preuve
+#   tools/github/configurer-depot.sh <proprietaire>/<depot> --cle-env-demo  (re)pose la clé de déploiement d'env/demo (US-007)
 #
 # Jeton : lu dans ~/.qvl/gh-token (ou $FICHIER_JETON) au moment de chaque appel, transmis à gh par son
 # environnement seulement ; jamais affiché, jamais écrit ailleurs. Portée fine requise sur le seul dépôt :
-# Administration (écriture), Contents (lecture), Secret scanning alerts (lecture), Dependabot alerts (lecture).
+# Administration (écriture), Contents (lecture), Secret scanning alerts (lecture), Dependabot alerts (lecture) ;
+# --cle-env-demo demande aussi Environments (écriture) et Secrets (écriture).
 #
 # Ordre conseillé : dépôt publié (US-001), PR de US-002 ouverte et workflow exécuté une fois, puis ce script.
 
@@ -19,6 +21,8 @@ MODE="${2:-appliquer}"
 FICHIER_JETON="${FICHIER_JETON:-$HOME/.qvl/gh-token}"
 NOM_REGLES="protection-main"
 NOM_REGLES_ENV="protection-env-demo"
+NOM_REGLES_ECRITURE="ecriture-env-demo"
+ENVIRONNEMENT="publication"
 ID_GITHUB_ACTIONS=15368
 
 if [[ ! "$DEPOT" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
@@ -109,29 +113,70 @@ JSON
     echo "ensemble de règles créé"
   fi
 
-  etape "Ensemble de règles « $NOM_REGLES_ENV » : env/demo écrite par GitHub Actions seul, ni poussée forcée ni suppression (MP5)"
-  corps="$(cat <<JSON
-{
-  "name": "$NOM_REGLES_ENV",
-  "target": "branch",
-  "enforcement": "active",
-  "bypass_actors": [ { "actor_id": $ID_GITHUB_ACTIONS, "actor_type": "Integration", "bypass_mode": "always" } ],
-  "conditions": { "ref_name": { "include": ["refs/heads/env/demo"], "exclude": [] } },
-  "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
-    { "type": "creation" },
-    { "type": "update", "parameters": { "update_allows_fetch_and_merge": false } }
-  ]
+  regles_env_demo
 }
-JSON
-)"
-  id="$(api "repos/$DEPOT/rulesets" --jq ".[] | select(.name == \"$NOM_REGLES_ENV\") | .id")"
+
+ensemble_de_regles() {
+  local nom="$1" corps="$2" id
+  id="$(api "repos/$DEPOT/rulesets" --jq ".[] | select(.name == \"$nom\") | .id")"
   if [[ -n "$id" ]]; then
     api --method PUT "repos/$DEPOT/rulesets/$id" --input - --silent <<< "$corps"
   else
     api --method POST "repos/$DEPOT/rulesets" --input - --silent <<< "$corps"
   fi
+}
+
+regles_env_demo() {
+  etape "« $NOM_REGLES_ENV » : env/demo ni forcée ni supprimée, sans aucun contournement (MP5)"
+  ensemble_de_regles "$NOM_REGLES_ENV" "$(cat <<JSON
+{
+  "name": "$NOM_REGLES_ENV",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": { "ref_name": { "include": ["refs/heads/env/demo"], "exclude": [] } },
+  "rules": [ { "type": "deletion" }, { "type": "non_fast_forward" } ]
+}
+JSON
+)"
+
+  etape "« $NOM_REGLES_ECRITURE » : création et mise à jour d'env/demo par la seule clé de déploiement (MP5)"
+  ensemble_de_regles "$NOM_REGLES_ECRITURE" "$(cat <<JSON
+{
+  "name": "$NOM_REGLES_ECRITURE",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [ { "actor_id": null, "actor_type": "DeployKey", "bypass_mode": "always" } ],
+  "conditions": { "ref_name": { "include": ["refs/heads/env/demo"], "exclude": [] } },
+  "rules": [ { "type": "creation" }, { "type": "update", "parameters": { "update_allows_fetch_and_merge": false } } ]
+}
+JSON
+)"
+
+  etape "Environnement « $ENVIRONNEMENT » : déploiements depuis main seulement"
+  api --method PUT "repos/$DEPOT/environments/$ENVIRONNEMENT" --input - --silent <<'JSON'
+{ "deployment_branch_policy": { "protected_branches": false, "custom_branch_policies": true } }
+JSON
+  if ! api "repos/$DEPOT/environments/$ENVIRONNEMENT/deployment-branch-policies" --jq '.branch_policies[].name' | grep -qx main; then
+    api --method POST "repos/$DEPOT/environments/$ENVIRONNEMENT/deployment-branch-policies" \
+      -f name=main -f type=branch --silent
+  fi
+}
+
+cle_env_demo() {
+  local travail
+  command -v ssh-keygen > /dev/null || { echo "ssh-keygen est requis" >&2; exit 1; }
+  travail="$(mktemp -d)"
+  trap 'rm -rf "$travail"' RETURN
+  etape "Clé de déploiement d'env/demo : nouvelle paire, publique sur le dépôt, privée dans l'environnement $ENVIRONNEMENT"
+  ssh-keygen -q -t ed25519 -N '' -C "env-demo-$(date -u +%Y%m%d)" -f "$travail/cle"
+  api "repos/$DEPOT/keys" --jq '.[] | select(.title | startswith("env-demo")) | .id' |
+    while read -r id; do api --method DELETE "repos/$DEPOT/keys/$id" --silent; done
+  api --method POST "repos/$DEPOT/keys" -f title="env-demo-$(date -u +%Y%m%d)" \
+    -f key="$(cat "$travail/cle.pub")" -F read_only=false --silent
+  GH_TOKEN="$(< "$FICHIER_JETON")" GH_PROMPT_DISABLED=1 gh secret set ENV_DEMO_CLE \
+    --repo "$DEPOT" --env "$ENVIRONNEMENT" < "$travail/cle"
+  echo "clé posée ; aucune copie conservée sur le poste"
 }
 
 relever() {
@@ -156,10 +201,14 @@ relever() {
   else
     echo "ensemble de règles « $NOM_REGLES » absent"
   fi
+  api "repos/$DEPOT/rulesets" --jq ".[] | select(.name == \"$NOM_REGLES_ENV\" or .name == \"$NOM_REGLES_ECRITURE\") | .id" |
+    while read -r id; do api "repos/$DEPOT/rulesets/$id" --jq '{name, enforcement, bypass_actors, conditions, rules}'; done
+  api "repos/$DEPOT/environments/$ENVIRONNEMENT" --jq '{name, deployment_branch_policy}' || echo "environnement $ENVIRONNEMENT absent"
 }
 
 case "$MODE" in
   appliquer) appliquer; relever ;;
   --relever) relever ;;
+  --cle-env-demo) cle_env_demo ;;
   *) echo "mode inconnu : $MODE" >&2; exit 2 ;;
 esac

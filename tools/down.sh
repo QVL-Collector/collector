@@ -23,6 +23,22 @@ SESSION_TF="${SESSION_TF:-$(nouvelle_session)}"
 export EXTINCTION_INCOMPLETE=1
 ecrire_session
 
+retirer_flux() {
+  local manifeste="$DOSSIER_SESSION/k8s-$NOM/flux-install.yaml"
+  k get crd helmreleases.helm.toolkit.fluxcd.io >/dev/null 2>&1 || return 0
+  journal "retrait de Flux en premier (sinon il recrée les releases)"
+  if ! k -n "$NS_FLUX" delete helmrelease --all --timeout=5m >/dev/null; then
+    journal "ATTENTION : HelmRelease non désinstallées par Flux ; finaliseurs levés, les releases sont retirées par Helm"
+    k -n "$NS_FLUX" get helmrelease -o name | while read -r hr; do
+      k -n "$NS_FLUX" patch "$hr" --type=merge -p '{"metadata":{"finalizers":null}}' >/dev/null || true
+    done
+  fi
+  k -n "$NS_FLUX" delete gitrepository,ocirepository,helmchart --all --timeout=2m >/dev/null 2>&1 || true
+  [ -f "$manifeste" ] || { mkdir -p "$(dirname "$manifeste")" && manifestes_flux >"$manifeste"; } ||
+    { journal "ATTENTION : manifeste Flux indisponible, contrôleurs non retirés ; l'inventaire tranchera"; return 0; }
+  k delete -f "$manifeste" --ignore-not-found --timeout=3m >/dev/null || journal "ATTENTION : Flux non retiré, l'inventaire tranchera"
+}
+
 retirer_charges_cluster() {
   command -v kubectl >/dev/null 2>&1 || return 0
   aws eks describe-cluster --name "$NOM" >/dev/null 2>&1 || return 0
@@ -31,10 +47,7 @@ retirer_charges_cluster() {
     journal "ATTENTION : API du cluster injoignable (adresse du poste changée ?) ; releases non retirées, l'inventaire tranchera"
     return 0
   fi
-  if command -v flux >/dev/null 2>&1 && kubectl --context "$NOM" get namespace flux-system >/dev/null 2>&1; then
-    journal "retrait de Flux en premier (sinon il recrée les releases)"
-    flux --context "$NOM" uninstall --silent >/dev/null || journal "ATTENTION : Flux non retiré, l'inventaire tranchera"
-  fi
+  retirer_flux
   if command -v helm >/dev/null 2>&1; then
     { helm --kube-context "$NOM" list -A -o json || printf '[]'; } | tr -d '\r' | jq -r '.[] | "\(.namespace) \(.name)"' |
       while read -r espace release; do
@@ -138,5 +151,6 @@ noter_cout
 [ "$STATUT_DESTROY" -eq 0 ] || echec "destroy en échec : relancer down.sh avant « End Lab » ; up.sh refusé tant qu'un down.sh n'a pas abouti"
 [ "$STATUT_INVENTAIRE" -eq 0 ] || echec "inventaire non vide : nettoyer les ressources listées puis relancer down.sh avant « End Lab » ; up.sh refusé d'ici là"
 rm -f "$FICHIER_SESSION"
+rm -rf "$DEPOT/infra/canal/.genere"
 annuler_rappel_poste
 journal "extinction terminée, inventaire vide hors couche persistante : « End Lab » possible"

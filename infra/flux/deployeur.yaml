@@ -1,6 +1,3 @@
-# Compte de service des HelmRelease (D10 MP4, US-007 AC9). Le contrôleur Helm agit sous cette identité
-# (--default-service-account, usurpation limitée à ce seul compte) : droits par namespace applicatif uniquement,
-# aucun objet de cluster, Secrets lisibles dans le seul namespace collector (versions Helm).
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -156,7 +153,6 @@ roleRef:
 subjects:
   - { kind: ServiceAccount, name: deployeur, namespace: collector }
 ---
-# Le contrôleur Helm ne garde que le droit d'agir sous l'identité deployeur (cluster-admin retiré par up-flux.sh).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -177,4 +173,4 @@ roleRef:
   kind: ClusterRole
   name: flux-usurpation-deployeur
 subjects:
-  - { kind: ServiceAccount, name: helm-controller, namespace: flux-system }
+  - { kind: ServiceAccount, name: helm-controller, namespace: collector }

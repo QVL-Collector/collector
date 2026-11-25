@@ -45,6 +45,22 @@ cas false "seconde politique qui ouvre toute la sortie" "$SOCLE,$(politique '{"m
 cas false "politique limitée à certains pods" "$(politique '{"matchLabels":{"app":"a"}}' '[{"to":[{"ipBlock":{"cidr":"10.0.0.0/8"}}]}]')"
 cas false "sortie implicite par egress sans policyTypes" "$SOCLE,"'{"spec":{"podSelector":{},"egress":[{}]}}'
 
+
+aws() {
+  local ns="$1" selecteur="$2" sortie="$3"
+  printf '{"metadata":{"namespace":"%s"},"spec":{"podSelector":%s,"policyTypes":["Egress"],"egress":%s}}' "$ns" "$selecteur" "$sortie"
+}
+ACCES_AWS='{"matchLabels":{"app.kubernetes.io/name":"place-de-marche","collector/acces-aws":"true"}}'
+REGLES_AWS='[{"to":[{"ipBlock":{"cidr":"169.254.169.254/32"}}],"ports":[{"port":80,"protocol":"TCP"}]},{"to":[{"ipBlock":{"cidr":"0.0.0.0/0","except":["10.0.0.0/8","169.254.0.0/16"]}}],"ports":[{"port":443,"protocol":"TCP"}]}]'
+REFUS='{"metadata":{"namespace":"place-de-marche"},"spec":{"podSelector":{},"policyTypes":["Ingress","Egress"]}}'
+FLUX='{"metadata":{"namespace":"collector"},"spec":{"podSelector":{},"policyTypes":["Ingress","Egress"],"ingress":[{"from":[{"podSelector":{}}]}],"egress":[{}]}}'
+
+cas true "Place de marché : exception accesAws du chart" "$REFUS,$(aws place-de-marche "$ACCES_AWS" "$REGLES_AWS")"
+cas false "Place de marché : même règle sans l'étiquette accesAws" "$REFUS,$(aws place-de-marche '{"matchLabels":{"app.kubernetes.io/name":"place-de-marche"}}' "$REGLES_AWS")"
+cas false "étiquette accesAws hors du namespace place-de-marche" "$REFUS,$(aws interactions "$ACCES_AWS" "$REGLES_AWS")"
+cas false "exception accesAws qui ouvre aussi toute la sortie" "$REFUS,$(aws place-de-marche "$ACCES_AWS" '[{"to":[{"ipBlock":{"cidr":"169.254.169.254/32"}}]},{}]')"
+cas false "exception accesAws vers 169.254.0.0/16" "$REFUS,$(aws place-de-marche "$ACCES_AWS" '[{"to":[{"ipBlock":{"cidr":"169.254.0.0/16"}}]}]')"
+cas false "politique allow-egress de flux install" "$FLUX"
 [ "$ECHECS" -eq 0 ] || {
   printf '%s cas en échec\n' "$ECHECS"
   exit 1

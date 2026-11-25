@@ -168,3 +168,43 @@ Les majeures portent sur :
 - la relance de `up-flux.sh` (6).
 
 Répartition : devops pour les 3 bloquantes, les 6 majeures, les 8 mineures et les suggestions 1 à 5 ; testeur pour la suggestion 6, et pour rejouer AC3 à AC6 et AC9 sur k3d une fois les bloquantes levées. Aucune correction back ni front.
+
+## Retours traités
+
+2026-11-25, branche posée sur US-005, sans appel AWS, sans poussée ni commit.
+
+| Point | Traitement |
+|---|---|
+| B1 | `contexte_autorise` ajoutée à `tools/lib.sh` (motifs `k3d-*`, `*collector*`), appelée par `up-flux.sh` ; contexte hors liste refusé avant tout appel (constaté avec `docker-desktop`) |
+| B2 | `up.sh` appelle `up-flux.sh --contexte collector --valeurs aws`, et relaie `--sans-flux` ; `--chart` et `--valeurs` retirés. `infra/front` supprimé : le chart applicatif reprend image par empreinte, NodePort 30080, HPA 2 à 6 et descente en 60 s. `application_active` vaut `true` par défaut. `nodeports_application` et `nodeport_front` sont lus par `up-flux.sh` (`--set` en filet P1, `spec.values` de la `HelmRelease` sous Flux) et par le contrôle (NodePorts admis, ports balayés). `down.sh` retire Flux même sans CLI (`HelmRelease` désinstallées, puis manifeste de session ou regénéré par l'image `flux-cli`) et efface `infra/canal/.genere/`. Documentation : `tools/README.md`, `infra/README.md`, D10 (« Mise en œuvre »), `cicd.md`, US-007 |
+| B3 | `manifestes_flux` (`tools/lib.sh`) écarte toutes les `NetworkPolicy` de `flux install`, dont `allow-egress`, avant l'unique `apply` ; `infra/flux/controleurs.yaml` ouvre DNS, 443 et 6443 sans IMDS, plus 9090 entre helm-controller et source-controller. Cas « politique allow-egress de flux install » ajouté au test du filtre (refusé) |
+| M1 | `env/demo` porte `source: <commit>` ; `publier.sh` compare depuis ce commit (reconstruction complète s'il est absent, inconnu ou non ancêtre) |
+| M2 | Filtre : une règle vers `169.254.169.254/32` seul n'est admise que dans une politique du namespace `place-de-marche` qui sélectionne `collector/acces-aws: "true"`. Cinq cas ajoutés : un positif (chart AWS), quatre négatifs (sans étiquette, autre namespace, exception qui ouvre tout, exception vers 169.254.0.0/16) |
+| M3 | Flux installé dans `collector`, `--watch-all-namespaces=false`. `cluster-reconciler` et `crd-controller` (liaisons et rôle) retirés du manifeste ; `Role` `flux-controleurs` limitée à `collector`, ressources nommées une à une (KSV-0112) |
+| M4 | `GitRepository` `env-demo` et `collector` épinglées par `ref.commit` sur le commit vérifié d'`env/demo` et sur son commit `source` (suggestion 3 incluse) ; `--empreintes` refusé sans `--sans-flux` ; règle de session tracée dans l'US, D10 et `cicd.md` |
+| M5 | Deux ensembles de règles : `protection-env-demo` (suppression, poussée forcée) sans aucun contournement ; `ecriture-env-demo` (création, mise à jour) contourné par les seules clés de déploiement. Écriture par une clé rangée dans l'environnement `publication`, limité à `main` ; le job passe à `contents: read`. Mode `configurer-depot.sh --cle-env-demo`. Limite documentée dans D10 : GitHub ne sait pas nommer une clé précise ; mesure compensatoire : une seule clé en écriture, et `cosign verify` sur l'identité du workflow de `main` avant tout déploiement |
+| M6 | Mots de passe et secret du client `transactions` repris des Secrets existants ; `--rotation` régénère les rôles de base puis redémarre les services |
+| m1 à m8 | `chemin_natif` local retiré ; `-o "$NUL"` et attente bornée du port ; nettoyage de l'amorçage sur toute sortie (`trap EXIT`) ; Flux retiré sans CLI ; plus de fenêtre `cluster-admin` (arguments injectés et liaisons retirées avant l'`apply`) ; annotation du front sur toute la configuration ; liste partagée `tools/ci/images.txt` ; commentaires de justification retirés, raisons reportées dans `infra/application/README.md` et `infra/README.md` |
+| Suggestions | 1 : image du front construite et passée à Trivy en PR (job « Front ») ; Keycloak l'est par le job `go` d'`infra/identite` (Dockerfile au contexte racine). 2 : clé `AMQP_URL` retirée du Secret `canal-amqp`. 3 : voir M4. 4 : chaque clé doit pointer vers `…/<nom>@sha256:`. 5 : `KC_PROXY_TRUSTED_ADDRESSES` = `exposition.sources`. 6 : sans objet, le chart et les images étant épinglés ensemble (M4) |
+| Constats repris | `sortie-sans-imds` du namespace `front` retirée de `socle.yaml` (namespace `front` déplacé dans `application.yaml`) ; `CHEMINS_INTERDITS` complétés (`/interne/…`, traversées vers `/interne`, `/sante`, `/disponibilite`), rejoués aussi sur `auth.` |
+
+### Preuves rejouées
+
+| Commande | Résultat |
+|---|---|
+| `helm lint` et `helm template` (`valeurs-aws.yaml`, `valeurs-k3d.yaml`) ; `helm lint infra/canal` | 0 échec |
+| kubeconform `-strict` (rendus, `infra/k8s`, `infra/flux`, manifeste Flux filtré) | 134 valides, 0 invalide ; 7 CRD Flux sans schéma dans le catalogue |
+| `terraform fmt -check -recursive infra`, `validate` (éphémère) | Conformes, valide |
+| shellcheck (CI, `--severity=warning`), actionlint, zizmor `--offline` | 0 constat |
+| `bash tools/tests/*.sh` | Tous les cas passent (dont les 6 nouveaux) |
+| `trivy.sh config infra infra` et `config . config` ; `verifier-exceptions.sh` | 0 bloquant ; 3 exceptions valides |
+| Filtre IMDS hors ligne : rendu AWS + `application.yaml` + `socle.yaml` + manifeste Flux + `controleurs.yaml` | `true` dans les 8 namespaces, `place-de-marche` (exception) et `collector` (Flux) compris |
+| k3d neuf : `up-flux.sh --sans-flux --images-locales` | Amorçage, migrations, 6 Deployments, catégories 200, en 4 min ; Secret d'amorçage absent ensuite ; filtre IMDS `true` sur les 10 namespaces du cluster ; front vers Internet refusé |
+| Relance identique (M6) | Empreinte des Secrets inchangée, aucun redémarrage ; jeton `client_credentials` de Transactions obtenu avec `oidc-client` (200) |
+| Flux restreint (manifeste filtré, `controleurs.yaml`, `deployeur.yaml` ; chart en OCI local et politique d'essai vers le registre local, hors dépôt) | `canal` et `application` `Ready`, sans aucune `ClusterRoleBinding` Flux |
+| AC9 (`kubectl auth can-i`) | helm-controller et source-controller : aucun Secret ni ConfigMap hors `collector`, aucun Deployment nulle part ; usurpation de `deployeur` seule. `deployeur` : Secrets de `collector` seuls, aucun objet de cluster ni `RoleBinding` |
+| AC5 | Empreinte invalide du front : mise à jour en échec, `RollbackSucceeded`, v3 déployée, image d'origine restaurée |
+| AC4 | Empreintes GHCR non signées : les six refusées, allumage arrêté ; empreinte d'un autre dépôt et `--empreintes` sans `--sans-flux` refusés avant tout appel au cluster |
+| `down.sh` (fonction `retirer_flux`, sans CLI `flux`) | CRD, contrôleurs et releases retirés |
+
+Non joué hors AWS : `publier.sh` sur `main` (GHCR, clé de déploiement, `env/demo`), règles et environnement GitHub, chemin AWS d'`up-flux.sh` (RDS, TLS, Secrets Manager, NodePorts Terraform), `up.sh` et `down.sh` de bout en bout.

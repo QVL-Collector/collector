@@ -1,6 +1,3 @@
-# HelmRelease du canal et de l'application (D10 P2, US-007 AC3, AC5). Compte deployeur, versions Helm rangées dans
-# collector ; retour arrière automatique sur échec d'une mise à jour. tools/up-flux.sh remplace valeurs-aws.yaml
-# par valeurs-k3d.yaml sur le poste.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

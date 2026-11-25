@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Allumage de la couche éphémère (D11) : contrôles, apply horodaté, destruction programmée (G1) et rappel sur le poste (G7)
-# armés dès la fin de l'apply, front, HTTPS 200, contrôle après déploiement (US-004 AC11). ALB restreint au poste (ME5).
-#   ./up.sh --fin-lab HH:MM|--debut-lab HH:MM [--chart DOSSIER --valeurs FICHIER] [--repetition-soutenance]
+# armés dès la fin de l'apply, application par up-flux.sh (Flux, ou helm avec --sans-flux, US-007), HTTPS 200, contrôle
+# après déploiement (US-004 AC11). ALB restreint au poste (ME5).
+#   ./up.sh --fin-lab HH:MM|--debut-lab HH:MM [--sans-flux] [--repetition-soutenance]
 #   ./up.sh --prolonger --fin-lab HH:MM|--debut-lab HH:MM   (réarme G1 et G7 après « Start Lab »)
 
 set -euo pipefail
@@ -9,7 +10,7 @@ set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 usage() {
-  sed -n '4,5p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '5,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -17,8 +18,7 @@ PROLONGER=0
 REPETITION=0
 HEURE_LAB=""
 HEURE_FIN=""
-CHART=""
-VALEURS=""
+SANS_FLUX=()
 
 [ "$#" -ge 1 ] || usage
 while [ "$#" -gt 0 ]; do
@@ -26,8 +26,7 @@ while [ "$#" -gt 0 ]; do
     --prolonger) PROLONGER=1; shift ;;
     --debut-lab) HEURE_LAB="${2:-}"; shift 2 ;;
     --fin-lab) HEURE_FIN="${2:-}"; shift 2 ;;
-    --chart) CHART="${2:-}"; shift 2 ;;
-    --valeurs) VALEURS="${2:-}"; shift 2 ;;
+    --sans-flux) SANS_FLUX=(--sans-flux); shift ;;
     --repetition-soutenance) REPETITION=1; shift ;;
     *) usage ;;
   esac
@@ -129,11 +128,7 @@ fi
 [ "$RESTANT_MIN" -ge "$MARGE_UP_MIN" ] ||
   echec "refus d'allumer : $RESTANT_MIN min restantes, minimum $MARGE_UP_MIN (D11). Relancer « Start Lab »."
 
-CHART="${CHART:-$DEPOT/infra/front}"
-VALEURS="${VALEURS:-$DEPOT/infra/front/valeurs-aws.yaml}"
-exiger_outils kubectl helm
-[ -f "$CHART/Chart.yaml" ] || echec "chart du front introuvable : $CHART"
-[ -f "$VALEURS" ] || echec "fichier de valeurs introuvable : $VALEURS"
+exiger_outils kubectl helm docker git openssl
 
 statut_version="$(aws_json eks describe-cluster-versions --cluster-versions "$VERSION_EKS" | jq -r '.clusterVersions[0].versionStatus // empty')"
 [ "$statut_version" = "STANDARD_SUPPORT" ] || echec "EKS $VERSION_EKS hors support standard ($statut_version)"
@@ -205,10 +200,10 @@ sauvegarder_etat "$DOSSIER_TF" ephemere up
 aws eks update-kubeconfig --name "$NOM" --alias "$NOM" --profile "$AWS_PROFILE" >/dev/null
 kubectl --context "$NOM" wait --for=condition=Ready nodes --all --timeout=10m >/dev/null
 phase up noeuds-ready "$(($(maintenant) - T0))" "kubeconfig et nœuds Ready"
-journal "socle : namespaces applicatifs et sortie sans IMDS par namespace (XP01 session 1)"
-k apply -f "$DOSSIER_K8S/socle.yaml" >/dev/null
-helm --kube-context "$NOM" upgrade --install front "$CHART" -n front -f "$VALEURS" --set "service.nodePort=$(tf output -raw nodeport_front)" --wait --timeout 10m >/dev/null
-phase up chart "$(($(maintenant) - T0))" "front installé par helm"
+journal "application : up-flux.sh (US-007)"
+"$RACINE_TOOLS/up-flux.sh" --contexte "$NOM" --valeurs aws "${SANS_FLUX[@]}" ||
+  echec "déploiement de l'application en échec : corriger puis relancer up.sh, ou down.sh"
+phase up application "$(($(maintenant) - T0))" "application installée ($([ "${#SANS_FLUX[@]}" -eq 0 ] && printf Flux || printf "helm, filet P1"))"
 
 URL="$(tf output -raw url)"
 journal "attente du premier HTTPS 200 sur $URL (30 min au plus)"

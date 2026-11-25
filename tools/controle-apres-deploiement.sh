@@ -28,6 +28,8 @@ CHEMINS_INTERDITS=(
   "/ADMIN/" "/Realms/Master/" "/resources/../admin/" "/resources/..%2f..%2fadmin/"
   "/realms/collector/protocol/openid-connect/%2e%2e/%2e%2e/%2e%2e/master/"
   "/realms/collector/broker/" "/metrics" "/health/ready" "/.env" "/.git/config" "/server-status"
+  "/interne/" "/interne/v1/articles/x/reservations" "/marche/../interne/v1/articles/x/reservations"
+  "/marche/%2e%2e/interne/v1/" "/transactions/../interne/" "/marche/v1/../../interne/" "/sante" "/disponibilite"
 )
 
 RES_TSV=""
@@ -129,7 +131,7 @@ port_ouvert() { timeout 3 bash -c 'exec 3<>"/dev/tcp/$1/$2"' _ "$1" "$2" >/dev/n
 
 balayer() {
   local ip="$1" port ouverts=""
-  for port in $PORTS_BALAYES $NODEPORT; do
+  for port in $PORTS_BALAYES $NODEPORTS; do
     if port_ouvert "$ip" "$port"; then ouverts="$ouverts $port"; fi
   done
   printf '%s\n' "${ouverts# }" >"$TRAVAIL/balayage-$ip"
@@ -287,10 +289,10 @@ controler_services() {
   else
     resultat X17 services-lb ko "Service(s) LoadBalancer : $lb"
   fi
-  nodeports="$(printf '%s' "$services" | jq -r --argjson n "$NODEPORT" '[.items[] | select(.spec.type == "NodePort" or .spec.type == "LoadBalancer") |
-    .spec.ports[] | select(.nodePort != $n) | .nodePort] | join(" ")')"
+  nodeports="$(printf '%s' "$services" | jq -r --arg n "$NODEPORTS" '($n | split(" ") | map(select(. != "") | tonumber)) as $l | [.items[] | select(.spec.type == "NodePort" or .spec.type == "LoadBalancer") |
+    .spec.ports[] | select(.nodePort as $p | $l | index($p) | not) | .nodePort | tostring] | join(" ")')"
   if [ -z "$nodeports" ]; then
-    resultat X17 nodeports ok "seul le NodePort $NODEPORT du front est publié (MS5)"
+    resultat X17 nodeports ok "seuls les NodePorts de la liste Terraform sont publiés ($NODEPORTS, MS5)"
   else
     resultat X17 nodeports ko "NodePorts hors liste : $nodeports"
   fi
@@ -575,7 +577,7 @@ ARN_HTTPS="$(sortie arn_ecouteur_https)"
 ARN_HTTP="$(sortie arn_ecouteur_http)"
 SG_ALB="$(sortie id_groupe_securite_alb)"
 ALB_OUVERT="$(sortie alb_ouvert)"
-NODEPORT="$(sortie nodeport_front)"
+NODEPORTS="$(sortie nodeport_front) $(printf '%s' "$SORTIES" | jq -r '.nodeports_application.value // {} | .[]' | tr "\n" " ")"
 ID_RDS="$(sortie id_rds)"
 ADRESSE_RDS="$(sortie adresse_rds)"
 POINT_API="$(sortie point_api_eks)"

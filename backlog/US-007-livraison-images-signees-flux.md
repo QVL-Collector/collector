@@ -56,7 +56,7 @@ Mesures : MS1, MP5, MP6, MP10, MI5.
 
 ## Hors périmètre
 
-- Revérification continue des signatures dans le cluster : V1 (écart documenté, architecture § 9.8).
+- Revérification continue des signatures dans le cluster : V1 (écart documenté, architecture § 9.8). Les sources Flux sont épinglées sur la révision vérifiée ; une publication pendant la session est appliquée en relançant `tools/up-flux.sh`, qui revérifie (D10, mise en œuvre).
 - Suspension de Flux pendant la soutenance : procédure de `presentation/demo-script.md`.
 
 ## Décisions liées

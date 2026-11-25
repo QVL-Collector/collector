@@ -1,6 +1,3 @@
-# k3d (poste) : même chart et mêmes empreintes que sur EKS (X2) ; base PostgreSQL locale (infra/k8s/base-locale.yaml)
-# sans TLS, une réplique par service ; IMDS absente.
-
 domaine: collector.localhost
 
 exposition:

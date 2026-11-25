@@ -30,6 +30,9 @@ spec:
               value: {{ printf "https://auth.%s" .Values.domaine | quote }}
             - { name: KC_HTTP_ENABLED, value: "true" }
             - { name: KC_PROXY_HEADERS, value: xforwarded }
+            {{- with .Values.exposition.sources }}
+            - { name: KC_PROXY_TRUSTED_ADDRESSES, value: {{ join "," . | quote }} }
+            {{- end }}
             - { name: JAVA_OPTS_KC_HEAP, value: "-XX:MaxRAMPercentage=70" }
           envFrom:
             - secretRef:

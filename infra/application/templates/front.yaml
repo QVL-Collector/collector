@@ -1,6 +1,13 @@
 {{- $v := .Values.front }}
 {{- $ctx := dict "racine" . "nom" "front" }}
 {{- $emetteur := printf "https://auth.%s/realms/%s" .Values.domaine .Values.identite.realm }}
+{{- $config := dict
+  "marketplaceApiUrl" "/marche"
+  "interactionsApiUrl" "/interactions"
+  "transactionsApiUrl" "/transactions"
+  "catalogue" (dict "source" "api" "demoScenario" "nominal")
+  "oidc" (dict "authority" $emetteur "clientId" "collector-web" "scope" "openid profile")
+  | toPrettyJson }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,13 +17,7 @@ metadata:
     {{- include "collector.etiquettes" $ctx | nindent 4 }}
 data:
   config.json: |-
-    {{- dict
-      "marketplaceApiUrl" "/marche"
-      "interactionsApiUrl" "/interactions"
-      "transactionsApiUrl" "/transactions"
-      "catalogue" (dict "source" "api" "demoScenario" "nominal")
-      "oidc" (dict "authority" $emetteur "clientId" "collector-web" "scope" "openid profile")
-      | toPrettyJson | nindent 4 }}
+    {{- $config | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -37,7 +38,7 @@ spec:
       labels:
         {{- include "collector.etiquettes" $ctx | nindent 8 }}
       annotations:
-        collector/empreinte-config: {{ $emetteur | sha256sum | trunc 16 }}
+        collector/empreinte-config: {{ printf "%s%s" $config .Values.domaine | sha256sum | trunc 16 }}
     spec:
       {{- include "collector.securitePod" (dict "utilisateur" 101 "groupe" 101) | nindent 6 }}
       terminationGracePeriodSeconds: 10

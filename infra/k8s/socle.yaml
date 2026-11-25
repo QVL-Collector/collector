@@ -1,33 +1,8 @@
-# Socle appliqué par tools/up.sh avant les charts : namespaces applicatifs et politique de sortie par défaut
-# sans 169.254.169.254/32 dans chacun (XP01 session 1 : IMDS joignable depuis un namespace sans politique).
-# Tout nouveau namespace applicatif s'ajoute ici avec sa politique ; le contrôle après déploiement les vérifie.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: front
-  labels:
-    pod-security.kubernetes.io/enforce: restricted
-    pod-security.kubernetes.io/enforce-version: latest
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: sortie-sans-imds
   namespace: default
-spec:
-  podSelector: {}
-  policyTypes: [Egress]
-  egress:
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except: [169.254.169.254/32]
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: sortie-sans-imds
-  namespace: front
 spec:
   podSelector: {}
   policyTypes: [Egress]

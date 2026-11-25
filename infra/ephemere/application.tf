@@ -1,7 +1,7 @@
 variable "application_active" {
-  description = "Règles de l'ALB vers les API et Keycloak (US-007, chart infra/application). false : front seul (US-004)."
+  description = "Règles de l'ALB vers les API et Keycloak du chart infra/application (US-007)."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cibles_application" {

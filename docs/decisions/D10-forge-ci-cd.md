@@ -379,6 +379,15 @@ La décision de Martin est enregistrée ci-dessus ; ses conséquences :
 - **Documentation** : schéma détaillé du processus CI/CD et du cycle DevSecOps dans `docs/processus/` (M3, M4) ; procédure d'exception aux portes ; README (badges, commandes).
 - **Compétences (C9)** : GitHub Actions et GitOps entrent dans la cartographie.
 
+## Mise en œuvre (US-007, 2026-11-25)
+
+Écarts et précisions par rapport à l'avis faisabilité, après la revue de code d'US-007 :
+
+- **Deux scripts** : `up.sh` garde la couche AWS et appelle `tools/up-flux.sh --valeurs aws [--sans-flux]`, qui porte l'ordre ci-dessus (empreintes, `cosign verify`, namespaces, amorçage, Secrets, Flux ou filet P1, fumée). Le même script sert seul sur k3d. `up.sh --sans-flux` relaie le filet P1 (AC6).
+- **Flux dans `collector`**, namespace de l'application, avec `--watch-all-namespaces=false`. Les liaisons `cluster-admin` (`cluster-reconciler`) et `crd-controller` du manifeste exporté sont retirées avant l'unique `apply` ; une `Role` limitée à `collector` les remplace (`infra/flux/controleurs.yaml`). Le contrôleur Helm n'agit que sous `deployeur`, imposé par argument. La politique `allow-egress` (toute sortie) est remplacée par DNS, 443 et 6443 sans IMDS.
+- **Révision déployée = révision vérifiée** : `env/demo` porte `source`, le commit de `main` des images. `up-flux.sh` vérifie les signatures, puis épingle les deux `GitRepository` sur ces commits (`ref.commit`). Une publication pendant la session n'est donc appliquée qu'en relançant `up-flux.sh`, qui revérifie. La vérification continue dans le cluster reste en V1 (§ 9.8 de l'architecture).
+- **Écriture d'`env/demo`** : par une clé de déploiement rangée dans l'environnement GitHub `publication`, limité à `main` et utilisé par le seul job de publication (`contents: read`). Ensembles de règles : suppression et poussée forcée interdites sans aucun contournement ; création et mise à jour réservées aux clés de déploiement. **Limite** : GitHub ne permet pas de nommer une clé précise dans un contournement ; toute clé de déploiement en écriture du dépôt peut donc mettre à jour `env/demo`. **Mesure compensatoire** : une seule clé en écriture, posée et tournée par `tools/github/configurer-depot.sh --cle-env-demo` sans copie sur le poste ; et une empreinte écrite par un autre moyen n'est jamais déployée sans `cosign verify` sur l'identité du workflow de `main` (AC4).
+
 ## À savoir défendre en soutenance
 
 1. **« Sans OIDC vers AWS, comment déployez-vous automatiquement ? »**

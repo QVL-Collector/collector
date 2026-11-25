@@ -46,7 +46,7 @@ Files quorum. Politique de chaque file de travail : `delivery-limit` **4**, soit
 
 ## Contrat pour les services
 
-- Secret `canal-amqp` dans le namespace du service (`place-de-marche`, `controle`, `interactions`) : clé `AMQP_URL` (`amqp://<identité>:<mot de passe>@rabbitmq.canal.svc:5672/collector`) et clé `CANAL_MOT_DE_PASSE`, seule lue par les services (`CANAL_HOTE` et `CANAL_UTILISATEUR` viennent du chart `infra/application`, US-007).
+- Secret `canal-amqp` dans le namespace du service (`place-de-marche`, `controle`, `interactions`) : clé `CANAL_MOT_DE_PASSE` seule ; `CANAL_HOTE` et `CANAL_UTILISATEUR` viennent du chart `infra/application` (US-007).
 - Secret `canal-supervision`, clé `host` (`http://keda:<mot de passe>@rabbitmq.canal.svc:15672/collector`, API de gestion), dans le namespace `controle` : lu par la `TriggerAuthentication` du scaler KEDA (US-026). L'identité `keda` (tag `monitoring`, droits vides) lit l'inventaire des files ; 15672 reste fermé aux pods de `controle`, ouvert au seul `keda-operator`.
 - Aucune déclaration ni liaison (refus 403) : `Publish` et `Consume` sur la topologie existante seulement. La déclaration passive reste permise (elle ne crée rien, constaté sur 4.3.7).
 - Propriété `user-id` égale à l'identité connectée sur chaque publication (MC2) ; le broker refuse un `user-id` usurpé (406).

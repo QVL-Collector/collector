@@ -101,7 +101,7 @@ B = bloquant (la fusion ou la publication est refusée) ; NB = non bloquant, arc
 | 15 | `main` | SBOM | Trivy (CycloneDX) | NB | < 30 s | SBOM jointe à l'image |
 | 16 | `main` | Publication | push GHCR, cosign sans clé, `cosign verify` | B | < 1 min | Signature dans GHCR, empreinte |
 | 17 | `main`, après 11 et 16 | Promotion | commit des empreintes sur `env/demo` | B | < 30 s | Commit `env/demo` lié au commit `main` |
-| 18 | `up` ou nouveau commit `env/demo` en session | Réconciliation | Flux (source et helm controllers) | B (`Ready` attendu) | 4 à 6 min au premier `up` | Événements Flux, `flux get` |
+| 18 | `up`, ou relance de `up-flux.sh` après un commit `env/demo` en session | Réconciliation | Flux (source et helm controllers) | B (`Ready` attendu) | 4 à 6 min au premier `up` | Événements Flux, `flux get` |
 | 19 | Fin de `up` ; après une réconciliation en session | Après déploiement | tests de fumée, X17, contrôles TLS et d'exposition | B (retour arrière) | 1 à 2 min | Sortie archivée |
 | 20 | Fin de sprint, déclenchement manuel | DAST | ZAP baseline sur l'URL de démonstration | NB ; constats au registre | 5 à 10 min | Rapport ZAP |
 
@@ -109,7 +109,7 @@ B = bloquant (la fusion ou la publication est refusée) ; NB = non bloquant, arc
 
 Durées cibles de bout en bout : PR en moins de 15 min (10 à 12 visées) ; `main` jusqu'à `env/demo` en moins de 20 min. Leviers : caches Go, npm et couches Docker, base Trivy en cache quotidien avec miroir `public.ecr.aws`, Chromium seul pour Playwright, annulation de l'exécution précédente sur la même PR.
 
-**Chaîne protégée** (ES-32) : droits par défaut en lecture ; écriture GHCR, jeton OIDC pour cosign et écriture de `env/demo` réservés aux jobs 13 à 17 sur `main` ; actions tierces épinglées par empreinte de commit, mises à jour par Dependabot ; jamais `pull_request_target` (une PR issue d'un fork s'exécute sans secret). Démonstration BP3 : une branche contenant une dépendance vulnérable connue et un secret fictif rend `ci-ok` rouge, `main` reste verte.
+**Chaîne protégée** (ES-32) : droits par défaut en lecture ; écriture GHCR et jeton OIDC pour cosign réservés au job de publication sur `main`, écriture de `env/demo` par la clé de déploiement de son environnement `publication`, limité à `main` (D10, mise en œuvre) ; actions tierces épinglées par empreinte de commit, mises à jour par Dependabot ; jamais `pull_request_target` (une PR issue d'un fork s'exécute sans secret). Démonstration BP3 : une branche contenant une dépendance vulnérable connue et un secret fictif rend `ci-ok` rouge, `main` reste verte.
 
 ## 4. Promotion par empreinte immuable
 
@@ -117,7 +117,7 @@ Durées cibles de bout en bout : PR en moins de 15 min (10 à 12 visées) ; `mai
 2. L'étiquette sert à la lecture humaine ; **seule l'empreinte est déployée**. GHCR ne protège pas une étiquette contre la réécriture : l'immuabilité vient du déploiement par empreinte.
 3. Le job de promotion écrit dans `deploy/demo/` de la branche `env/demo` les empreintes de toutes les images et la référence du commit source. `main` n'est jamais écrite par un robot.
 4. Flux lit `env/demo` et applique le chart avec ces empreintes. Le filet P1 lit **le même fichier** : une seule source d'état voulu pour les deux chemins.
-5. Signature : cosign signe chaque empreinte avec l'identité OIDC du workflow de `main`. La vérification (`cosign verify`, identité et émetteur attendus) a lieu à la publication, puis dans `up.sh` sur toutes les empreintes de `env/demo` avant de créer la source Flux. Une signature absente ou d'une autre identité arrête l'allumage.
+5. Signature : cosign signe chaque empreinte avec l'identité OIDC du workflow de `main`. La vérification (`cosign verify`, identité et émetteur attendus) a lieu à la publication, puis dans `tools/up-flux.sh` (appelé par `up.sh`) sur toutes les empreintes de `env/demo` avant de créer les sources Flux, épinglées sur le commit vérifié d'`env/demo` et sur son commit `source` de `main`. Une signature absente ou d'une autre identité arrête l'allumage.
 6. Environnements : poste (compose), CI (compose éphémère), k3d local et AWS utilisent les mêmes empreintes ; aucune préproduction séparée dans le POC.
 
 ## 5. Retour arrière
@@ -138,7 +138,7 @@ Le cluster n'existe que pendant une session du Learner Lab (environ 4 h) ; il es
 
 - **Hors session** : la CI tourne entièrement (étapes 1 à 17). Elle reste verte pour des raisons de code uniquement, puisqu'elle ne dépend d'aucun identifiant AWS. Le commit sur `env/demo` constitue un **déploiement en attente**.
 - **Au `up` suivant** : Flux est installé, les Secrets sont créés, les signatures sont vérifiées, puis la première réconciliation applique le dernier état de `env/demo`. Ordre détaillé : [D11](../decisions/D11-iac-allumage-cout.md) et avis faisabilité de [D10](../decisions/D10-forge-ci-cd.md).
-- **Pendant une session** : chaque nouveau commit sur `env/demo` est réconcilié par Flux. Les tests de fumée sont relancés depuis le poste, l'ALB n'étant ouvert qu'à son adresse hors démonstration (ME5).
+- **Pendant une session** : les sources Flux restent sur la révision vérifiée ; un nouveau commit sur `env/demo` est appliqué en relançant `tools/up-flux.sh --contexte collector --valeurs aws`, qui revérifie les signatures avant de déplacer l'épinglage. Les tests de fumée sont relancés depuis le poste, l'ALB n'étant ouvert qu'à son adresse hors démonstration (ME5).
 - **Au `down`** : Flux est retiré en premier, sinon il recrée les releases supprimées. Rien n'est à reprendre ensuite : `env/demo` reste la seule source de vérité.
 - **ZAP de fin de sprint** : exige une session ouverte et l'ALB temporairement ouvert ; planifié dans la session de fin de sprint.
 

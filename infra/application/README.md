@@ -8,6 +8,22 @@ Un seul chart pour les quatre services Go, le front et Keycloak ([D03](../../doc
 | `valeurs-aws.yaml`, `valeurs-k3d.yaml` | Domaine, sources de l'ALB, destinations de la base, TLS, accès AWS de la Place de marché |
 | `deploy/demo/empreintes.yaml` (branche `env/demo`) | `images.<service>` : seule source des images, par empreinte, écrite par le job de publication |
 
+## Valeurs
+
+| Clé | Rôle |
+|---|---|
+| `registreAttendu` | Préfixe imposé à toute image (`ghcr.io/qvl-collector/`) ; `up-flux.sh --images-locales` le remplace sur k3d |
+| `images.<service>` | Rempli par `deploy/demo/empreintes.yaml` d'`env/demo` (avec `source`, commit de `main` des images, sans effet sur le rendu) |
+| `exposition.sources` | Sources admises vers les NodePorts et mandataires de confiance de Keycloak (`KC_PROXY_TRUSTED_ADDRESSES`) ; vide : aucune entrée extérieure |
+| `base.destinations` | Pairs NetworkPolicy vers PostgreSQL ; vide refusé au rendu (sortie vers toute adresse) |
+| `base.autorites` | ConfigMap `ca.pem` du paquet d'autorités RDS, posé par `up-flux.sh` sur AWS |
+| `placeDeMarche.accesAws` | Seul pod à joindre l'IMDS (rôle du nœud) et HTTPS sortant, pour les photos (MS3, X16) ; étiquette `collector/acces-aws`, seule exception admise par `tools/sortie-sans-imds.jq` |
+| `placeDeMarche.rejeu.depuis` | Rend le Job de rejeu de l'outbox (MC9), lancé par l'exploitation |
+| `migrations.imageAttente` | Conteneur d'initialisation qui attend la base : une politique réseau n'admet un pod neuf qu'après quelques secondes (constaté sur k3d), et `goose` ne réessaie pas |
+| `<service>.nodePort` | Repris des sorties Terraform (`nodeport_front`, `nodeports_application`) par `up-flux.sh` sur AWS |
+
+AWS (`valeurs-aws.yaml`, `cidr_vpc` 10.30.0.0/16) : sources = sous-réseaux publics de l'ALB 10.30.0.0/24 et 10.30.1.0/24, base = sous-réseaux privés 10.30.16.0/20 et 10.30.32.0/20, `accesAws` actif, descente HPA en 60 s (X7 bis de XP01 : 10 min 16 s avec 300 s). k3d (`valeurs-k3d.yaml`) : domaine `collector.localhost`, base locale sans TLS, une réplique par service, IMDS absente.
+
 ## Contrat avec `tools/up-flux.sh`
 
 Avant le chart : namespaces, refus par défaut et DNS ([infra/k8s/application.yaml](../k8s/application.yaml)), bases amorcées, puis un Secret par usage, dans le seul namespace qui le monte ([secrets-autorises.txt](../k8s/secrets-autorises.txt)) :

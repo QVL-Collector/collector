@@ -1,6 +1,3 @@
-# EKS (couche éphémère, cidr_vpc 10.30.0.0/16 de infra/ephemere) : seuls ces écarts séparent AWS de k3d (X2).
-# Sous-réseaux publics (ALB) 10.30.0.0/24 et 10.30.1.0/24 ; privés (nœuds, pods, RDS) 10.30.16.0/20 et 10.30.32.0/20.
-
 domaine: collector.qvl-project.com
 
 exposition:
