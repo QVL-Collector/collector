@@ -55,9 +55,8 @@ func (h handlers) listCatalogue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handlers) publishedArticle(w http.ResponseWriter, r *http.Request) {
-	id, err := annonces.ParseArticleID(r.PathValue("id"))
-	if err != nil {
-		problem.Write(w, problem.NotFound())
+	id, found := articleIDOf(w, r)
+	if !found {
 		return
 	}
 	article, err := h.service.PublishedArticle(r.Context(), id)

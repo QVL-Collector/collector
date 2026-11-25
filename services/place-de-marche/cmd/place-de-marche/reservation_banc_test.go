@@ -244,6 +244,7 @@ func lancerTransactions(t *testing.T, binaire string, base basePostgreSQL, kc *f
 
 func lancerPlaceDeMarcheSurKeycloak(t *testing.T, canal *canalDeTest, adresseBase string, kc *fournisseurKeycloak, duree, plafond time.Duration) (string, string, *journalPartage) {
 	t.Helper()
+	avecLesVariables(t, nouveauBucket(t).variables())
 	api, gestion, interne := adresseLibre(t), adresseLibre(t), adresseLibre(t)
 	variables := canal.environnementDeService(identiteMarche)
 	variables["BASE_DE_DONNEES_URL"] = adresseBase
@@ -308,7 +309,7 @@ func demarrerBancReservationAvec(t *testing.T, duree, plafond time.Duration) *ba
 	lancerControle(t, construireControle(t), canal)
 	relais := demarrerRelaisEspion(t, interne)
 	b := &bancReservation{
-		environnement: &environnement{adresse: public, client: &http.Client{Timeout: 10 * time.Second}},
+		environnement: &environnement{adresse: public, client: &http.Client{Timeout: 10 * time.Second}, avecPhotos: true},
 		kc:            kc,
 		marche:        marche,
 		transactions:  transactions,

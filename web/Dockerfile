@@ -7,6 +7,7 @@ RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.29.1-alpine
 ENV COLLECTOR_IDP_ORIGIN=https://auth.collector.qvl-project.com
+ENV COLLECTOR_PHOTOS_ORIGIN="'self'"
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/security-headers.inc.template /etc/nginx/templates/security-headers.inc.template
 COPY --from=build /app/dist /usr/share/nginx/html

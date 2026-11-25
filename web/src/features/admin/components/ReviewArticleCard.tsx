@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import { CardTitle } from '../../../ui/components/CardTitle';
 import { FactItem } from '../../../ui/components/FactItem';
 import { FactList } from '../../../ui/components/FactList';
+import { ReviewArticlePhotos } from '../../photos/components/ReviewArticlePhotos';
 import type { ReviewArticle } from '../domain/reviewArticle';
 import { useReviewArticleCard } from '../hooks/useReviewArticleCard';
 import type { DecisionListener } from '../hooks/useReviewDecision';
@@ -40,6 +41,7 @@ export function ReviewArticleCard({ article, onDecided }: ReviewArticleCardProps
           </Typography>
         </Stack>
         <CardTitle level="h3">{labels.title}</CardTitle>
+        <ReviewArticlePhotos articleId={article.id} articleTitle={labels.title} />
         <FactList>
           {facts.map(({ label, value }) => (
             <FactItem key={label} label={label}>

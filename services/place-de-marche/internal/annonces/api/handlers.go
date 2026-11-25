@@ -69,11 +69,12 @@ type RateLimiter interface {
 
 type handlers struct {
 	service ArticleService
+	photos  PhotoRoutes
 	logger  *slog.Logger
 }
 
-func Register(mux *http.ServeMux, service ArticleService, authenticator Authenticator, limiter RateLimiter, logger *slog.Logger) {
-	h := handlers{service: service, logger: logger}
+func Register(mux *http.ServeMux, service ArticleService, photos PhotoRoutes, authenticator Authenticator, limiter RateLimiter, logger *slog.Logger) {
+	h := handlers{service: service, photos: photos, logger: logger}
 	restrictedTo := func(role string) func(http.HandlerFunc) http.Handler {
 		return func(handler http.HandlerFunc) http.Handler {
 			return authenticator.Authenticate(logger, token.RequireRole(role, handler))
@@ -92,7 +93,12 @@ func Register(mux *http.ServeMux, service ArticleService, authenticator Authenti
 	mux.Handle("GET "+sellerArticles+"/{id}", sellerOnly(h.ownArticle))
 	mux.Handle("PUT "+sellerArticles+"/{id}", throttledSellerOnly(h.updateDraft))
 	mux.Handle("POST "+sellerArticles+"/{id}/soumission", throttledSellerOnly(h.submit))
+	mux.HandleFunc("GET "+publishedArticles+"/{id}/photos", h.publishedPhotos)
+	mux.Handle("GET "+sellerArticles+"/{id}/photos", sellerOnly(h.ownPhotos))
+	mux.Handle("POST "+sellerArticles+"/{id}/photos", throttledSellerOnly(h.addPhoto))
+	mux.Handle("DELETE "+sellerArticles+"/{id}/photos/{"+photoParameter+"}", sellerOnly(h.removePhoto))
 	mux.Handle("GET "+adminArticles, adminOnly(h.listArticlesToVerify))
+	mux.Handle("GET "+adminArticles+"/{id}/photos", adminOnly(h.articlePhotos))
 	mux.Handle("POST "+adminArticles+"/{id}/decision", adminOnly(h.decide))
 	mux.HandleFunc("/", httpserver.NotFound)
 }
@@ -224,9 +230,8 @@ func (h handlers) decide(w http.ResponseWriter, r *http.Request) {
 	if !authenticated {
 		return
 	}
-	id, err := annonces.ParseArticleID(r.PathValue("id"))
-	if err != nil {
-		problem.Write(w, problem.NotFound())
+	id, found := articleIDOf(w, r)
+	if !found {
 		return
 	}
 	var payload decisionPayload
@@ -285,9 +290,8 @@ func ownedArticleOf(w http.ResponseWriter, r *http.Request) (annonces.SellerID, 
 	if !authenticated {
 		return annonces.SellerID{}, annonces.ArticleID{}, false
 	}
-	id, err := annonces.ParseArticleID(r.PathValue("id"))
-	if err != nil {
-		problem.Write(w, problem.NotFound())
+	id, found := articleIDOf(w, r)
+	if !found {
 		return annonces.SellerID{}, annonces.ArticleID{}, false
 	}
 	return seller, id, true
@@ -329,6 +333,23 @@ func (h handlers) writeError(w http.ResponseWriter, r *http.Request, err error) 
 		problem.Write(w, reservedOrSold)
 	case errors.Is(err, annonces.ErrArticleNotToVerify):
 		problem.Write(w, notToVerify)
+	default:
+		h.writePhotoError(w, r, err)
+	}
+}
+
+func (h handlers) writePhotoError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, annonces.ErrPhotoNotFound):
+		problem.Write(w, problem.NotFound())
+	case errors.Is(err, annonces.ErrPhotoLimitReached):
+		problem.Write(w, photoLimitReached)
+	case errors.Is(err, annonces.ErrUnsupportedPhoto):
+		problem.Write(w, unsupportedPhoto)
+	case errors.Is(err, annonces.ErrPhotoTooManyPixels):
+		problem.Write(w, excessiveDimensions)
+	case errors.Is(err, annonces.ErrPhotoProcessingUnavailable):
+		problem.Write(w, problem.Unavailable())
 	default:
 		h.logger.ErrorContext(r.Context(), "erreur interne", slog.String("event", "annonces.erreur_interne"), slog.Any("erreur", err))
 		problem.Write(w, problem.Internal())

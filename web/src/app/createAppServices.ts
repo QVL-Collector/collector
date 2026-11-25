@@ -9,6 +9,8 @@ import { createNotificationsClient } from '../features/notifications/api/createN
 import type { NotificationsClient } from '../features/notifications/domain/sellerNotification';
 import { createOrdersClient } from '../features/orders/api/createOrdersClient';
 import type { OrdersClient } from '../features/orders/domain/order';
+import { createPhotosClient } from '../features/photos/api/createPhotosClient';
+import { defaultPhotoLimits, type PhotosClient } from '../features/photos/domain/articlePhoto';
 import { createSellerClient } from '../features/seller/api/createSellerClient';
 import type { SellerClient } from '../features/seller/domain/sellerArticle';
 
@@ -18,12 +20,13 @@ export type AppServices = {
   readonly adminClient?: AdminClient;
   readonly notificationsClient?: NotificationsClient;
   readonly ordersClient?: OrdersClient;
+  readonly photosClient?: PhotosClient;
   readonly authSession?: AuthSession;
 };
 
 export type AppServicesConfig = Pick<
   RuntimeConfig,
-  'marketplaceApiUrl' | 'interactionsApiUrl' | 'transactionsApiUrl' | 'catalogue'
+  'marketplaceApiUrl' | 'interactionsApiUrl' | 'transactionsApiUrl' | 'catalogue' | 'photos'
 >;
 
 export async function createAppServices(
@@ -33,20 +36,28 @@ export async function createAppServices(
   const httpFor = (baseUrl: string) =>
     createHttpClient({ baseUrl, getAccessToken: session.getAccessToken });
   const marketplaceHttp = httpFor(config.marketplaceApiUrl);
-  const [catalogueClient, sellerClient, adminClient, notificationsClient, ordersClient] =
-    await Promise.all([
-      createCatalogueClient(config.catalogue, marketplaceHttp),
-      createSellerClient(config.catalogue, marketplaceHttp),
-      createAdminClient(config.catalogue, marketplaceHttp),
-      createNotificationsClient(config.catalogue, httpFor(config.interactionsApiUrl)),
-      createOrdersClient(config.catalogue, httpFor(config.transactionsApiUrl)),
-    ]);
+  const [
+    catalogueClient,
+    sellerClient,
+    adminClient,
+    notificationsClient,
+    ordersClient,
+    photosClient,
+  ] = await Promise.all([
+    createCatalogueClient(config.catalogue, marketplaceHttp),
+    createSellerClient(config.catalogue, marketplaceHttp),
+    createAdminClient(config.catalogue, marketplaceHttp),
+    createNotificationsClient(config.catalogue, httpFor(config.interactionsApiUrl)),
+    createOrdersClient(config.catalogue, httpFor(config.transactionsApiUrl)),
+    createPhotosClient(config.catalogue, marketplaceHttp, config.photos ?? defaultPhotoLimits),
+  ]);
   return {
     catalogueClient,
     sellerClient,
     adminClient,
     notificationsClient,
     ordersClient,
+    photosClient,
     authSession: session,
   };
 }

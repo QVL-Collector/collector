@@ -34,11 +34,12 @@ type echange struct {
 }
 
 type environnement struct {
-	adresse  string
-	client   *http.Client
-	jetons   *fabriqueDeJetons
-	mu       sync.Mutex
-	echanges []echange
+	adresse    string
+	client     *http.Client
+	jetons     *fabriqueDeJetons
+	avecPhotos bool
+	mu         sync.Mutex
+	echanges   []echange
 }
 
 type reponse struct {
@@ -48,8 +49,9 @@ type reponse struct {
 }
 
 type envoi struct {
-	corps       []byte
-	typeContenu string
+	corps        []byte
+	typeContenu  string
+	nomDeFichier string
 }
 
 type option func(*envoi)
@@ -153,7 +155,7 @@ func demarrerAvecLimiteur(t *testing.T, service api.ArticleService, journal *slo
 	if err != nil {
 		t.Fatalf("vérificateur de jetons : %v", err)
 	}
-	serveur := httptest.NewServer(publicHandler(journal, service, verificateur, limiteur))
+	serveur := httptest.NewServer(publicHandler(journal, service, api.PhotoRoutes{}, verificateur, limiteur))
 	t.Cleanup(serveur.Close)
 	return emetteur.environnementSur(t, serveur.URL, serveur.Client())
 }
@@ -199,6 +201,9 @@ func (e *environnement) envoyer(t *testing.T, methode, chemin, jeton string, opt
 	}
 	if jeton != "" {
 		requete.Header.Set("Authorization", jeton)
+	}
+	if parametres.nomDeFichier != "" {
+		requete.Header.Set("Content-Disposition", `attachment; filename="`+parametres.nomDeFichier+`"`)
 	}
 	resultat := e.executer(t, requete)
 	requete.Body = io.NopCloser(bytes.NewReader(parametres.corps))

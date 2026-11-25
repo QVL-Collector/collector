@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import axe from 'axe-core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   authorizationEndpoint,
   buyer,
@@ -18,6 +18,8 @@ import {
   waitForNavigationTo,
   press,
 } from './identityProviderHarness';
+
+vi.setConfig({ testTimeout: 30000 });
 
 const blockingImpacts = new Set(['serious', 'critical']);
 

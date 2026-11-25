@@ -419,6 +419,54 @@ export const en: Translation = {
       retry: 'Try again',
     },
   },
+  photos: {
+    unavailable: 'Photo temporarily unavailable',
+    untitledAlt: 'Photo of the item',
+    galleryTitle: 'Item photos',
+    seller: {
+      title: 'Photos',
+      hint_one:
+        'Add {{count}} photo of the item, as JPEG or PNG: it is required for publication. Location data is removed before anything is shown.',
+      hint_other:
+        'Add up to {{count}} photos of the item, as JPEG or PNG: at least one is required for publication. Location data is removed before anything is shown.',
+      readOnly: 'Photos can only be changed on a draft or a refused listing.',
+      limitReached_one: 'One photo per item: remove the current photo to replace it.',
+      limitReached_other: '{{count}} photos at most per item: remove one to add another.',
+      remove: 'Remove photo',
+      retry: 'Try again',
+      loadFailed: 'Photos are temporarily unavailable.',
+    },
+    upload: {
+      dropTitle: 'Drag and drop a photo here',
+      dropDescription:
+        'Or choose a file. JPEG or PNG, at most {{maxSize}} MB and {{maxPixels}} megapixels.',
+      choose: 'Choose a photo',
+      checking: 'Checking the file…',
+      progress: 'Uploading photo: {{percent}}%',
+      previewAlt: 'Preview of the photo being uploaded',
+      cancel: 'Cancel upload',
+    },
+    announcements: {
+      uploading: 'Uploading photo.',
+      added: 'Photo added.',
+      removed: 'Photo removed.',
+    },
+    failures: {
+      unsupportedType:
+        'This file is not a valid JPEG or PNG image. GIF, WebP and SVG files are not accepted.',
+      tooLarge: 'File too large: {{max}} MB at most.',
+      tooManyPixels:
+        'Image too large: {{max}} megapixels at most. Reduce its dimensions, then try again.',
+      limitReached_one: 'This item already has its photo: remove it to replace it.',
+      limitReached_other: 'This item already has {{count}} photos, the maximum allowed.',
+      reserved: 'This item is reserved or sold: its photos can no longer be changed.',
+      locked: 'This item’s photos cannot be changed in its current state.',
+      rateLimited: 'Too many uploads in a short time. Wait a moment, then try again.',
+      busy: 'Photo processing is saturated. Try again in a few moments.',
+      notFound: 'This item or photo no longer exists.',
+      unavailable: 'Upload failed. Check your connection, then try again.',
+    },
+  },
   control: {
     reasons: {
       annonce_incomplete: 'Incomplete listing',

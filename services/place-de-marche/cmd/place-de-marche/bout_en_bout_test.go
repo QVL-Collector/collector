@@ -19,7 +19,7 @@ const (
 	delaiDePublication    = 10 * time.Second
 	delaiDeTraitement     = 20 * time.Second
 	categorieNonReconnue  = "timbres"
-	versionDesReglesV3    = 3
+	versionDesReglesV4    = 4
 	motifPrixAConfirmer   = "prix_a_confirmer"
 	motifVendeurAVerifier = "vendeur_a_verifier"
 	motifCoordonnees      = "coordonnees_detectees"
@@ -216,7 +216,7 @@ func TestUS013BoutEnBoutPlaceDeMarcheEtControle(t *testing.T) {
 	t.Run("US-018 AC1 AC4 annonce avec téléphone refusée pour coordonnées puis publiée une fois corrigée", b.us018TelephoneRefusePuisCorrigePublie)
 	t.Run("US-019 AC1 AC4 prix hors de la plage de la catégorie à vérifier pour prix à confirmer, sans divulguer la plage", b.us019PrixHorsPlageAVerifier)
 	t.Run("US-019 AC3 vendeur récent au-dessus du seuil de vigilance à vérifier", b.us019VendeurRecentAuDessusDeLaVigilanceAVerifier)
-	t.Run("AC5 AC8 US-018 AC5 US-019 chaque résultat porte la version des règles v3 et respecte le contrat v1", b.ac5ac8ResultatsEnVersionDeReglesV3)
+	t.Run("AC5 AC8 US-018 AC5 US-019 US-020 AC2 chaque résultat porte la version des règles v4 et respecte le contrat v1", b.ac5ac8ResultatsEnVersionDeReglesV4)
 	t.Run("AC6 résultat livré deux fois ou de révision antérieure sans effet", b.ac6DoublonEtRevisionAnterieureSansEffet)
 	t.Run("AC9 soumission par un autre vendeur introuvable", b.ac9AutreVendeurIntrouvable)
 }
@@ -376,19 +376,19 @@ func (b *bancComplet) ac4CategorieInconnueAVerifier(t *testing.T) {
 	exigerEtat(t, b.relire(t, b.jeton, soumis.ID), etatAVerifier, motifCategorieInconnu)
 }
 
-func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV3(t *testing.T) {
+func (b *bancComplet) ac5ac8ResultatsEnVersionDeReglesV4(t *testing.T) {
 	b.releverLesResultats(t)
 	if len(b.captures) == 0 {
 		t.Fatal("aucun résultat capturé")
 	}
 	for id, captures := range b.captures {
 		for _, c := range captures {
-			if c.donnees.RulesVersion != versionDesReglesV3 {
+			if c.donnees.RulesVersion != versionDesReglesV4 {
 				t.Errorf("résultat de %s en version de règles %d", id, c.donnees.RulesVersion)
 			}
 		}
 		for _, r := range b.resultatsEnregistres(t, id) {
-			if r.version != versionDesReglesV3 {
+			if r.version != versionDesReglesV4 {
 				t.Errorf("résultat enregistré de %s en version de règles %d", id, r.version)
 			}
 		}

@@ -43,13 +43,23 @@ export type FieldError = { readonly champ: string; readonly code: string };
 
 export type ScriptedAnswer = { readonly status: number; readonly body: unknown };
 
+export type StoredPhoto = {
+  readonly id: string;
+  readonly url: string;
+  readonly expireLe: string;
+  readonly largeur: number;
+  readonly hauteur: number;
+};
+
 export type FakeMarketplace = {
   readonly articles: Map<string, StoredArticle>;
+  readonly photos: Map<string, StoredPhoto[]>;
   readonly requests: ApiRequest[];
   categories: Category[];
   categoriesAvailable: boolean;
   readonly scriptedWrites: ScriptedAnswer[];
   readonly scriptedReads: ScriptedAnswer[];
+  readonly scriptedPhotoAnswers: ScriptedAnswer[];
 };
 
 export const categories: Category[] = [
@@ -60,6 +70,7 @@ export const categories: Category[] = [
 
 const vendorArticlesPath = '/marche/v1/vendeur/articles';
 const categoriesPath = '/marche/v1/categories';
+const photoPath = /^\/marche\/v1\/vendeur\/articles\/([^/]+)\/photos(?:\/([^/]+))?$/;
 const statesReviewedOnEdit: ReadonlySet<ArticleState> = new Set([
   'publie',
   'en_controle',
@@ -125,6 +136,9 @@ export function notSubmittable(): ScriptedAnswer {
 
 function json(answer: ScriptedAnswer): Response {
   const isProblem = answer.status >= 400;
+  if (answer.status === 204) {
+    return new Response(null, { status: 204 });
+  }
   return new Response(JSON.stringify(answer.body), {
     status: answer.status,
     headers: {
@@ -249,6 +263,34 @@ function submit(
   return { status: 202, body: submitted };
 }
 
+function photosOf(marketplace: FakeMarketplace, id: string): StoredPhoto[] {
+  return marketplace.photos.get(id) ?? [];
+}
+
+function routePhotos(
+  marketplace: FakeMarketplace,
+  request: ApiRequest,
+  id: string,
+  photoId: string | undefined,
+): ScriptedAnswer {
+  if (!marketplace.articles.has(id)) {
+    return problem(404, 'about:blank');
+  }
+  const scripted = marketplace.scriptedPhotoAnswers.shift();
+  if (scripted !== undefined) {
+    return scripted;
+  }
+  if (request.method === 'GET' && photoId === undefined) {
+    return { status: 200, body: { elements: photosOf(marketplace, id) } };
+  }
+  const remaining = photosOf(marketplace, id).filter((photo) => photo.id !== photoId);
+  if (request.method !== 'DELETE' || remaining.length === photosOf(marketplace, id).length) {
+    return problem(404, 'about:blank');
+  }
+  marketplace.photos.set(id, remaining);
+  return { status: 204, body: null };
+}
+
 function list(marketplace: FakeMarketplace, url: URL): ScriptedAnswer {
   const page = Number(url.searchParams.get('page') ?? '1');
   const size = Number(url.searchParams.get('taille') ?? '20');
@@ -272,6 +314,10 @@ function route(marketplace: FakeMarketplace, request: ApiRequest): ScriptedAnswe
     return marketplace.categoriesAvailable
       ? { status: 200, body: { elements: marketplace.categories } }
       : problem(500, 'about:blank');
+  }
+  const photoRoute = photoPath.exec(url.pathname);
+  if (photoRoute !== null) {
+    return routePhotos(marketplace, request, photoRoute[1] ?? '', photoRoute[2]);
   }
   const isWrite = request.method !== 'GET';
   const scripted = isWrite ? marketplace.scriptedWrites.shift() : marketplace.scriptedReads.shift();
@@ -304,11 +350,13 @@ function isSellerApi(input: RequestInfo | URL): boolean {
 beforeEach(() => {
   const marketplace: FakeMarketplace = {
     articles: new Map(),
+    photos: new Map(),
     requests: [],
     categories: [...categories],
     categoriesAvailable: true,
     scriptedWrites: [],
     scriptedReads: [],
+    scriptedPhotoAnswers: [],
   };
   currentMarketplace = marketplace;
   const upstream = globalThis.fetch;

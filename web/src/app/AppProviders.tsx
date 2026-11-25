@@ -6,6 +6,7 @@ import { AdminClientProvider } from '../features/admin/api/AdminClientContext';
 import { CatalogueClientProvider } from '../features/catalogue/api/CatalogueClientContext';
 import { NotificationsClientProvider } from '../features/notifications/api/NotificationsClientContext';
 import { OrdersClientProvider } from '../features/orders/api/OrdersClientContext';
+import { PhotosClientProvider } from '../features/photos/api/PhotosClientContext';
 import { SellerClientProvider } from '../features/seller/api/SellerClientContext';
 import { AppThemeRoot } from './AppThemeRoot';
 import type { AppServices } from './createAppServices';
@@ -26,7 +27,9 @@ export function AppProviders({ services, queryClient, children }: AppProvidersPr
               <AdminClientProvider client={services.adminClient ?? null}>
                 <NotificationsClientProvider client={services.notificationsClient ?? null}>
                   <OrdersClientProvider client={services.ordersClient ?? null}>
-                    {children}
+                    <PhotosClientProvider client={services.photosClient ?? null}>
+                      {children}
+                    </PhotosClientProvider>
                   </OrdersClientProvider>
                 </NotificationsClientProvider>
               </AdminClientProvider>

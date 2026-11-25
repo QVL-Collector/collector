@@ -1,4 +1,5 @@
 import { keyframes, type SxProps, type Theme } from '@mui/material/styles';
+import { springEasing } from './springEasing';
 
 const rise = keyframes`
   from {
@@ -11,7 +12,6 @@ const rise = keyframes`
   }
 `;
 
-const springEasing = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const durationMs = 520;
 const staggerMs = 45;
 const maxStaggeredItems = 12;

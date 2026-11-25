@@ -1,5 +1,7 @@
 import { parseOidcConfig, type OidcConfig } from '../auth/oidcConfig';
+import type { PhotoLimits } from '../features/photos/domain/articlePhoto';
 import { expectOneOf, expectRecord, expectString, InvalidPayloadError } from '../shared/payload';
+import { parsePhotoLimits } from './photoLimitsConfig';
 
 export const catalogueSources = ['api', 'demo'] as const;
 export type CatalogueSource = (typeof catalogueSources)[number];
@@ -18,6 +20,7 @@ export type RuntimeConfig = {
   readonly transactionsApiUrl: string;
   readonly catalogue: CatalogueConfig;
   readonly oidc: OidcConfig;
+  readonly photos?: PhotoLimits;
 };
 
 export const defaultInteractionsApiUrl = '/interactions';
@@ -65,5 +68,6 @@ export function parseRuntimeConfig(value: unknown): RuntimeConfig {
     ),
     catalogue: parseCatalogueConfig(root.catalogue),
     oidc: parseOidcConfig(root.oidc),
+    photos: parsePhotoLimits(root.photos),
   };
 }

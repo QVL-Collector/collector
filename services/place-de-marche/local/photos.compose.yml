@@ -1,0 +1,28 @@
+name: collector-photos
+
+services:
+  s3:
+    image: "${SEAWEEDFS_IMAGE:-chrislusf/seaweedfs:3.80}"
+    command: ["server", "-dir=/data", "-ip=s3", "-ip.bind=0.0.0.0", "-s3", "-s3.port=8333"]
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - donnees:/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status && wget -q -O /dev/null http://127.0.0.1:8333/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  bucket:
+    image: "${SEAWEEDFS_IMAGE:-chrislusf/seaweedfs:3.80}"
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c", "echo 's3.bucket.create -name ${PHOTOS_BUCKET:-collector-photos-local}' | weed shell -master=s3:9333"]
+    restart: "no"
+
+volumes:
+  donnees:

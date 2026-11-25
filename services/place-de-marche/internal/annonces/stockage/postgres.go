@@ -278,10 +278,15 @@ func (s *Store) requestReview(ctx context.Context, tx pgx.Tx, article annonces.A
 	if err != nil {
 		return err
 	}
+	photos, err := countPhotos(ctx, tx, article.ID)
+	if err != nil {
+		return err
+	}
 	event, err := s.requests.Encode(ctx, annonces.ReviewRequest{
 		Article:     article,
 		Seller:      seller,
 		SubmittedAt: article.UpdatedAt,
+		PhotoCount:  photos,
 	})
 	if err != nil {
 		return err

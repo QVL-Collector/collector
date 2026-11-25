@@ -37,6 +37,7 @@ func (e *environnement) soumettre(t *testing.T, jeton, id string, revision int) 
 func (e *environnement) soumettreAvecSucces(t *testing.T, jeton string, article articleRecu) articleRecu {
 	t.Helper()
 	var soumis articleRecu
+	e.assurerUnePhoto(t, jeton, article.ID)
 	e.soumettre(t, jeton, article.ID, article.Revision).exiger(t, http.StatusAccepted).lire(t, &soumis)
 	if soumis.Etat != etatEnControle || soumis.Revision != article.Revision+1 || soumis.Motif != nil {
 		t.Fatalf("après soumission : état %q, révision %d, motif %v ; attendu en_controle, révision %d, sans motif",
