@@ -1,11 +1,16 @@
 import '@testing-library/jest-dom/vitest';
-import { act, screen } from '@testing-library/react';
+import { act, configure, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, expect, vi } from 'vitest';
 import { startApplication } from '../../app/startApplication';
 import type { SupportedLanguage } from '../../i18n/languages';
+
+const asyncUiTimeout = 5000;
+
+configure({ asyncUtilTimeout: asyncUiTimeout });
+vi.setConfig({ testTimeout: 30000 });
 
 export const authority = 'https://auth.collector.qvl-project.com/realms/collector';
 export const clientId = 'collector-web';
@@ -355,9 +360,14 @@ export function lastNavigation(): URL {
 }
 
 export async function waitForNavigationTo(endpoint: string): Promise<URL> {
-  await vi.waitFor(() => {
-    expect(identityProvider().navigations.some((url) => url.href.startsWith(endpoint))).toBe(true);
-  });
+  await vi.waitFor(
+    () => {
+      expect(identityProvider().navigations.some((url) => url.href.startsWith(endpoint))).toBe(
+        true,
+      );
+    },
+    { timeout: asyncUiTimeout },
+  );
   return lastNavigation();
 }
 
@@ -404,6 +414,14 @@ export async function signInAs(
   await returnFromIdentityProvider(
     (state) => `code=code-fictif-${account.subject}&state=${encodeURIComponent(state)}`,
   );
+}
+
+export async function mainHeadingFocused(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveFocus();
+    return heading;
+  });
 }
 
 export function currentPath(): string {

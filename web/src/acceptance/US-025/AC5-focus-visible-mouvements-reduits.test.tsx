@@ -1,7 +1,12 @@
 import { screen, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { openCollector, sellerA, signInAs } from '../US-008/identityProviderHarness';
+import {
+  mainHeadingFocused,
+  openCollector,
+  sellerA,
+  signInAs,
+} from '../US-008/identityProviderHarness';
 
 type MotionPreference = 'reduce' | 'no-preference';
 
@@ -124,6 +129,7 @@ describe('US-025-AC5 focus visible au clavier, mouvements réduits compris', () 
     const user = userEvent.setup();
     preferMotion('reduce');
     await signInAs(sellerA);
+    await mainHeadingFocused();
     const signOut = await within(screen.getByRole('banner')).findByRole('button', {
       name: 'Se déconnecter',
     });

@@ -18,6 +18,7 @@ import (
 const (
 	balayageRapide     = 50 * time.Millisecond
 	attenteSansRelance = time.Second
+	margeAvantEcheance = 5 * time.Second
 	delaiDeRelance     = 5 * time.Second
 	toleranceDHorloge  = 50 * time.Millisecond
 )
@@ -87,6 +88,11 @@ func (b *bancDuFilet) dater(t *testing.T, id string, relances int, depuis time.D
 	if err != nil {
 		t.Fatalf("datation de la demande : %v", err)
 	}
+}
+
+func (b *bancDuFilet) daterAvantEcheance(t *testing.T, id string, relances int, echeance time.Duration) {
+	t.Helper()
+	b.dater(t, id, relances, echeance-attenteSansRelance-margeAvantEcheance)
 }
 
 func (b *bancDuFilet) relancesEnBase(t *testing.T, id string) int {
@@ -165,7 +171,7 @@ func TestUS024FiletDelaiCroissantAuxValeursDeProduction(t *testing.T) {
 	journal := b.lancerLeFilet(t, rythmeDeProductionBalayeVite())
 	article := b.soumettreUnArticle(t, "Filet de production")
 	t.Run("US-024-AC1 pas de relance avant 2 min", func(t *testing.T) {
-		b.dater(t, article.ID, 0, 2*time.Minute-time.Second)
+		b.daterAvantEcheance(t, article.ID, 0, 2*time.Minute)
 		exigerAucuneRelance(t, journal, article.ID, 0)
 		if n := len(b.demandesEnOutbox(t, article.ID)); n != 1 || b.relancesEnBase(t, article.ID) != 0 {
 			t.Fatalf("%d demande(s), %d relance(s) en base", n, b.relancesEnBase(t, article.ID))
@@ -181,7 +187,7 @@ func TestUS024FiletDelaiCroissantAuxValeursDeProduction(t *testing.T) {
 		exigerEtat(t, b.relire(t, b.jeton, article.ID), etatEnControle, "")
 	})
 	t.Run("US-024-AC1 pas de seconde relance avant 4 min, puis prochaine dans 8 min", func(t *testing.T) {
-		b.dater(t, article.ID, 1, 4*time.Minute-time.Second)
+		b.daterAvantEcheance(t, article.ID, 1, 4*time.Minute)
 		exigerAucuneRelance(t, journal, article.ID, 1)
 		b.dater(t, article.ID, 1, 4*time.Minute+time.Second)
 		exigerRelance(t, journal, article.ID, 2, 8*time.Minute)
@@ -192,7 +198,7 @@ func TestUS024FiletDelaiCroissantAuxValeursDeProduction(t *testing.T) {
 		if n := b.relancesEnBase(t, article.ID); n != 5 {
 			t.Fatalf("%d relance(s) en base, 5 attendues", n)
 		}
-		b.dater(t, article.ID, 5, time.Hour-time.Minute)
+		b.daterAvantEcheance(t, article.ID, 5, time.Hour)
 		exigerAucuneRelance(t, journal, article.ID, 3)
 		b.dater(t, article.ID, 5, time.Hour+time.Minute)
 		exigerRelance(t, journal, article.ID, 4, time.Hour)

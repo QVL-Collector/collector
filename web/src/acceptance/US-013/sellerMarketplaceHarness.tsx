@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { beforeEach, expect, vi } from 'vitest';
 import type { SupportedLanguage } from '../../i18n/languages';
-import { sellerA, signInAs } from '../US-008/identityProviderHarness';
+import { mainHeadingFocused, sellerA, signInAs } from '../US-008/identityProviderHarness';
 
 export type ArticleState = 'brouillon' | 'en_controle' | 'publie' | 'refuse' | 'a_verifier';
 
@@ -363,6 +363,7 @@ export async function openAsSeller(
   language: SupportedLanguage = 'fr',
 ): Promise<void> {
   await signInAs(sellerA, path, language);
+  await mainHeadingFocused();
 }
 
 export async function type(element: HTMLElement, text: string): Promise<void> {

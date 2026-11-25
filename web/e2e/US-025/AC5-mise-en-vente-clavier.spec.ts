@@ -38,6 +38,7 @@ test.describe('US-025-AC5 parcours de mise en vente au clavier seul', () => {
     await tabulerJusqua(page, page.getByRole('textbox', { name: textes.champDescription }));
     await clavier.type('Peinte à la main, socle d’origine.');
     const categorie = page.getByRole('combobox', { name: textes.champCategorie });
+    await expect(categorie.getByRole('option', { name: 'Figurines' })).toBeAttached();
     await tabulerJusqua(page, categorie);
     await clavier.type('Figurines');
     await expect(categorie).toHaveValue('figurines');
