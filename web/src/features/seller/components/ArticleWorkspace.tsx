@@ -1,4 +1,5 @@
 import Stack from '@mui/material/Stack';
+import { SellerPhotoSection } from '../../photos/components/SellerPhotoSection';
 import type { SellerArticle } from '../domain/sellerArticle';
 import { useArticleWorkspace } from '../hooks/useArticleWorkspace';
 import { ArticleForm } from './ArticleForm';
@@ -11,7 +12,7 @@ type ArticleWorkspaceProps = {
 };
 
 export function ArticleWorkspace({ article, fetchLatest }: ArticleWorkspaceProps) {
-  const { status, editor, submission, categories, lockMessage, isSubmissionBlocked } =
+  const { status, editor, submission, categories, lockMessage, isSubmissionBlocked, photos } =
     useArticleWorkspace(article, fetchLatest);
   return (
     <Stack
@@ -36,8 +37,9 @@ export function ArticleWorkspace({ article, fetchLatest }: ArticleWorkspaceProps
           }
         />
       </Stack>
-      <Stack flexGrow={1} minWidth={0}>
+      <Stack flexGrow={1} minWidth={0} spacing={{ xs: 3, md: 4 }}>
         <ArticleForm editor={editor} categories={categories} />
+        <SellerPhotoSection {...photos} />
       </Stack>
     </Stack>
   );

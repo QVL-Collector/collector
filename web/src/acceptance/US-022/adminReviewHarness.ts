@@ -52,8 +52,17 @@ type Answer = { readonly status: number; readonly body: unknown };
 
 type Decision = { readonly revision?: number; readonly decision?: string; readonly motif?: string };
 
+export type ReviewPhoto = {
+  readonly id: string;
+  readonly url: string;
+  readonly expireLe: string;
+  readonly largeur: number;
+  readonly hauteur: number;
+};
+
 export type FakeAdministration = {
   readonly articles: Map<string, ArticleToReview>;
+  readonly photos: Map<string, ReviewPhoto[] | 'echec'>;
   readonly requests: AdminRequest[];
   readonly scriptedDecisions: Answer[];
 };
@@ -196,12 +205,25 @@ function decide(administration: FakeAdministration, id: string, decision: Decisi
   return { status: 200, body: asSellerArticle(decided) };
 }
 
+function reviewPhotos(administration: FakeAdministration, id: string): Answer {
+  const photos = administration.photos.get(id) ?? [];
+  if (!administration.articles.has(id)) {
+    return problem(404, 'about:blank');
+  }
+  return photos === 'echec'
+    ? problem(500, 'about:blank')
+    : { status: 200, body: { elements: photos } };
+}
+
 function route(administration: FakeAdministration, request: AdminRequest): Answer {
   const url = new URL(request.path, window.location.origin);
   if (url.pathname === adminArticlesPath && request.method === 'GET') {
     return list(administration, url);
   }
   const [id, action] = url.pathname.slice(adminArticlesPath.length + 1).split('/');
+  if (action === 'photos' && request.method === 'GET') {
+    return reviewPhotos(administration, id ?? '');
+  }
   if (action === 'decision' && request.method === 'POST') {
     return decide(administration, id ?? '', (request.body ?? {}) as Decision);
   }
@@ -238,6 +260,7 @@ function respond(answer: Answer): Response {
 beforeEach(() => {
   const administration: FakeAdministration = {
     articles: new Map(),
+    photos: new Map(),
     requests: [],
     scriptedDecisions: [],
   };
@@ -287,7 +310,21 @@ export function changeRevision(id: string): void {
 }
 
 export function listReads(): AdminRequest[] {
-  return administration().requests.filter((request) => request.method === 'GET');
+  return administration().requests.filter(
+    (request) =>
+      request.method === 'GET' &&
+      !new URL(request.path, window.location.origin).pathname.endsWith('/photos'),
+  );
+}
+
+export function photoReadsOf(id: string): AdminRequest[] {
+  return administration().requests.filter(
+    (request) => request.method === 'GET' && request.path === `${adminArticlesPath}/${id}/photos`,
+  );
+}
+
+export function givenReviewPhotos(id: string, photos: ReviewPhoto[] | 'echec'): void {
+  administration().photos.set(id, photos);
 }
 
 export function decisions(): AdminRequest[] {

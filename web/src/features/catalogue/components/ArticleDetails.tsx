@@ -1,4 +1,5 @@
 import Stack from '@mui/material/Stack';
+import { PublishedArticlePhotos } from '../../photos/components/PublishedArticlePhotos';
 import type { PublishedArticle } from '../domain/catalogue';
 import { usePublishedArticleSummary } from '../hooks/usePublishedArticleSummary';
 import { ArticleDescription } from './ArticleDescription';
@@ -26,7 +27,10 @@ export function ArticleDetails({ article, purchaseAction }: ArticleDetailsProps)
       >
         <ArticleSummaryCard summary={summary} action={purchaseAction(article)} />
       </Stack>
-      <ArticleDescription description={summary.description} />
+      <Stack spacing={{ xs: 3, md: 4 }} flex={1} minWidth={0}>
+        <PublishedArticlePhotos articleId={article.id} articleTitle={article.title} />
+        <ArticleDescription description={summary.description} />
+      </Stack>
     </Stack>
   );
 }

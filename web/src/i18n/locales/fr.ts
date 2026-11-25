@@ -423,6 +423,56 @@ export const fr = {
       retry: 'Réessayer',
     },
   },
+  photos: {
+    unavailable: 'Photo momentanément indisponible',
+    untitledAlt: 'Photo de l’article',
+    galleryTitle: 'Photos de l’article',
+    seller: {
+      title: 'Photos',
+      hint_one:
+        'Ajoutez {{count}} photo de l’objet, en JPEG ou PNG : elle est exigée pour la publication. Les données de localisation sont retirées avant toute diffusion.',
+      hint_other:
+        'Ajoutez jusqu’à {{count}} photos de l’objet, en JPEG ou PNG : au moins une est exigée pour la publication. Les données de localisation sont retirées avant toute diffusion.',
+      readOnly: 'Les photos ne se modifient que sur un brouillon ou une annonce refusée.',
+      limitReached_one:
+        'Une seule photo par article : retirez la photo actuelle pour la remplacer.',
+      limitReached_other:
+        '{{count}} photos au plus par article : retirez-en une pour en ajouter une autre.',
+      remove: 'Retirer la photo',
+      retry: 'Réessayer',
+      loadFailed: 'Les photos sont momentanément indisponibles.',
+    },
+    upload: {
+      dropTitle: 'Glissez-déposez une photo ici',
+      dropDescription:
+        'Ou choisissez un fichier. JPEG ou PNG, {{maxSize}} Mo et {{maxPixels}} mégapixels au plus.',
+      choose: 'Choisir une photo',
+      checking: 'Vérification du fichier…',
+      progress: 'Envoi de la photo : {{percent}} %',
+      previewAlt: 'Aperçu de la photo en cours d’envoi',
+      cancel: 'Annuler l’envoi',
+    },
+    announcements: {
+      uploading: 'Envoi de la photo en cours.',
+      added: 'Photo ajoutée.',
+      removed: 'Photo retirée.',
+    },
+    failures: {
+      unsupportedType:
+        'Ce fichier n’est pas une image JPEG ou PNG valide. Les formats GIF, WebP et SVG ne sont pas acceptés.',
+      tooLarge: 'Fichier trop lourd : {{max}} Mo au plus.',
+      tooManyPixels:
+        'Image trop grande : {{max}} mégapixels au plus. Réduisez ses dimensions, puis réessayez.',
+      limitReached_one: 'Cet article a déjà sa photo : retirez-la pour la remplacer.',
+      limitReached_other: 'Cet article a déjà {{count}} photos, le maximum autorisé.',
+      reserved: 'Cet article est réservé ou vendu : ses photos ne peuvent plus être modifiées.',
+      locked: 'Les photos de cet article ne sont pas modifiables dans son état actuel.',
+      rateLimited: 'Trop d’envois en peu de temps. Patientez un instant, puis réessayez.',
+      busy: 'Le traitement des photos est saturé. Réessayez dans quelques instants.',
+      notFound: 'Cet article ou cette photo n’existe plus.',
+      unavailable: 'L’envoi a échoué. Vérifiez votre connexion, puis réessayez.',
+    },
+  },
   control: {
     reasons: {
       annonce_incomplete: 'Annonce incomplète',

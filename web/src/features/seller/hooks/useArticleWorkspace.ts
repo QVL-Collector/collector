@@ -1,4 +1,5 @@
-import type { SellerArticle } from '../domain/sellerArticle';
+import type { SellerPhotoSectionOptions } from '../../photos/hooks/useSellerPhotoSection';
+import { acceptsSubmission, type SellerArticle } from '../domain/sellerArticle';
 import { useArticleEditor, type ArticleEditorModel } from './useArticleEditor';
 import { useArticleStatus, type ArticleStatus } from './useArticleStatus';
 import { useCategoryOptions, type CategoryOptions } from './useCategoryOptions';
@@ -13,6 +14,7 @@ export type ArticleWorkspaceModel = {
   readonly categories: CategoryOptions;
   readonly lockMessage: string | null;
   readonly isSubmissionBlocked: boolean;
+  readonly photos: SellerPhotoSectionOptions;
 };
 
 export function useArticleWorkspace(
@@ -32,5 +34,10 @@ export function useArticleWorkspace(
     categories,
     lockMessage: lockNotice.message,
     isSubmissionBlocked: editor.isDirty || editor.isSaving,
+    photos: {
+      articleId: article.id,
+      articleTitle: article.title,
+      canEdit: acceptsSubmission(article.state),
+    },
   };
 }

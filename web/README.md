@@ -48,6 +48,9 @@ Un composant ne contient que du JSX ; état, effets et appels vivent dans un hoo
 | `oidc.authority`         | URL de l'émetteur, ex. `https://auth.<domaine>/realms/collector`        | HTTPS obligatoire (HTTP admis sur `localhost` seulement), sans requête ni fragment |
 | `oidc.clientId`          | `collector-web`                                                         | Client public du realm                                                             |
 | `oidc.scope`             | portées séparées par une espace, `openid` obligatoire ; défaut `openid` | `profile` requis pour afficher le nom (AC1 de US-008)                              |
+| `photos.maxBytes`        | entier ≥ 1, défaut `5242880` (5 Mio)                                    | Pré-contrôle navigateur ; aligner sur `PHOTOS_TAILLE_MAX_OCTETS` du serveur        |
+| `photos.maxPixels`       | entier ≥ 1, défaut `16000000` (16 Mpx)                                  | Pré-contrôle navigateur ; aligner sur `PHOTOS_PIXELS_MAX` du serveur               |
+| `photos.maxPerArticle`   | entier de 1 à 10, défaut `1`                                            | Masque le dépôt une fois atteint ; aligner sur `PHOTOS_PAR_ARTICLE_MAX`            |
 
 Une configuration invalide affiche l'écran d'échec de démarrage. L'origine de `oidc.authority` doit être celle de `COLLECTOR_IDP_ORIGIN` (CSP).
 
@@ -60,7 +63,7 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, routes publiques sans
 - Filtre : liste native au clavier, libellé « Catégorie » ; un choix pousse une entrée d'historique (retour arrière vers le filtre précédent), revient à la page 1 et garde le focus sur la liste ; résultat annoncé dans la zone `role="status"`. Un identifiant hors motif du contrat est ignoré ; un 400 `categorie_inconnue` affiche « Cette catégorie n'existe pas » (US-023).
 - Fiche : description en texte brut (sauts de ligne conservés, aucun HTML interprété) ; un 404 affiche « Article introuvable » (tout autre échec : état d'erreur avec « Réessayer ») en `h1`, focus sur le titre. « Retour au catalogue » restaure le filtre et la page d'origine (état de navigation, US-023).
 - Démonstration : catégories tirées du jeu d'articles, 400 `categorie_inconnue` et 404 simulés ; une description contient du balisage.
-- Photos : hors périmètre tant qu'US-020 n'est pas livrée.
+- Photos (US-020) : `GET /v1/articles/{id}/photos` au-dessus de la description, texte alternatif = titre de l'article. Un échec ou un 404 masque simplement la galerie. Voir « Photos » ci-dessous.
 
 ## Espace vendeur (US-009, US-013)
 
@@ -83,6 +86,17 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, isolé dans `src/feat
 - Avant d'enregistrer, un avertissement (`Alert` en `role="note"`, relié au bouton par `aria-describedby`) annonce le retrait du catalogue (publié) ou la relance du contrôle sur la nouvelle version (en contrôle, à vérifier) ; le bouton devient « Enregistrer et renvoyer au contrôle » et le succès annonce le retour au contrôle.
 - Un résultat de contrôle portant sur une révision antérieure est sans effet (démonstration comprise).
 
+## Photos (US-020)
+
+Contrat : routes `…/photos` de `contracts/api/place-de-marche/v1.openapi.yaml`, isolées dans `src/features/photos/api/` (`photoPayload.ts` valide chaque `Photo` : `id`, `url` http(s), `expireLe`, `largeur`, `hauteur`). Le serveur fait foi pour toutes les limites ; celles du front ne servent qu'au pré-contrôle et aux messages (`photos.*` de `config.json`).
+
+- Dépôt (`/vendeur/articles/:id`, section « Photos », brouillon ou refusé seulement) : glisser-déposer ou bouton « Choisir une photo » (opérable au clavier, champ fichier non tabulable). Pré-contrôle local de l'en-tête : signature JPEG/PNG, taille, dimensions lues sans décodage (pixels et 65 535 px de côté). Envoi du fichier brut (`POST …/photos`, `Content-Type` détecté) par XHR pour la progression ; aperçu, barre de progression libellée, « Annuler l'envoi ».
+- Erreurs traduites : 415 type refusé, 413 trop lourd, 422 dimensions excessives, 409 plafond atteint / réservé / non modifiable, 429, 503 traitement saturé. Annonces en `role="status"` (envoi, ajout, retrait).
+- Retrait (`DELETE …/photos/{photoId}`) : focus ramené sur le titre « Photos ». Une fois le plafond atteint, le dépôt est remplacé par « retirez la photo actuelle pour la remplacer ».
+- Affichage : espace vendeur (`GET /v1/vendeur/articles/{id}/photos`), fiche publique, carte d'examen admin (`GET /v1/admin/articles/{id}/photos`). Texte alternatif : titre de l'article, « Photo de l'article » s'il est vide.
+- URL présignées : la liste est relue une minute avant le plus proche `expireLe` (au plus toutes les 5 s) ; l'image précédente reste affichée jusqu'au chargement de la nouvelle. Sur échec de chargement : une relecture, puis « Photo momentanément indisponible », sans boucle.
+- Démonstration : images générées (canvas, couleurs du thème) pour trois brouillons, deux articles à vérifier et tous les articles du catalogue ; dépôt simulé avec progression et mêmes erreurs que l'API.
+
 ## Notifications du vendeur (US-028)
 
 Contrat : `GET {interactionsApiUrl}/v1/notifications?page=1&taille=20` (jeton du vendeur, audience `interactions`), réponse `{ elements, page, taille, total }`, élément `{ id, articleId, revision, issue, motif, decideLe }`. Isolé dans `src/features/notifications/api/` (`notificationPayload.ts` valide chaque réponse).
@@ -96,7 +110,7 @@ Contrat : `GET {interactionsApiUrl}/v1/notifications?page=1&taille=20` (jeton du
 
 Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, tag Administration, isolé dans `src/features/admin/api/` (`reviewArticlePayload.ts` valide chaque réponse).
 
-- `/admin` (rôle `admin`) : « Articles à vérifier » (`GET /v1/admin/articles`), contenu de la révision examinée, motif du contrôle traduit et révision.
+- `/admin` (rôle `admin`) : « Articles à vérifier » (`GET /v1/admin/articles`), contenu de la révision examinée, motif du contrôle traduit et révision ; photo de l'article sous le titre (`GET /v1/admin/articles/{id}/photos`, US-020), masquée si absente ou en échec.
 - « Publier » ou « Refuser » (`POST /v1/admin/articles/{id}/decision`, révision examinée envoyée). Refuser ouvre une boîte de dialogue : motif choisi dans la liste fermée (`src/shared/articleReason.ts`), puis « Confirmer le refus ». L'article quitte la liste, la décision est annoncée en `role="status"` et le focus revient sur le titre de la liste.
 - 409 (ou 404) : décision non appliquée, « L'article a changé, rechargez la liste » et bouton « Recharger la liste » ; 403 : message dédié.
 - Les motifs de refus de l'admin (`prix_abusif`, `article_interdit`, `vendeur_non_fiable`) sont traduits côté vendeur avec ceux du contrôle (`useArticleReasonLabel`).
@@ -108,9 +122,10 @@ Contrat : `contracts/api/place-de-marche/v1.openapi.yaml`, tag Administration, i
 
 - Aucun HTML libre : `react/no-danger`, `no-unsanitized`, `no-eval` en erreur ; un titre contenant du balisage s'affiche comme du texte (US-010, AC4). Le jeu de démonstration en contient deux.
 - `localStorage`, `sessionStorage` et `document.cookie` interdits au lint : les jetons restent en mémoire (D06). Seule exception : l'état transitoire de la requête d'autorisation (voir « Connexion »).
-- CSP posée par nginx sur toutes les réponses, 404 comprises : `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (Emotion, D04), `connect-src 'self' ${COLLECTOR_IDP_ORIGIN}`, `frame-ancestors 'none'`. Polices auto-hébergées, `assetsInlineLimit: 0`.
+- CSP posée par nginx sur toutes les réponses, 404 comprises : `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (Emotion, D04), `img-src 'self' blob: ${COLLECTOR_PHOTOS_ORIGIN}` (`blob:` pour l'aperçu avant envoi et les images de démonstration), `connect-src 'self' ${COLLECTOR_IDP_ORIGIN}`, `frame-ancestors 'none'`. Polices auto-hébergées, `assetsInlineLimit: 0`.
+- Images des photos chargées avec `referrerPolicy="no-referrer"` ; URL présignées jamais conservées au-delà de la liste en cache.
 - HSTS est posé par l'écouteur de l'ALB, pas ici (D08, ME1).
-- Image : `COLLECTOR_IDP_ORIGIN` injecté au démarrage par les modèles nginx. En système de fichiers en lecture seule, monter un `emptyDir` sur `/tmp` et sur `/etc/nginx/conf.d`.
+- Image : `COLLECTOR_IDP_ORIGIN` et `COLLECTOR_PHOTOS_ORIGIN` injectés au démarrage par les modèles nginx. `COLLECTOR_PHOTOS_ORIGIN` = hôte exact du bucket tel qu'il figure dans les URL présignées (`https://<bucket>.s3.<région>.amazonaws.com`), jamais `*.amazonaws.com` ; défaut `'self'`, qui bloque les photos S3 tant qu'il n'est pas posé. En système de fichiers en lecture seule, monter un `emptyDir` sur `/tmp` et sur `/etc/nginx/conf.d`.
 
 ## Connexion (US-008)
 

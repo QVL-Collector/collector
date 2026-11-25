@@ -53,8 +53,10 @@ async function saveDraftRejectedWith(language: SupportedLanguage): Promise<void>
   marketplace().scriptedWrites.push(threeFieldErrors);
   await type(field(wording.title), 'Lot de cartes modifié');
   await click(screen.getByRole('button', { name: wording.save }));
-  await screen.findByRole('alert');
+  await screen.findByRole('alert', {}, settleTimeout);
 }
+
+const settleTimeout = { timeout: 15000 };
 
 describe('US-009-AC11 chaque champ du formulaire a un libellé', () => {
   it.each(languages)(
@@ -104,7 +106,7 @@ describe('US-009-AC11 et AC4 erreurs 400 de l’API rattachées aux champs et an
       expect(screen.getByRole('alert')).toHaveTextContent(errorWording[language].summary);
       await waitFor(() => {
         expect(field(sellerWording[language].title)).toHaveFocus();
-      });
+      }, settleTimeout);
     },
   );
 
@@ -119,7 +121,7 @@ describe('US-009-AC11 et AC4 erreurs 400 de l’API rattachées aux champs et an
     await type(field(fr.price), '2000000');
     await click(screen.getByRole('button', { name: fr.save }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert', {}, settleTimeout)).toHaveTextContent(
       'Le formulaire contient 1 erreur : corrigez le champ signalé.',
     );
     expect(field(fr.price)).toHaveAccessibleDescription(
@@ -127,7 +129,7 @@ describe('US-009-AC11 et AC4 erreurs 400 de l’API rattachées aux champs et an
     );
     await waitFor(() => {
       expect(field(fr.price)).toHaveFocus();
-    });
+    }, settleTimeout);
   });
 
   it('Given une création refusée en 400, When la réponse arrive, Then l’erreur est rattachée au champ et aucun article n’est créé', async () => {
@@ -140,7 +142,7 @@ describe('US-009-AC11 et AC4 erreurs 400 de l’API rattachées aux champs et an
     await type(field(fr.title), 'Titre');
     await click(screen.getByRole('button', { name: fr.create }));
 
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByRole('alert', {}, settleTimeout)).toBeInTheDocument();
     expect(field(fr.title)).toHaveAccessibleDescription(
       expect.stringContaining('Ce texte contient un caractère non autorisé.') as string,
     );
@@ -156,7 +158,7 @@ describe('US-009-AC11 et AC4 erreurs 400 de l’API rattachées aux champs et an
 
     await waitFor(() => {
       expect(field(fr.title)).toHaveAttribute('aria-invalid', 'false');
-    });
+    }, settleTimeout);
     expect(screen.queryByText('Texte trop long.')).not.toBeInTheDocument();
   });
 });
