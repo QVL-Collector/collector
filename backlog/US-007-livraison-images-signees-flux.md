@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E1 Chaîne de livraison |
-| Statut | À faire |
+| Statut | En cours |
 | Sprint | 1 (J4) |
 | Engagement | Ferme (ordre de coupe S1 n° 1 : repli sur le déploiement depuis le poste, signature conservée) |
 | Estimation | 5 points |
