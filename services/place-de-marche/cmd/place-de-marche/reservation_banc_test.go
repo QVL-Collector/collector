@@ -60,6 +60,7 @@ type relaisEspion struct {
 type processusTransactions struct {
 	api       string
 	gestion   string
+	metriques string
 	journal   *journalPartage
 	processus *exec.Cmd
 	termine   chan error
@@ -200,7 +201,7 @@ func (r *relaisEspion) tous() []appelRelaye {
 
 func lancerTransactions(t *testing.T, binaire string, base basePostgreSQL, kc *fournisseurKeycloak, placeDeMarche string) *processusTransactions {
 	t.Helper()
-	p := &processusTransactions{api: adresseLibre(t), gestion: adresseLibre(t), journal: &journalPartage{}, termine: make(chan error, 1)}
+	p := &processusTransactions{api: adresseLibre(t), gestion: adresseLibre(t), metriques: adresseLibre(t), journal: &journalPartage{}, termine: make(chan error, 1)}
 	p.processus = exec.Command(binaire, "serve")
 	p.processus.Env = environnementDuProcessus(map[string]string{
 		"BASE_DE_DONNEES_URL":         base.execution,
@@ -210,6 +211,7 @@ func lancerTransactions(t *testing.T, binaire string, base basePostgreSQL, kc *f
 		"PLACE_DE_MARCHE_URL_INTERNE": placeDeMarche,
 		"ADRESSE_API":                 p.api,
 		"ADRESSE_GESTION":             p.gestion,
+		"ADRESSE_METRIQUES":           p.metriques,
 		"LIMITE_DEBIT_PAR_MINUTE":     "6000000",
 		"LIMITE_DEBIT_RAFALE":         "100000",
 		"JOURNAL_NIVEAU":              "DEBUG",
@@ -254,6 +256,7 @@ func lancerPlaceDeMarcheSurKeycloak(t *testing.T, canal *canalDeTest, adresseBas
 	variables["ADRESSE_API"] = api
 	variables["ADRESSE_GESTION"] = gestion
 	variables["ADRESSE_INTERNE"] = interne
+	variables["ADRESSE_METRIQUES"] = adresseLibre(t)
 	variables["RESERVATION_DUREE"] = duree.String()
 	variables["RESERVATION_DUREE_MAX"] = plafond.String()
 	variables["LIMITE_DEBIT_PAR_MINUTE"] = "6000000"

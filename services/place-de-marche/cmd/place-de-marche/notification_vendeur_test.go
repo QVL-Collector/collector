@@ -164,6 +164,7 @@ func lancerProcessusInteractions(t *testing.T, binaire string, canal *canalDeTes
 	variables["CANAL_EMETTEUR_ATTENDU"] = identiteMarche
 	variables["ADRESSE_API"] = api
 	variables["ADRESSE_GESTION"] = gestion
+	variables["ADRESSE_METRIQUES"] = adresseLibre(t)
 	instance := &instanceInteractions{api: "http://" + api, gestion: "http://" + gestion, journal: &journalPartage{}, termine: make(chan error, 1)}
 	instance.processus = exec.Command(binaire, "serve")
 	instance.processus.Env = environnementDuProcessus(variables)

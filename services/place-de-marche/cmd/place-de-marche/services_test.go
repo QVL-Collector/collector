@@ -62,6 +62,7 @@ func lancerPlaceDeMarche(t *testing.T, canal *canalDeTest, adresseBase string, e
 	variables["ADRESSE_API"] = api
 	variables["ADRESSE_GESTION"] = gestion
 	variables["ADRESSE_INTERNE"] = adresseLibre(t)
+	variables["ADRESSE_METRIQUES"] = adresseLibre(t)
 	variables["LIMITE_DEBIT_PAR_MINUTE"] = "6000000"
 	variables["LIMITE_DEBIT_RAFALE"] = "100000"
 	for nom, valeur := range variables {
@@ -118,22 +119,23 @@ func construireBinaire(t *testing.T, relatif, nom string) string {
 }
 
 type processusControle struct {
-	journal *journalPartage
-	gestion string
-	termine chan error
-	arret   *exec.Cmd
-	une     sync.Once
+	journal   *journalPartage
+	gestion   string
+	metriques string
+	termine   chan error
+	arret     *exec.Cmd
+	une       sync.Once
 }
 
 func demarrerProcessusControle(t *testing.T, binaire string, canal *canalDeTest) *processusControle {
 	t.Helper()
-	p := &processusControle{journal: &journalPartage{}, gestion: adresseLibre(t), termine: make(chan error, 1)}
+	p := &processusControle{journal: &journalPartage{}, gestion: adresseLibre(t), metriques: adresseLibre(t), termine: make(chan error, 1)}
 	p.arret = exec.Command(binaire)
 	p.arret.Env = os.Environ()
 	for nom, valeur := range canal.environnementDeService(identiteControle) {
 		p.arret.Env = append(p.arret.Env, nom+"="+valeur)
 	}
-	p.arret.Env = append(p.arret.Env, "CANAL_EMETTEUR_ATTENDU="+identiteMarche, "ADRESSE_GESTION="+p.gestion)
+	p.arret.Env = append(p.arret.Env, "CANAL_EMETTEUR_ATTENDU="+identiteMarche, "ADRESSE_GESTION="+p.gestion, "ADRESSE_METRIQUES="+p.metriques)
 	p.arret.Stdout, p.arret.Stderr = p.journal, p.journal
 	if err := p.arret.Start(); err != nil {
 		t.Fatalf("lancement du Contrôle : %v", err)

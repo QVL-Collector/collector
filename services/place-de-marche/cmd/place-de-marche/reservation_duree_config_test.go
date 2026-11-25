@@ -22,6 +22,7 @@ func environnementDeDemarrageSansDependance(t *testing.T) map[string]string {
 		"ADRESSE_API":               adresseLibre(t),
 		"ADRESSE_INTERNE":           adresseLibre(t),
 		"ADRESSE_GESTION":           adresseLibre(t),
+		"ADRESSE_METRIQUES":         adresseLibre(t),
 		"RESERVATION_DUREE":         "10m",
 		"RESERVATION_DUREE_MAX":     "30m",
 	}

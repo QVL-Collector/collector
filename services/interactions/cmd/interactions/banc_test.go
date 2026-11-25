@@ -419,10 +419,12 @@ func codeDeRefus(err error) int {
 }
 
 type serviceInteractions struct {
-	adresse string
-	client  *http.Client
-	journal *journalPartage
-	jetons  *fabriqueDeJetons
+	adresse   string
+	gestion   string
+	metriques string
+	client    *http.Client
+	journal   *journalPartage
+	jetons    *fabriqueDeJetons
 }
 
 func migrer(t *testing.T, bases basesPostgreSQL) {
@@ -439,7 +441,7 @@ func migrer(t *testing.T, bases basesPostgreSQL) {
 func lancerInteractions(t *testing.T, bases basesPostgreSQL, canal *canalDeTest) *serviceInteractions {
 	t.Helper()
 	jetons := nouvelleFabriqueDeJetons(t)
-	api, gestion := adresseLibre(t), adresseLibre(t)
+	api, gestion, metriques := adresseLibre(t), adresseLibre(t), adresseLibre(t)
 	variables := map[string]string{
 		"BASE_DE_DONNEES_URL":       bases.adresse(bases.interactions.execution, baseInteractions),
 		"BASE_DE_DONNEES_TLS_EXIGE": "false",
@@ -452,6 +454,7 @@ func lancerInteractions(t *testing.T, bases basesPostgreSQL, canal *canalDeTest)
 		"CANAL_MOT_DE_PASSE":        canal.secrets[identiteInteraction],
 		"ADRESSE_API":               api,
 		"ADRESSE_GESTION":           gestion,
+		"ADRESSE_METRIQUES":         metriques,
 	}
 	for nom, valeur := range variables {
 		t.Setenv(nom, valeur)
@@ -483,5 +486,5 @@ func lancerInteractions(t *testing.T, bases basesPostgreSQL, canal *canalDeTest)
 		_ = reponse.Body.Close()
 		return reponse.StatusCode == http.StatusOK
 	})
-	return &serviceInteractions{adresse: "http://" + api, client: client, journal: journal, jetons: jetons}
+	return &serviceInteractions{adresse: "http://" + api, gestion: "http://" + gestion, metriques: "http://" + metriques, client: client, journal: journal, jetons: jetons}
 }
