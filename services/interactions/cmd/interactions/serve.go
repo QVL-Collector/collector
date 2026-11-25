@@ -14,6 +14,7 @@ import (
 	"collector/libs/platform/httpserver"
 	"collector/libs/platform/logging"
 	"collector/libs/platform/message"
+	"collector/libs/platform/metrics"
 	"collector/libs/platform/token"
 	"collector/services/interactions/internal/config"
 	"collector/services/interactions/internal/notifications/api"
@@ -25,6 +26,10 @@ const decisionsConnection = serviceName + "/publication-decidee"
 
 func serve(ctx context.Context, logger *slog.Logger) error {
 	cfg, err := config.LoadServer(os.Getenv)
+	if err != nil {
+		return err
+	}
+	metricsHandler, err := metrics.Install(serviceName, logger)
 	if err != nil {
 		return err
 	}
@@ -47,6 +52,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 		return httpserver.Run(groupCtx, logger,
 			httpserver.New(cfg.APIAddress, publicHandler(logger, store, verifier)),
 			httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, pool.Ping)),
+			httpserver.New(cfg.MetricsAddress, metricsHandler),
 		)
 	})
 	group.Go(func() error {
@@ -58,7 +64,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 func publicHandler(logger *slog.Logger, lister api.NotificationLister, authenticator api.Authenticator) http.Handler {
 	mux := http.NewServeMux()
 	api.Register(mux, lister, authenticator, logger)
-	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
+	return logging.Middleware(logger, metrics.Middleware(httpserver.Recover(logger, httpserver.SecurityHeaders(mux))))
 }
 
 func consumeDecisions(ctx context.Context, logger *slog.Logger, channel config.Channel, decisions *canal.DecisionHandler) error {

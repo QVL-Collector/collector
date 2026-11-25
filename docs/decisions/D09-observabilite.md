@@ -321,6 +321,7 @@ La décision de Martin est enregistrée ci-dessus ; ses conséquences :
 - **D12** : latence p95, taux d'erreurs, délai de mise à l'échelle et messages écartés deviennent mesurables depuis Prometheus ; le choix des indicateurs reste à D12.
 - **D13** : script d'export des métriques en fin de tir vers `docs/mesures/charge/`.
 - **`libs/platform/`** : démarrage OpenTelemetry, exportateur Prometheus, gestionnaire `slog` avec masquage, porteur W3C pour AMQP.
+- **2026-11-25 (US-015)** : les métriques HTTP passent par un middleware maison (`libs/platform/metrics`) et non par `otelhttp`, pour garder les étiquettes bornées à la méthode, au modèle de route et au code de réponse. Si `otelhttp` est posé pour les traces, il reçoit `otelhttp.WithMeterProvider(noop.NewMeterProvider())`, faute de quoi `http.server.request.duration` serait doublé.
 - **Documents** : `docs/exploitation.md` (accès à Grafana, requêtes Logs Insights types, liste des alertes) ; ES-23 révisé dans [exigences-securite.md](../securite/exigences-securite.md).
 - **Repli ECS Fargate** : journaux par `awslogs` au même format ; métriques par Container Insights et l'option A.
 

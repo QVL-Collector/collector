@@ -124,6 +124,7 @@ func (c Consumer) process(ctx context.Context, handle Handler, delivery amqp.Del
 			slog.String("message_id", delivery.MessageId),
 			slog.Any("erreur", err),
 		)
+		recordRetried(ctx, c.Queue)
 		if err := wait(ctx, closed, c.Backoff.Delay(attempt)); err != nil {
 			return err
 		}
@@ -156,6 +157,7 @@ func (c Consumer) settle(ctx context.Context, delivery amqp.Delivery, dispositio
 	if err := delivery.Ack(false); err != nil {
 		return fmt.Errorf("acquittement de %s : %w", delivery.MessageId, err)
 	}
+	recordConsumed(ctx, c.Queue)
 	return nil
 }
 
@@ -163,6 +165,7 @@ func (c Consumer) discard(ctx context.Context, delivery amqp.Delivery, cause dis
 	if err := delivery.Nack(false, false); err != nil {
 		return fmt.Errorf("mise à l'écart de %s : %w", delivery.MessageId, err)
 	}
+	recordDiscarded(ctx, c.Queue, cause)
 	c.Logger.WarnContext(ctx, "message écarté",
 		slog.String("event", discardedEvent),
 		slog.String("file", c.Queue),

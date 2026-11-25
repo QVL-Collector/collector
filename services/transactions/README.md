@@ -6,13 +6,14 @@ Transactions réduit à la réservation dans le POC ([D02](../../docs/decisions/
 
 | Commande | Rôle | Compte de base attendu |
 |---|---|---|
-| `transactions serve` (par défaut) | API sur `ADRESSE_API`, santé sur `ADRESSE_GESTION` | `transactions_execution` |
+| `transactions serve` (par défaut) | API sur `ADRESSE_API`, santé sur `ADRESSE_GESTION`, métriques sur `ADRESSE_METRIQUES` | `transactions_execution` |
 | `transactions migrate` | Applique les migrations embarquées, puis s'arrête (Job Helm `pre-install`, `pre-upgrade`) | `transactions_migration` |
 
 | Port | Contenu | Exposition |
 |---|---|---|
 | 8080 | `/transactions/v1/...` | Routé par l'ALB |
 | 9090 | `GET /sante` (vivant), `GET /disponibilite` (base joignable ; ni Keycloak ni la Place de marché interrogés) | Jamais routé ; sondes Kubernetes |
+| 9091 | `GET /metrics` : requêtes HTTP du port 8080 ([catalogue](../../libs/platform/metrics/README.md), US-015) | Jamais routé ; ouvert au seul Prometheus |
 
 ## Réserver et commander (US-030)
 
@@ -95,6 +96,7 @@ Exemples : 10 c → 1 c (0,5 arrondi vers le haut) ; 9 c → 0 c (0,45) ; 12 590
 | `LIMITE_DEBIT_PAR_MINUTE`, `LIMITE_DEBIT_RAFALE`, `LIMITE_DEBIT_TIR_*` | `serve` | `30`, `10`, voir la Place de marché | Limitation de débit de `POST /commandes` |
 | `ADRESSE_API` | `serve` | `:8080` | Écoute de l'API |
 | `ADRESSE_GESTION` | `serve` | `:9090` | Écoute de la santé |
+| `ADRESSE_METRIQUES` | `serve` | `:9091` | Écoute des métriques |
 | `JOURNAL_NIVEAU` | toutes | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 
 ## Base et rôles PostgreSQL attendus

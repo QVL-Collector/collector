@@ -16,6 +16,7 @@ import (
 	"collector/libs/platform/httpserver"
 	"collector/libs/platform/logging"
 	"collector/libs/platform/message"
+	"collector/libs/platform/metrics"
 	"collector/libs/platform/outbox"
 	"collector/libs/platform/ratelimit"
 	"collector/libs/platform/token"
@@ -47,11 +48,18 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	metricsHandler, err := metrics.Install(serviceName, logger)
+	if err != nil {
+		return err
+	}
 	pool, err := database.Connect(ctx, cfg.Database.URL)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
+	if err := outbox.ObserveBacklog(pool); err != nil {
+		return err
+	}
 	verifier, err := token.NewVerifier(ctx, cfg.Token)
 	if err != nil {
 		return err
@@ -78,6 +86,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 			httpserver.New(cfg.APIAddress, publicHandler(logger, service, verifier, guard)),
 			httpserver.New(cfg.InternalAddress, internalHandler(logger, reservationService, delegation)),
 			httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, pool.Ping)),
+			httpserver.New(cfg.MetricsAddress, metricsHandler),
 		)
 	})
 	group.Go(func() error {
@@ -98,13 +107,17 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 func publicHandler(logger *slog.Logger, service api.ArticleService, authenticator api.Authenticator, limiter api.RateLimiter) http.Handler {
 	mux := http.NewServeMux()
 	api.Register(mux, service, authenticator, limiter, logger)
-	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
+	return instrumented(logger, mux)
 }
 
 func internalHandler(logger *slog.Logger, reserver reservationsapi.Reserver, authenticator reservationsapi.Authenticator) http.Handler {
 	mux := http.NewServeMux()
 	reservationsapi.Register(mux, reserver, authenticator, logger)
-	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
+	return instrumented(logger, mux)
+}
+
+func instrumented(logger *slog.Logger, mux *http.ServeMux) http.Handler {
+	return logging.Middleware(logger, metrics.Middleware(httpserver.Recover(logger, httpserver.SecurityHeaders(mux))))
 }
 
 func reservationDelegation(users *token.Verifier, reservation config.Reservation) (token.Delegation, error) {

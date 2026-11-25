@@ -81,7 +81,9 @@ func (p *Publisher) PublishBatch(ctx context.Context, batch []Message) error {
 	if err := p.awaitConfirmations(ctx, batch, confirmations); err != nil {
 		return err
 	}
-	if unroutable := p.drainReturned(); len(unroutable) > 0 {
+	unroutable := p.drainReturned()
+	recordPublished(ctx, batch, unroutable)
+	if len(unroutable) > 0 {
 		return &UnroutableError{IDs: unroutable}
 	}
 	return nil

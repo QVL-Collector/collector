@@ -14,6 +14,7 @@ import (
 	"collector/libs/platform/httpserver"
 	"collector/libs/platform/logging"
 	"collector/libs/platform/message"
+	"collector/libs/platform/metrics"
 	"collector/services/controle/internal/canal"
 	"collector/services/controle/internal/config"
 	"collector/services/controle/internal/regles"
@@ -49,6 +50,10 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	metricsHandler, err := metrics.Install(serviceName, logger)
+	if err != nil {
+		return err
+	}
 	validator, err := message.NewValidator(contracts.Messages, message.DefaultMaxSize)
 	if err != nil {
 		return err
@@ -64,7 +69,10 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	supervisor := broker.NewSupervisor(cfg.Endpoint.Named(requestsConnection), logger)
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		return httpserver.Run(groupCtx, logger, httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, supervisor.Ready)))
+		return httpserver.Run(groupCtx, logger,
+			httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, supervisor.Ready)),
+			httpserver.New(cfg.MetricsAddress, metricsHandler),
+		)
 	})
 	group.Go(func() error {
 		return supervisor.Run(groupCtx, consumer.WorkerWithPublisher(cfg.Endpoint.User, responder.HandlerFor))

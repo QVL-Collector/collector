@@ -10,6 +10,7 @@ import (
 	"collector/libs/platform/database"
 	"collector/libs/platform/httpserver"
 	"collector/libs/platform/logging"
+	"collector/libs/platform/metrics"
 	"collector/libs/platform/ratelimit"
 	"collector/libs/platform/serviceclient"
 	"collector/libs/platform/token"
@@ -24,6 +25,10 @@ const marketplaceTimeout = 5 * time.Second
 
 func serve(ctx context.Context, logger *slog.Logger) error {
 	cfg, err := config.LoadServer(os.Getenv)
+	if err != nil {
+		return err
+	}
+	metricsHandler, err := metrics.Install(serviceName, logger)
 	if err != nil {
 		return err
 	}
@@ -42,11 +47,12 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	return httpserver.Run(ctx, logger,
 		httpserver.New(cfg.APIAddress, publicHandler(logger, service, verifier, guard)),
 		httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, pool.Ping)),
+		httpserver.New(cfg.MetricsAddress, metricsHandler),
 	)
 }
 
 func publicHandler(logger *slog.Logger, service api.OrderService, authenticator api.Authenticator, limiter api.RateLimiter) http.Handler {
 	mux := http.NewServeMux()
 	api.Register(mux, service, authenticator, limiter, logger)
-	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
+	return logging.Middleware(logger, metrics.Middleware(httpserver.Recover(logger, httpserver.SecurityHeaders(mux))))
 }
