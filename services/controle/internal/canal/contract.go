@@ -69,6 +69,7 @@ type listingData struct {
 	Description  string  `json:"description"`
 	CategoryCode *string `json:"category_code"`
 	PriceCents   *int64  `json:"price_cents"`
+	PhotoCount   int     `json:"photo_count"`
 }
 
 func (l listingData) listing() regles.Listing {
@@ -77,6 +78,7 @@ func (l listingData) listing() regles.Listing {
 		Description:  l.Description,
 		CategoryCode: (*regles.CategoryCode)(l.CategoryCode),
 		PriceCents:   l.PriceCents,
+		PhotoCount:   l.PhotoCount,
 	}
 }
 

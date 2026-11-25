@@ -89,8 +89,8 @@ func exigerResultat(t *testing.T, recu resultatLu, issue, motif string) {
 	if recu.Reason != nil {
 		recuMotif = *recu.Reason
 	}
-	if recu.Issue != issue || recuMotif != motif || recu.RulesVersion != 3 {
-		t.Fatalf("résultat %s/%s v%d, attendu %s/%s v3", recu.Issue, recuMotif, recu.RulesVersion, issue, motif)
+	if recu.Issue != issue || recuMotif != motif || recu.RulesVersion != 4 {
+		t.Fatalf("résultat %s/%s v%d, attendu %s/%s v4", recu.Issue, recuMotif, recu.RulesVersion, issue, motif)
 	}
 }
 

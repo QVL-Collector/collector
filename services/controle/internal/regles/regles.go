@@ -2,7 +2,7 @@ package regles
 
 import "time"
 
-const RulesVersion = 3
+const RulesVersion = 4
 
 type Issue string
 
@@ -30,6 +30,7 @@ type Listing struct {
 	Description  string
 	CategoryCode *CategoryCode
 	PriceCents   *int64
+	PhotoCount   int
 }
 
 type Seller struct {

@@ -22,6 +22,7 @@ func annonceComplete() regles.Listing {
 		Description:  "Belle pièce en bon état",
 		CategoryCode: code("figurines"),
 		PriceCents:   prix(4500),
+		PhotoCount:   1,
 	}
 }
 
@@ -51,9 +52,9 @@ func exigerVerdict(t *testing.T, recu regles.Verdict, issue regles.Issue, motif 
 	}
 }
 
-func TestUS013AC5US018AC5US019VersionDesReglesEgaleA3(t *testing.T) {
-	if regles.RulesVersion != 3 {
-		t.Fatalf("version des règles %d, attendue 3", regles.RulesVersion)
+func TestUS020AC2VersionDesReglesEgaleA4(t *testing.T) {
+	if regles.RulesVersion != 4 {
+		t.Fatalf("version des règles %d, attendue 4", regles.RulesVersion)
 	}
 }
 
@@ -68,7 +69,7 @@ func TestUS013AC1AnnonceCompleteDansUneCategorieDeReferencePubliee(t *testing.T)
 }
 
 func TestUS013AC1TexteMinimalSuffit(t *testing.T) {
-	annonce := regles.Listing{Title: "a", Description: "b", CategoryCode: code("figurines"), PriceCents: prix(4500)}
+	annonce := regles.Listing{Title: "a", Description: "b", CategoryCode: code("figurines"), PriceCents: prix(4500), PhotoCount: 1}
 	exigerVerdict(t, evaluer(annonce), regles.IssuePublished, "")
 }
 

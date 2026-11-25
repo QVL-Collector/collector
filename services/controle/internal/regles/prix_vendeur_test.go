@@ -181,8 +181,8 @@ func TestUS019OrdreDesReglesQuandPlusieursSAppliquent(t *testing.T) {
 		motif   regles.Reason
 	}{
 		{"incomplète et prix hors plage", vendeurInscritIlYA(2), regles.Listing{Title: "Figurine", CategoryCode: code("figurines"), PriceCents: prix(1)}, regles.IssueRefused, regles.ReasonIncompleteListing},
-		{"coordonnées et prix hors plage", vendeurInscritIlYA(2), regles.Listing{Title: "Figurine", Description: "Écrivez à jean.dupont@example.com", CategoryCode: code("figurines"), PriceCents: prix(1)}, regles.IssueRefused, regles.ReasonContactDetected},
-		{"coordonnées et vendeur récent au-dessus de la vigilance", vendeurInscritIlYA(2), regles.Listing{Title: "Figurine", Description: "Écrivez à jean.dupont@example.com", CategoryCode: code("figurines"), PriceCents: prix(30_001)}, regles.IssueRefused, regles.ReasonContactDetected},
+		{"coordonnées et prix hors plage", vendeurInscritIlYA(2), regles.Listing{Title: "Figurine", Description: "Écrivez à jean.dupont@example.com", CategoryCode: code("figurines"), PriceCents: prix(1), PhotoCount: 1}, regles.IssueRefused, regles.ReasonContactDetected},
+		{"coordonnées et vendeur récent au-dessus de la vigilance", vendeurInscritIlYA(2), regles.Listing{Title: "Figurine", Description: "Écrivez à jean.dupont@example.com", CategoryCode: code("figurines"), PriceCents: prix(30_001), PhotoCount: 1}, regles.IssueRefused, regles.ReasonContactDetected},
 		{"catégorie inconnue et prix extrême", vendeurInscritIlYA(2), annonceAuPrix("timbres", 1), regles.IssueToVerify, regles.ReasonUnknownCategory},
 		{"prix hors plage et vendeur récent au-dessus de la vigilance", vendeurInscritIlYA(2), annonceAuPrix("figurines", 300_001), regles.IssueToVerify, regles.ReasonPriceToConfirm},
 	}
