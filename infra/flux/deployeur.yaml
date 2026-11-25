@@ -1,0 +1,180 @@
+# Compte de service des HelmRelease (D10 MP4, US-007 AC9). Le contrôleur Helm agit sous cette identité
+# (--default-service-account, usurpation limitée à ce seul compte) : droits par namespace applicatif uniquement,
+# aucun objet de cluster, Secrets lisibles dans le seul namespace collector (versions Helm).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deployeur
+  namespace: collector
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: collector-deployeur
+rules:
+  - apiGroups: [""]
+    resources: [configmaps, services, serviceaccounts]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods, events, endpoints]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [apps]
+    resources: [replicasets, controllerrevisions]
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: versions-helm
+  namespace: collector
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur-versions-helm
+  namespace: collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: versions-helm
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: canal
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: identite
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: front
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: place-de-marche
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: controle
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: interactions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployeur
+  namespace: transactions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collector-deployeur
+subjects:
+  - { kind: ServiceAccount, name: deployeur, namespace: collector }
+---
+# Le contrôleur Helm ne garde que le droit d'agir sous l'identité deployeur (cluster-admin retiré par up-flux.sh).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: flux-usurpation-deployeur
+rules:
+  - apiGroups: [""]
+    resources: [serviceaccounts]
+    resourceNames: [deployeur]
+    verbs: [impersonate]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-usurpation-deployeur
+  namespace: collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: flux-usurpation-deployeur
+subjects:
+  - { kind: ServiceAccount, name: helm-controller, namespace: flux-system }

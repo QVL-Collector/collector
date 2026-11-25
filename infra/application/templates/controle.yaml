@@ -1,0 +1,34 @@
+{{- $v := .Values.controle }}
+{{- $ctx := dict "racine" . "nom" "controle" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controle
+  namespace: controle
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $v.repliques }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: controle
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+    spec:
+      {{- include "collector.securitePod" (dict) | nindent 6 }}
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: controle
+          image: {{ include "collector.image" (dict "racine" . "cle" "controle") }}
+          ports:
+            - { name: gestion, containerPort: 9090 }
+          env:
+            - { name: JOURNAL_NIVEAU, value: {{ .Values.journalNiveau | quote }} }
+            - { name: CANAL_EMETTEUR_ATTENDU, value: marche }
+            {{- include "collector.canal" (dict "racine" . "identite" "controle") | nindent 12 }}
+          {{- include "collector.sondes" . | nindent 10 }}
+          resources:
+            {{- toYaml $v.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" . | nindent 10 }}

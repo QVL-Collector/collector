@@ -1,0 +1,35 @@
+# Sources publiques lues sans jeton (D10 P2) : le chart depuis main, les empreintes depuis env/demo, réunis dans un
+# seul artefact (include) pour que la HelmRelease lise ses fichiers de valeurs au même endroit que le chart.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: env-demo
+  namespace: collector
+spec:
+  interval: 1m
+  url: https://github.com/QVL-Collector/collector
+  ref:
+    branch: env/demo
+  ignore: |
+    /*
+    !/deploy/demo/empreintes.yaml
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: collector
+  namespace: collector
+spec:
+  interval: 1m
+  url: https://github.com/QVL-Collector/collector
+  ref:
+    branch: main
+  ignore: |
+    /*
+    !/infra/application/
+    !/infra/canal/
+  include:
+    - repository:
+        name: env-demo
+      fromPath: deploy/demo
+      toPath: deploy/demo

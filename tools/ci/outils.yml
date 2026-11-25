@@ -46,6 +46,20 @@ services:
       - ../../.cache/trivy:/cache
       - /var/run/docker.sock:/var/run/docker.sock
 
+  cosign:
+    image: ghcr.io/sigstore/cosign/cosign:v3.1.4@sha256:0f06154836d2de34f887a5c273506d52ca43edaa1d9e53e6510fa78a48f69c2d
+    working_dir: /depot
+    environment:
+      - GITHUB_ACTIONS
+      - ACTIONS_ID_TOKEN_REQUEST_URL
+      - ACTIONS_ID_TOKEN_REQUEST_TOKEN
+      - DOCKER_CONFIG=/docker
+      - HOME=/tmp
+    volumes:
+      - ../..:/depot:ro
+      - ../../rapports:/rapports:ro
+      - ${HOME}/.docker:/docker:ro
+
   semgrep:
     <<: *depot
     image: semgrep/semgrep:1.182.0@sha256:4a34048c04fef049f71665047f074cffb00cc3d89482f965a5cd151d589237af

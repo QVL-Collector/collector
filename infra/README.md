@@ -31,6 +31,11 @@ La zone, le certificat, son CNAME de validation et le budget ont été créés e
 |---|---|
 | `k8s/socle.yaml` | Namespaces applicatifs (Pod Security `restricted`) et politique `sortie-sans-imds` par namespace ; appliqué par `up.sh` avant les charts |
 | `k8s/secrets-autorises.txt` | Secrets que chaque application peut monter (X20) ; tout autre montage rend le contrôle rouge |
+| `k8s/application.yaml` | Namespaces de l'application (un par service, `collector` pour Flux et les versions Helm), refus par défaut entrée et sortie, DNS ; appliqué par `tools/up-flux.sh` avant les Secrets (US-006 AC1, US-007) |
+| `k8s/base-locale.yaml` | k3d seulement : PostgreSQL de session à la place de RDS |
+| `application/` | Chart de l'application : quatre services, front, Keycloak, migrations, flux réseau autorisés ([README](application/README.md)) |
+| `flux/` | Compte `deployeur` et ses liaisons par namespace, sources (`main` + `env/demo`), `HelmRelease` du canal et de l'application avec retour arrière (US-007) |
+| `ephemere/application.tf` | Règles de l'ALB vers les API et `auth.` (liste blanche XP03), activées par `application_active` ; jamais `/interne/`, ni le port 8081 |
 | `front/` | Chart du front nginx (US-004 AC2) : Deployment non root, Service NodePort cible de l'ALB, HPA 2 à 6 ; `values.yaml` : `conteneur.port` (port d'écoute de nginx), `service.port` et `service.nodePort` ; `valeurs-aws.yaml` : image épinglée par empreinte (MS9), remplacée par l'image du front publiée par la CI dès qu'elle est poussée (D10), descente HPA en 60 s (X7 bis de XP01 : 10 min 16 s avec les 300 s par défaut) |
 
 ## Contrôles hors AWS

@@ -1,0 +1,30 @@
+# k3d (poste) : même chart et mêmes empreintes que sur EKS (X2) ; base PostgreSQL locale (infra/k8s/base-locale.yaml)
+# sans TLS, une réplique par service ; IMDS absente.
+
+domaine: collector.localhost
+
+exposition:
+  sources: [0.0.0.0/0]
+
+base:
+  tlsExige: false
+  destinations:
+    - namespaceSelector:
+        matchLabels: { kubernetes.io/metadata.name: base-locale }
+      podSelector:
+        matchLabels: { app.kubernetes.io/name: postgres }
+
+identite:
+  ressources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { memory: 1Gi }
+
+placeDeMarche:
+  hpa:
+    min: 1
+    max: 2
+
+front:
+  hpa:
+    min: 1
+    max: 2

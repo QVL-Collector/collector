@@ -1,0 +1,103 @@
+# k3d seulement : PostgreSQL de session à la place de RDS (base neuve à chaque pod), joint par les seuls namespaces
+# des services et l'amorçage. Mot de passe maître dans le Secret base-maitre, posé par tools/up-flux.sh.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: base-locale
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: base-locale
+  labels: { app.kubernetes.io/name: postgres }
+spec:
+  type: ClusterIP
+  selector: { app.kubernetes.io/name: postgres }
+  ports:
+    - { name: postgres, port: 5432, targetPort: 5432 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: base-locale
+  labels: { app.kubernetes.io/name: postgres }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: postgres }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: postgres }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db
+          env:
+            - { name: POSTGRES_USER, value: collector_admin }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: base-maitre, key: MOT_DE_PASSE } }
+            - { name: PGDATA, value: /var/lib/postgresql/donnees }
+          ports:
+            - { containerPort: 5432 }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "collector_admin"] }
+            periodSeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: donnees, mountPath: /var/lib/postgresql }
+            - { name: run, mountPath: /var/run/postgresql }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: donnees
+          emptyDir: { sizeLimit: 1Gi }
+        - name: run
+          emptyDir: { sizeLimit: 16Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: refus-par-defaut
+  namespace: base-locale
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: entree-postgres
+  namespace: base-locale
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: [place-de-marche, interactions, transactions, identite, collector]
+      ports:
+        - { protocol: TCP, port: 5432 }

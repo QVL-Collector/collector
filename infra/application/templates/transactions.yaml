@@ -1,0 +1,65 @@
+{{- $v := .Values.transactions }}
+{{- $ctx := dict "racine" . "nom" "transactions" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transactions
+  namespace: transactions
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $v.repliques }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transactions
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+    spec:
+      {{- include "collector.securitePod" (dict) | nindent 6 }}
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: transactions
+          image: {{ include "collector.image" (dict "racine" . "cle" "transactions") }}
+          args: ["serve"]
+          ports:
+            - { name: api, containerPort: 8080 }
+            - { name: gestion, containerPort: 9090 }
+          env:
+            - { name: JOURNAL_NIVEAU, value: {{ .Values.journalNiveau | quote }} }
+            - name: PLACE_DE_MARCHE_URL_INTERNE
+              value: "http://place-de-marche-interne.place-de-marche.svc:8081"
+            {{- include "collector.oidc" . | nindent 12 }}
+            - name: OIDC_JETON_URL
+              value: {{ printf "%s/protocol/openid-connect/token" (include "collector.keycloakInterne" .) | quote }}
+            - { name: OIDC_CLIENT_ID, value: transactions }
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oidc-client
+                  key: OIDC_CLIENT_SECRET
+            {{- include "collector.base" (dict "racine" . "secret" "base-execution") | nindent 12 }}
+          {{- include "collector.sondes" . | nindent 10 }}
+          resources:
+            {{- toYaml $v.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" . | nindent 10 }}
+          volumeMounts:
+            {{- include "collector.montageAutorites" . | nindent 12 }}
+      volumes:
+        {{- include "collector.volumeAutorites" . | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transactions
+  namespace: transactions
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: transactions
+  ports:
+    - { name: api, port: 8080, targetPort: api, nodePort: {{ $v.nodePort }} }

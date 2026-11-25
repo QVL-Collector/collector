@@ -32,7 +32,16 @@ output "arn_ecouteur_http" {
 
 output "arns_regles_https" {
   description = "Règles de la liste blanche de l'écouteur 443, seules admises par le contrôle après déploiement (XE4)."
-  value       = [aws_lb_listener_rule.front.arn]
+  value = concat(
+    [aws_lb_listener_rule.front.arn],
+    aws_lb_listener_rule.interne_refus[*].arn,
+    aws_lb_listener_rule.auth_refus[*].arn,
+    [for r in values(aws_lb_listener_rule.application) : r.arn],
+  )
+}
+
+output "nodeports_application" {
+  value = { for nom, c in local.cibles : nom => c.nodeport }
 }
 
 output "id_groupe_securite_alb" {

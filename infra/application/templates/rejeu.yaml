@@ -1,0 +1,45 @@
+{{- $r := .Values.placeDeMarche.rejeu }}
+{{- if $r.depuis }}
+{{- $ctx := dict "racine" . "nom" "place-de-marche-rejeu" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: place-de-marche-rejeu-{{ printf "%s|%s" $r.depuis $r.jusquA | sha256sum | trunc 8 }}
+  namespace: place-de-marche
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.migrations.delaiS }}
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+        collector/migration: "true"
+    spec:
+      {{- include "collector.securitePod" (dict) | nindent 6 }}
+      restartPolicy: Never
+      {{- include "collector.attenteBase" (dict "racine" . "secret" "base-migration") | nindent 6 }}
+      containers:
+        - name: rejeu
+          image: {{ include "collector.image" (dict "racine" . "cle" "place-de-marche") }}
+          args:
+            - rejouer
+            - --depuis
+            - {{ $r.depuis | quote }}
+            {{- with $r.jusquA }}
+            - --jusqu-a
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            - { name: JOURNAL_NIVEAU, value: {{ .Values.journalNiveau | quote }} }
+            {{- include "collector.base" (dict "racine" . "secret" "base-migration") | nindent 12 }}
+          resources:
+            {{- toYaml .Values.migrations.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" . | nindent 10 }}
+          volumeMounts:
+            {{- include "collector.montageAutorites" . | nindent 12 }}
+      volumes:
+        {{- include "collector.volumeAutorites" . | nindent 8 }}
+{{- end }}

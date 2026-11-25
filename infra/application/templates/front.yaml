@@ -1,0 +1,93 @@
+{{- $v := .Values.front }}
+{{- $ctx := dict "racine" . "nom" "front" }}
+{{- $emetteur := printf "https://auth.%s/realms/%s" .Values.domaine .Values.identite.realm }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: front-config
+  namespace: front
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+data:
+  config.json: |-
+    {{- dict
+      "marketplaceApiUrl" "/marche"
+      "interactionsApiUrl" "/interactions"
+      "transactionsApiUrl" "/transactions"
+      "catalogue" (dict "source" "api" "demoScenario" "nominal")
+      "oidc" (dict "authority" $emetteur "clientId" "collector-web" "scope" "openid profile")
+      | toPrettyJson | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front
+  namespace: front
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  {{- if not $v.hpa.actif }}
+  replicas: {{ $v.repliques }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: front
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+      annotations:
+        collector/empreinte-config: {{ $emetteur | sha256sum | trunc 16 }}
+    spec:
+      {{- include "collector.securitePod" (dict "utilisateur" 101 "groupe" 101) | nindent 6 }}
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: nginx
+          image: {{ include "collector.image" (dict "racine" . "cle" "front") }}
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - name: COLLECTOR_IDP_ORIGIN
+              value: {{ printf "https://auth.%s" .Values.domaine | quote }}
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 2
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 15
+            failureThreshold: 4
+          resources:
+            {{- toYaml $v.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" . | nindent 10 }}
+          volumeMounts:
+            - { name: config, mountPath: /usr/share/nginx/html/config.json, subPath: config.json, readOnly: true }
+            - { name: conf-d, mountPath: /etc/nginx/conf.d }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: config
+          configMap:
+            name: front-config
+        - name: conf-d
+          emptyDir: { sizeLimit: 1Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front
+  namespace: front
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: front
+  ports:
+    - { name: http, port: 80, targetPort: http, nodePort: {{ $v.nodePort }} }
+{{- if $v.hpa.actif }}
+---
+{{ include "collector.hpa" (merge (dict "hpa" $v.hpa) $ctx) }}
+{{- end }}

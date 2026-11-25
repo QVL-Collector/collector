@@ -1,0 +1,92 @@
+{{- $v := .Values.identite }}
+{{- $ctx := dict "racine" . "nom" "keycloak" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: {{ $v.namespace }}
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+    spec:
+      {{- include "collector.securitePod" (dict "utilisateur" 1000 "groupe" 0) | nindent 6 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: keycloak
+          image: {{ include "collector.image" (dict "racine" . "cle" $v.image) }}
+          args: ["start", "--optimized", "--import-realm"]
+          env:
+            - name: KC_HOSTNAME
+              value: {{ printf "https://auth.%s" .Values.domaine | quote }}
+            - { name: KC_HTTP_ENABLED, value: "true" }
+            - { name: KC_PROXY_HEADERS, value: xforwarded }
+            - { name: JAVA_OPTS_KC_HEAP, value: "-XX:MaxRAMPercentage=70" }
+          envFrom:
+            - secretRef:
+                name: keycloak
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: gestion, containerPort: 9000 }
+          startupProbe:
+            httpGet: { path: /health/started, port: gestion }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health/ready, port: gestion }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: gestion }
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            {{- toYaml $v.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" . | nindent 10 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: donnees, mountPath: /opt/keycloak/data/tmp }
+            {{- include "collector.montageAutorites" . | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: donnees
+          emptyDir: { sizeLimit: 256Mi }
+        {{- include "collector.volumeAutorites" . | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: {{ $v.namespace }}
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: keycloak
+  ports:
+    - { name: http, port: 8080, targetPort: http }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-alb
+  namespace: {{ $v.namespace }}
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: keycloak
+  ports:
+    - { name: http, port: 8080, targetPort: http, nodePort: {{ $v.nodePort }} }

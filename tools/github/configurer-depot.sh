@@ -18,6 +18,7 @@ DEPOT="${1:-}"
 MODE="${2:-appliquer}"
 FICHIER_JETON="${FICHIER_JETON:-$HOME/.qvl/gh-token}"
 NOM_REGLES="protection-main"
+NOM_REGLES_ENV="protection-env-demo"
 ID_GITHUB_ACTIONS=15368
 
 if [[ ! "$DEPOT" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
@@ -106,6 +107,30 @@ JSON
   else
     api --method POST "repos/$DEPOT/rulesets" --input - --silent <<< "$corps"
     echo "ensemble de règles créé"
+  fi
+
+  etape "Ensemble de règles « $NOM_REGLES_ENV » : env/demo écrite par GitHub Actions seul, ni poussée forcée ni suppression (MP5)"
+  corps="$(cat <<JSON
+{
+  "name": "$NOM_REGLES_ENV",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [ { "actor_id": $ID_GITHUB_ACTIONS, "actor_type": "Integration", "bypass_mode": "always" } ],
+  "conditions": { "ref_name": { "include": ["refs/heads/env/demo"], "exclude": [] } },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    { "type": "creation" },
+    { "type": "update", "parameters": { "update_allows_fetch_and_merge": false } }
+  ]
+}
+JSON
+)"
+  id="$(api "repos/$DEPOT/rulesets" --jq ".[] | select(.name == \"$NOM_REGLES_ENV\") | .id")"
+  if [[ -n "$id" ]]; then
+    api --method PUT "repos/$DEPOT/rulesets/$id" --input - --silent <<< "$corps"
+  else
+    api --method POST "repos/$DEPOT/rulesets" --input - --silent <<< "$corps"
   fi
 }
 

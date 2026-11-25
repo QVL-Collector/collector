@@ -1,0 +1,42 @@
+{{- range $nom := list "place-de-marche" "interactions" "transactions" }}
+{{- $ctx := dict "racine" $ "nom" (printf "%s-migration" $nom) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $nom }}-migration
+  namespace: {{ $nom }}
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 4
+  activeDeadlineSeconds: {{ $.Values.migrations.delaiS }}
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+        collector/migration: "true"
+    spec:
+      {{- include "collector.securitePod" (dict) | nindent 6 }}
+      restartPolicy: Never
+      {{- include "collector.attenteBase" (dict "racine" $ "secret" "base-migration") | nindent 6 }}
+      containers:
+        - name: migration
+          image: {{ include "collector.image" (dict "racine" $ "cle" $nom) }}
+          args: ["migrate"]
+          env:
+            - { name: JOURNAL_NIVEAU, value: {{ $.Values.journalNiveau | quote }} }
+            {{- include "collector.base" (dict "racine" $ "secret" "base-migration") | nindent 12 }}
+          resources:
+            {{- toYaml $.Values.migrations.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" $ | nindent 10 }}
+          volumeMounts:
+            {{- include "collector.montageAutorites" $ | nindent 12 }}
+      volumes:
+        {{- include "collector.volumeAutorites" $ | nindent 8 }}
+{{- end }}

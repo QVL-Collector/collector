@@ -259,6 +259,7 @@ jobs:
         run: bash "${GITHUB_WORKSPACE}/tools/ci/govulncheck.sh" "${NOM}"
       - name: Construire l'image sans la pousser
         id: image
+        if: github.event_name != 'push'
         env:
           NOM: ${{ steps.nom.outputs.nom }}
         run: |
@@ -432,3 +433,36 @@ jobs:
             echo "::error::au moins un job requis est en échec ou annulé"
             exit 1
           fi
+
+  publication:
+    name: Publication (images signées, env/demo)
+    needs: [ci-ok]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    concurrency:
+      group: publication
+      cancel-in-progress: false
+    permissions:
+      contents: write # écriture de la seule branche env/demo (MP5)
+      packages: write # poussée des images sur GHCR (R1)
+      id-token: write # signature cosign sans clé, identité OIDC de ce workflow (MP6)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Construire, analyser, publier, signer, vérifier, écrire env/demo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AVANT: ${{ github.event.before }}
+          COMMIT: ${{ github.sha }}
+        run: bash tools/ci/publier.sh
+      - name: Conserver les SBOM
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: rapports/sbom-*.cdx.json
+          retention-days: 90
+          if-no-files-found: ignore

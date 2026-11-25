@@ -1,0 +1,84 @@
+{{- $v := .Values.placeDeMarche }}
+{{- $ctx := dict "racine" . "nom" "place-de-marche" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: place-de-marche
+  namespace: place-de-marche
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  {{- if not $v.hpa.actif }}
+  replicas: {{ $v.repliques }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: place-de-marche
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+        {{- if $v.accesAws }}
+        collector/acces-aws: "true"
+        {{- end }}
+    spec:
+      {{- include "collector.securitePod" (dict) | nindent 6 }}
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: place-de-marche
+          image: {{ include "collector.image" (dict "racine" . "cle" "place-de-marche") }}
+          args: ["serve"]
+          ports:
+            - { name: api, containerPort: 8080 }
+            - { name: interne, containerPort: 8081 }
+            - { name: gestion, containerPort: 9090 }
+          env:
+            - { name: JOURNAL_NIVEAU, value: {{ .Values.journalNiveau | quote }} }
+            - { name: RESERVATION_DUREE, value: {{ $v.reservation.duree | quote }} }
+            - { name: RESERVATION_DUREE_MAX, value: {{ $v.reservation.dureeMax | quote }} }
+            - { name: RESERVATION_CLIENT_AUTORISE, value: transactions }
+            - { name: CANAL_EMETTEUR_ATTENDU, value: controle }
+            {{- include "collector.oidc" . | nindent 12 }}
+            {{- include "collector.canal" (dict "racine" . "identite" "marche") | nindent 12 }}
+            {{- include "collector.base" (dict "racine" . "secret" "base-execution") | nindent 12 }}
+          {{- include "collector.sondes" . | nindent 10 }}
+          resources:
+            {{- toYaml $v.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" . | nindent 10 }}
+          volumeMounts:
+            {{- include "collector.montageAutorites" . | nindent 12 }}
+      volumes:
+        {{- include "collector.volumeAutorites" . | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: place-de-marche
+  namespace: place-de-marche
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: place-de-marche
+  ports:
+    - { name: api, port: 8080, targetPort: api, nodePort: {{ $v.nodePort }} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: place-de-marche-interne
+  namespace: place-de-marche
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: place-de-marche
+  ports:
+    - { name: interne, port: 8081, targetPort: interne }
+{{- if $v.hpa.actif }}
+---
+{{ include "collector.hpa" (merge (dict "hpa" $v.hpa) $ctx) }}
+{{- end }}

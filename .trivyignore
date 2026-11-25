@@ -24,3 +24,10 @@ AWS-0053 exp:2026-12-20
 # validation: Martin 2026-11-20 (décision) ; Sécurité à confirmer
 # creee: 2026-11-20
 AWS-0040 exp:2026-12-20
+
+# composant: infra/flux/deployeur.yaml (ClusterRole collector-deployeur, liée par RoleBinding dans chaque namespace applicatif)
+# justification: voulu (D10 MP4, US-007 AC9) ; le compte de Flux crée les Services et les NetworkPolicy du chart applicatif, sans objet de cluster ni Secret hors du namespace collector
+# mesure: liaisons par namespace seulement, usurpation limitée au compte deployeur, cluster-admin retiré au contrôleur Helm ; Services LoadBalancer refusés par l'admission (US-006 AC3)
+# validation: Sécurité à confirmer ; Martin à confirmer
+# creee: 2026-11-23
+KSV-0056 exp:2026-12-23

@@ -47,7 +47,7 @@ secrets() {
   for s in "${SERVICES[@]}"; do
     var="$(variable_mdp "$s")"
     url="amqp://$s:${!var}@rabbitmq.$NS_CANAL.svc:5672/$VHOST"
-    printf 'AMQP_URL %s\n' "$(b64 "$url")" | manifeste_secret "$(namespace_de "$s")" canal-amqp | kc apply -f - >/dev/null
+    printf 'AMQP_URL %s\nCANAL_MOT_DE_PASSE %s\n' "$(b64 "$url")" "$(b64 "${!var}")" | manifeste_secret "$(namespace_de "$s")" canal-amqp | kc apply -f - >/dev/null
   done
   url="http://keda:${MDP_KEDA}@rabbitmq.$NS_CANAL.svc:15672/$VHOST"
   printf 'host %s\n' "$(b64 "$url")" | manifeste_secret "$NS_SUPERVISION_CIBLE" canal-supervision | kc apply -f - >/dev/null

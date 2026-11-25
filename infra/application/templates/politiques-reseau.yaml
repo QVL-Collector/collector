@@ -1,0 +1,212 @@
+{{- /*
+Flux autorisés (US-006 AC1, AC6) ; le refus par défaut et le DNS sont posés avec les namespaces (infra/k8s/application.yaml),
+avant tout crochet de migration. Chaque politique ne fait qu'ouvrir : elles s'additionnent au refus par défaut.
+*/ -}}
+{{- if not .Values.base.destinations }}
+{{- fail "base.destinations est obligatoire : une liste vide ouvrirait la sortie vers toute adresse" }}
+{{- end }}
+{{- $sources := .Values.exposition.sources }}
+{{- $kc := .Values.identite.namespace }}
+{{- range $nom := list "front" "place-de-marche" "interactions" "transactions" }}
+{{- if $sources }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: entree-alb
+  namespace: {{ $nom }}
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" $ "nom" $nom) | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $nom }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        {{- range $sources }}
+        - ipBlock: { cidr: {{ . }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: 8080 }
+{{- end }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: entree-reserver
+  namespace: place-de-marche
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" . "nom" "place-de-marche") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: place-de-marche
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: transactions }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: transactions }
+      ports:
+        - { protocol: TCP, port: 8081 }
+{{- range $nom := list "place-de-marche" "interactions" "transactions" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-base
+  namespace: {{ $nom }}
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" $ "nom" $nom) | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [{{ $nom }}, {{ $nom }}-migration, {{ $nom }}-rejeu]
+  policyTypes: [Egress]
+  egress:
+    - to:
+        {{- toYaml $.Values.base.destinations | nindent 8 }}
+      ports:
+        - { protocol: TCP, port: {{ $.Values.base.port }} }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-keycloak
+  namespace: {{ $nom }}
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" $ "nom" $nom) | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $nom }}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: {{ $kc }} }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: keycloak }
+      ports:
+        - { protocol: TCP, port: 8080 }
+{{- end }}
+{{- range $nom := list "place-de-marche" "controle" "interactions" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-canal
+  namespace: {{ $nom }}
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" $ "nom" $nom) | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $nom }}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: {{ $.Values.canal.namespace }} }
+          podSelector:
+            matchLabels: { app: rabbitmq }
+      ports:
+        - { protocol: TCP, port: {{ $.Values.canal.port }} }
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-reserver
+  namespace: transactions
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" . "nom" "transactions") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: transactions
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: place-de-marche }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: place-de-marche }
+      ports:
+        - { protocol: TCP, port: 8081 }
+{{- if .Values.placeDeMarche.accesAws }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-aws
+  namespace: place-de-marche
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" . "nom" "place-de-marche") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: place-de-marche
+      collector/acces-aws: "true"
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock: { cidr: 169.254.169.254/32 }
+      ports:
+        - { protocol: TCP, port: 80 }
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]
+      ports:
+        - { protocol: TCP, port: 443 }
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: entree-keycloak
+  namespace: {{ $kc }}
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" . "nom" "keycloak") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        {{- range $nom := list "place-de-marche" "interactions" "transactions" }}
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: {{ $nom }} }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: {{ $nom }} }
+        {{- end }}
+        {{- range $sources }}
+        - ipBlock: { cidr: {{ . }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sortie-base
+  namespace: {{ $kc }}
+  labels:
+    {{- include "collector.etiquettes" (dict "racine" . "nom" "keycloak") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak
+  policyTypes: [Egress]
+  egress:
+    - to:
+        {{- toYaml .Values.base.destinations | nindent 8 }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.base.port }} }

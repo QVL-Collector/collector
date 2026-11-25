@@ -1,0 +1,57 @@
+{{- $v := .Values.interactions }}
+{{- $ctx := dict "racine" . "nom" "interactions" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interactions
+  namespace: interactions
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $v.repliques }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: interactions
+  template:
+    metadata:
+      labels:
+        {{- include "collector.etiquettes" $ctx | nindent 8 }}
+    spec:
+      {{- include "collector.securitePod" (dict) | nindent 6 }}
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: interactions
+          image: {{ include "collector.image" (dict "racine" . "cle" "interactions") }}
+          args: ["serve"]
+          ports:
+            - { name: api, containerPort: 8080 }
+            - { name: gestion, containerPort: 9090 }
+          env:
+            - { name: JOURNAL_NIVEAU, value: {{ .Values.journalNiveau | quote }} }
+            - { name: CANAL_EMETTEUR_ATTENDU, value: marche }
+            {{- include "collector.oidc" . | nindent 12 }}
+            {{- include "collector.canal" (dict "racine" . "identite" "interactions") | nindent 12 }}
+            {{- include "collector.base" (dict "racine" . "secret" "base-execution") | nindent 12 }}
+          {{- include "collector.sondes" . | nindent 10 }}
+          resources:
+            {{- toYaml $v.ressources | nindent 12 }}
+          {{- include "collector.securiteConteneur" . | nindent 10 }}
+          volumeMounts:
+            {{- include "collector.montageAutorites" . | nindent 12 }}
+      volumes:
+        {{- include "collector.volumeAutorites" . | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: interactions
+  namespace: interactions
+  labels:
+    {{- include "collector.etiquettes" $ctx | nindent 4 }}
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: interactions
+  ports:
+    - { name: api, port: 8080, targetPort: api, nodePort: {{ $v.nodePort }} }

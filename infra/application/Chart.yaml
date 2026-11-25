@@ -1,0 +1,6 @@
+apiVersion: v2
+name: collector-application
+description: Application Collector (D03, D10) - quatre services Go, front nginx, Keycloak ; un namespace par service, images par empreinte
+type: application
+version: 0.1.1
+appVersion: "0.1.0"

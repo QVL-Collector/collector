@@ -1,0 +1,67 @@
+# HelmRelease du canal et de l'application (D10 P2, US-007 AC3, AC5). Compte deployeur, versions Helm rangées dans
+# collector ; retour arrière automatique sur échec d'une mise à jour. tools/up-flux.sh remplace valeurs-aws.yaml
+# par valeurs-k3d.yaml sur le poste.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: canal
+  namespace: collector
+spec:
+  interval: 10m
+  timeout: 6m
+  releaseName: canal
+  targetNamespace: canal
+  storageNamespace: collector
+  serviceAccountName: deployeur
+  chart:
+    spec:
+      chart: infra/canal
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: collector
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 0
+      remediateLastFailure: true
+      strategy: rollback
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: application
+  namespace: collector
+spec:
+  interval: 10m
+  timeout: 10m
+  releaseName: application
+  storageNamespace: collector
+  serviceAccountName: deployeur
+  dependsOn:
+    - name: canal
+  chart:
+    spec:
+      chart: infra/application
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: collector
+      valuesFiles:
+        - infra/application/values.yaml
+        - infra/application/valeurs-aws.yaml
+        - deploy/demo/empreintes.yaml
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 0
+      remediateLastFailure: true
+      strategy: rollback
+  rollback:
+    cleanupOnFail: true
