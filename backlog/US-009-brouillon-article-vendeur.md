@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E3 Mise en vente contrôlée |
-| Statut | Livrée côté back ; AC5, AC10 (DevOps) et AC11 (front) à faire |
+| Statut | Livrée côté back et front ; AC5 et AC10 (DevOps) à faire |
 | Sprint | 1 (J4) |
 | Engagement | Ferme |
 | Estimation | 5 points |
