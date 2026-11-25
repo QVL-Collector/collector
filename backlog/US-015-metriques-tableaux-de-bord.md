@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Epic | E4 Exploitation, charge et disponibilité |
-| Statut | À faire |
+| Statut | En cours |
 | Sprint | 2 (J5), reportée au sprint 3 (session AWS 3, [sprint-3.md](sprints/sprint-3.md)) |
 | Engagement | Ferme |
 | Estimation | 3 points |
