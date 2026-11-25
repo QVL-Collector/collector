@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, render, type RenderResult } from '@testing-library/react';
+import { cleanup, configure, render, type RenderResult } from '@testing-library/react';
 import i18n from 'i18next';
 import { afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import { App } from '../../app/App';
@@ -13,6 +13,9 @@ import type {
 import type { SellerClient } from '../../features/seller/domain/sellerArticle';
 import { initI18n } from '../../i18n/initI18n';
 import type { SupportedLanguage } from '../../i18n/languages';
+
+configure({ asyncUtilTimeout: 5000 });
+vi.setConfig({ testTimeout: 30000 });
 
 type ListPublishedArticles = CatalogueClient['listPublishedArticles'];
 

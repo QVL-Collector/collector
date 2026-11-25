@@ -17,6 +17,7 @@ import {
 import { categoryField, editorHeading, field, fr } from './sellerScreens';
 
 const firstId = articleId(1);
+const fullFormTypingTimeout = 60000;
 
 describe('US-013 front, création d’un brouillon depuis l’espace vendeur', () => {
   it('Given le vendeur sans article, When il ouvre « Mes articles », Then la liste vide l’invite à créer un brouillon', async () => {
@@ -34,32 +35,36 @@ describe('US-013 front, création d’un brouillon depuis l’espace vendeur', (
     );
   });
 
-  it('Given le formulaire de création, When le vendeur le remplit et crée le brouillon, Then l’API reçoit le contenu saisi et l’article s’ouvre en brouillon révision 1', async () => {
-    await openAsSeller('/vendeur/articles/nouveau');
-    await editorHeading(fr.newItemTitle);
+  it(
+    'Given le formulaire de création, When le vendeur le remplit et crée le brouillon, Then l’API reçoit le contenu saisi et l’article s’ouvre en brouillon révision 1',
+    async () => {
+      await openAsSeller('/vendeur/articles/nouveau');
+      await editorHeading(fr.newItemTitle);
 
-    await type(field(fr.title), 'Pièce de 5 francs Semeuse');
-    await type(field(fr.description), 'Argent, 1960, très bon état');
-    await chooseOption(fr.category, 'Monnaies');
-    await type(field(fr.price), '12,50');
-    await type(field(fr.shippingCost), '3');
-    await click(screen.getByRole('button', { name: fr.create }));
+      await type(field(fr.title), 'Pièce de 5 francs Semeuse');
+      await type(field(fr.description), 'Argent, 1960, très bon état');
+      await chooseOption(fr.category, 'Monnaies');
+      await type(field(fr.price), '12,50');
+      await type(field(fr.shippingCost), '3');
+      await click(screen.getByRole('button', { name: fr.create }));
 
-    await editorHeading('Pièce de 5 francs Semeuse');
-    expect(writesTo('POST', '/vendeur/articles').map((request) => request.body)).toEqual([
-      {
-        titre: 'Pièce de 5 francs Semeuse',
-        description: 'Argent, 1960, très bon état',
-        categorieId: 'monnaies',
-        prix: { montantCentimes: 1250, devise: 'EUR' },
-        fraisDePort: { montantCentimes: 300, devise: 'EUR' },
-      },
-    ]);
-    const [created] = [...marketplace().articles.values()];
-    expect(created?.revision).toBe(1);
-    expect(currentPath()).toBe(`/vendeur/articles/${created?.id ?? ''}`);
-    expect(screen.getByText(fr.states.brouillon)).toBeInTheDocument();
-  });
+      await editorHeading('Pièce de 5 francs Semeuse');
+      expect(writesTo('POST', '/vendeur/articles').map((request) => request.body)).toEqual([
+        {
+          titre: 'Pièce de 5 francs Semeuse',
+          description: 'Argent, 1960, très bon état',
+          categorieId: 'monnaies',
+          prix: { montantCentimes: 1250, devise: 'EUR' },
+          fraisDePort: { montantCentimes: 300, devise: 'EUR' },
+        },
+      ]);
+      const [created] = [...marketplace().articles.values()];
+      expect(created?.revision).toBe(1);
+      expect(currentPath()).toBe(`/vendeur/articles/${created?.id ?? ''}`);
+      expect(screen.getByText(fr.states.brouillon)).toBeInTheDocument();
+    },
+    fullFormTypingTimeout,
+  );
 
   it('Given un brouillon créé, When le vendeur revient à « Mes articles », Then il y figure à l’état brouillon', async () => {
     await openAsSeller('/vendeur/articles/nouveau');

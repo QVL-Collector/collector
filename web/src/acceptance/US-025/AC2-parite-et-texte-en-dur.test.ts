@@ -6,7 +6,6 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const webRoot = resolve(import.meta.dirname, '../../..');
 const paritySource = join(webRoot, 'scripts', 'check-translations.ts');
-const eslintBin = join(webRoot, 'node_modules', 'eslint', 'bin', 'eslint.js');
 const slowProcess = 60000;
 const hardCodedTextRules = /^(i18next\/no-literal-string|no-restricted-syntax)$/;
 
@@ -88,6 +87,16 @@ type LintReport = { readonly filePath: string; readonly messages: readonly LintM
 type Probe = 'traduit' | 'texteJsx' | 'ariaLabel' | 'alt';
 
 let lintReports: readonly LintReport[] = [];
+
+function projectLintWithoutTypeInformation(directory: string): string {
+  return [
+    "import { ESLint } from 'eslint';",
+    "import tseslint from 'typescript-eslint';",
+    'const eslint = new ESLint({ overrideConfig: tseslint.configs.disableTypeChecked });',
+    `const results = await eslint.lintFiles([${JSON.stringify(directory)}]);`,
+    'process.stdout.write(JSON.stringify(results));',
+  ].join('\n');
+}
 
 function rulesReportedFor(probe: Probe): readonly LintMessage[] {
   const report = lintReports.find(
@@ -223,7 +232,10 @@ describe('US-025-AC2 lint contre le texte en dur', () => {
     for (const [probe, source] of Object.entries(sources)) {
       writeFileSync(join(probeDirectory, `Sonde${probe}.tsx`), source);
     }
-    const outcome = await run([eslintBin, '--format', 'json', probeDirectory], webRoot);
+    const outcome = await run(
+      ['--input-type=module', '--eval', projectLintWithoutTypeInformation(probeDirectory)],
+      webRoot,
+    );
     lintReports = JSON.parse(outcome.output.slice(outcome.output.indexOf('['))) as LintReport[];
   }, slowProcess);
 

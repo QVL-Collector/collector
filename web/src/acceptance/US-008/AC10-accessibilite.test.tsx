@@ -7,6 +7,7 @@ import {
   buyer,
   defaultConfig,
   endSessionEndpoint,
+  mainHeadingFocused,
   openCollector,
   returnFromIdentityProvider,
   sellerA,
@@ -132,6 +133,7 @@ describe('US-008-AC10 connexion et déconnexion au clavier', () => {
   it('Given le vendeur A connecté, When il atteint « Se déconnecter » au clavier et appuie sur Espace, Then la déconnexion part vers le serveur d’autorisation', async () => {
     const user = userEvent.setup();
     await signInAs(sellerA);
+    await mainHeadingFocused();
     const signOut = await within(screen.getByRole('banner')).findByRole('button', {
       name: 'Se déconnecter',
     });
