@@ -11,7 +11,9 @@ info:
     de realm vendeur. Un article d'un autre vendeur répond 404, sans révéler son existence. Les routes
     d'administration exigent le même jeton portant le rôle de realm admin ; tout autre rôle répond 403. Corps JSON
     refusés : clé dupliquée (casse ignorée), champ inconnu, type inattendu, valeur racine autre qu'un objet, plus de
-    32 Kio.
+    32 Kio. Seul le dépôt de photo reçoit un corps binaire, borné par sa propre taille maximale. Les photos ne sont
+    jamais servies par l'API : chaque liste de photos donne des URL présignées de courte durée vers le bucket privé,
+    émises pour un article publié (catalogue), pour son vendeur (routes du vendeur) ou pour un admin.
 servers:
   - url: /marche/v1
 tags:
@@ -61,6 +63,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ArticlePublie"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+  /articles/{id}/photos:
+    parameters:
+      - $ref: "#/components/parameters/IdArticle"
+    get:
+      tags: [Catalogue]
+      operationId: listerPhotosArticlePublie
+      summary: >-
+        Photos d'un article publié, servies par des URL présignées de courte durée ; un article inexistant ou non
+        publié répond 404
+      security: []
+      responses:
+        "200":
+          description: Photos de l'article, de la plus ancienne à la plus récente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListePhotos"
         "404":
           $ref: "#/components/responses/Introuvable"
         "500":
@@ -261,6 +284,112 @@ paths:
           $ref: "#/components/responses/TropDeRequetes"
         "500":
           $ref: "#/components/responses/ErreurInterne"
+  /vendeur/articles/{id}/photos:
+    parameters:
+      - $ref: "#/components/parameters/IdArticle"
+    get:
+      tags: [Vendeur]
+      operationId: listerMesPhotos
+      summary: Photos d'un article du vendeur connecté, dans tout état, servies par des URL présignées de courte durée
+      security:
+        - jetonKeycloak: []
+      responses:
+        "200":
+          description: Photos de l'article, de la plus ancienne à la plus récente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListePhotos"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+    post:
+      tags: [Vendeur]
+      operationId: deposerPhoto
+      summary: >-
+        Déposer une photo sur un article brouillon ou refusé. Le corps est le fichier lui-même, sans enveloppe
+        multipart ; son type est reconnu par son contenu, l'en-tête Content-Type et le nom du fichier sont ignorés.
+        Seuls JPEG et PNG sont acceptés. Les dimensions sont lues dans l'en-tête avant tout décodage. La photo est
+        redressée selon son orientation EXIF, ré-encodée en JPEG sans aucune métadonnée (EXIF, GPS), puis stockée dans le bucket privé sous un nom aléatoire
+        généré par le serveur ; l'original n'est jamais conservé. La révision de l'article ne change pas. Nombre de
+        photos par article plafonné (1 par défaut).
+      security:
+        - jetonKeycloak: []
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/png:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Photo ré-encodée et enregistrée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Photo"
+        "400":
+          $ref: "#/components/responses/SaisieInvalide"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "409":
+          $ref: "#/components/responses/ConflitPhoto"
+        "413":
+          $ref: "#/components/responses/PhotoTropVolumineuse"
+        "415":
+          $ref: "#/components/responses/PhotoNonPriseEnCharge"
+        "422":
+          $ref: "#/components/responses/DimensionsExcessives"
+        "429":
+          $ref: "#/components/responses/TropDeRequetes"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+        "503":
+          $ref: "#/components/responses/Indisponible"
+  /vendeur/articles/{id}/photos/{photoId}:
+    parameters:
+      - $ref: "#/components/parameters/IdArticle"
+      - name: photoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Vendeur]
+      operationId: retirerPhoto
+      summary: >-
+        Retirer une photo d'un article brouillon ou refusé ; l'objet est supprimé du bucket. Une photo inconnue, déjà
+        retirée ou d'un autre article répond 404
+      security:
+        - jetonKeycloak: []
+      responses:
+        "204":
+          description: Photo retirée
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
+        "409":
+          $ref: "#/components/responses/ConflitPhoto"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
   /admin/articles:
     get:
       tags: [Administration]
@@ -286,6 +415,30 @@ paths:
           $ref: "#/components/responses/NonAuthentifie"
         "403":
           $ref: "#/components/responses/NonAutorise"
+        "500":
+          $ref: "#/components/responses/ErreurInterne"
+  /admin/articles/{id}/photos:
+    parameters:
+      - $ref: "#/components/parameters/IdArticle"
+    get:
+      tags: [Administration]
+      operationId: listerPhotosArticle
+      summary: Photos d'un article dans tout état, pour l'examen d'un article à vérifier, servies par des URL présignées de courte durée
+      security:
+        - jetonKeycloak: []
+      responses:
+        "200":
+          description: Photos de l'article, de la plus ancienne à la plus récente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListePhotos"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "403":
+          $ref: "#/components/responses/NonAutorise"
+        "404":
+          $ref: "#/components/responses/Introuvable"
         "500":
           $ref: "#/components/responses/ErreurInterne"
   /admin/articles/{id}/decision:
@@ -343,6 +496,13 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    IdArticle:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     Categorie:
       name: categorie
       in: query
@@ -704,6 +864,39 @@ components:
           allOf:
             - $ref: "#/components/schemas/Montant"
           nullable: true
+    Photo:
+      description: >-
+        Photo ré-encodée en JPEG, sans métadonnée. L'URL est présignée, valable jusqu'à expireLe (10 min par défaut,
+        15 min au plus) ; à redemander en relisant la liste, jamais à conserver. Le texte alternatif est
+        construit par le front à partir du titre de l'article.
+      type: object
+      additionalProperties: false
+      required: [id, url, expireLe, largeur, hauteur]
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        expireLe:
+          type: string
+          format: date-time
+        largeur:
+          type: integer
+          minimum: 1
+        hauteur:
+          type: integer
+          minimum: 1
+    ListePhotos:
+      type: object
+      additionalProperties: false
+      required: [elements]
+      properties:
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Photo"
     PageCatalogue:
       type: object
       additionalProperties: false
@@ -752,7 +945,9 @@ components:
             about:blank pour les erreurs génériques ; sinon urn:collector:probleme:saisie-invalide,
             urn:collector:probleme:corps-invalide, urn:collector:probleme:revision-perimee,
             urn:collector:probleme:article-non-modifiable, urn:collector:probleme:article-non-soumettable,
-            urn:collector:probleme:article-reserve ou urn:collector:probleme:article-non-a-verifier
+            urn:collector:probleme:article-reserve, urn:collector:probleme:article-non-a-verifier,
+            urn:collector:probleme:photos-limite-atteinte, urn:collector:probleme:photo-trop-volumineuse,
+            urn:collector:probleme:photo-non-prise-en-charge ou urn:collector:probleme:photo-dimensions-excessives
         title:
           type: string
         status:
@@ -829,6 +1024,43 @@ components:
             $ref: "#/components/schemas/Probleme"
     TypeNonPrisEnCharge:
       description: Corps qui n'est pas application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    ConflitPhoto:
+      description: >-
+        Article réservé ou vendu (urn:collector:probleme:article-reserve, prioritaire) ; article ni brouillon ni
+        refusé (urn:collector:probleme:article-non-modifiable) ; ou, au dépôt, nombre maximal de photos atteint
+        (urn:collector:probleme:photos-limite-atteinte). Rien n'est écrit
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    PhotoTropVolumineuse:
+      description: Fichier au-delà de la taille maximale, 5 Mio par défaut (urn:collector:probleme:photo-trop-volumineuse)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    PhotoNonPriseEnCharge:
+      description: >-
+        Contenu qui n'est ni un JPEG ni un PNG lisible, quels que soient l'extension et le Content-Type déclarés : GIF,
+        WebP, SVG, faux .jpg, fichier vide ou tronqué (urn:collector:probleme:photo-non-prise-en-charge)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    DimensionsExcessives:
+      description: >-
+        Dimensions lues dans l'en-tête au-delà du plafond de pixels (16 Mpx par défaut) ou de 65 535 pixels de côté,
+        refusées avant tout décodage (urn:collector:probleme:photo-dimensions-excessives)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Probleme"
+    Indisponible:
+      description: Traitement des photos saturé, aucun créneau de décodage libéré à temps ; réessayer plus tard
       content:
         application/problem+json:
           schema:

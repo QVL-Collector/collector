@@ -23,6 +23,8 @@ import (
 	"collector/services/place-de-marche/internal/annonces/api"
 	"collector/services/place-de-marche/internal/annonces/controle"
 	"collector/services/place-de-marche/internal/annonces/diffusion"
+	"collector/services/place-de-marche/internal/annonces/objets"
+	"collector/services/place-de-marche/internal/annonces/photo"
 	"collector/services/place-de-marche/internal/annonces/stockage"
 	comptesstockage "collector/services/place-de-marche/internal/comptes/stockage"
 	"collector/services/place-de-marche/internal/config"
@@ -66,6 +68,10 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	}
 	store := stockage.NewStore(pool, controle.NewRequestEncoder(validator), diffusion.NewDecisionEncoder(validator), comptesstockage.NewStore(pool))
 	service := annonces.NewService(store, store)
+	photos, err := photoRoutes(ctx, logger, store)
+	if err != nil {
+		return err
+	}
 	reservationService := reservations.NewService(reservationsstockage.NewStore(pool), cfg.Reservation.Term)
 	guard := ratelimit.NewGuard(cfg.RateLimit, logger, time.Now)
 	safeguard, err := controle.NewSafeguard(store, productionSafeguardTiming, logger)
@@ -75,7 +81,7 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		return httpserver.Run(groupCtx, logger,
-			httpserver.New(cfg.APIAddress, publicHandler(logger, service, verifier, guard)),
+			httpserver.New(cfg.APIAddress, publicHandler(logger, service, photos, verifier, guard)),
 			httpserver.New(cfg.InternalAddress, internalHandler(logger, reservationService, delegation)),
 			httpserver.New(cfg.ManagementAddress, httpserver.ManagementHandler(logger, pool.Ping)),
 		)
@@ -95,10 +101,29 @@ func serve(ctx context.Context, logger *slog.Logger) error {
 	return group.Wait()
 }
 
-func publicHandler(logger *slog.Logger, service api.ArticleService, authenticator api.Authenticator, limiter api.RateLimiter) http.Handler {
+func publicHandler(logger *slog.Logger, service api.ArticleService, photos api.PhotoRoutes, authenticator api.Authenticator, limiter api.RateLimiter) http.Handler {
 	mux := http.NewServeMux()
-	api.Register(mux, service, authenticator, limiter, logger)
+	api.Register(mux, service, photos, authenticator, limiter, logger)
 	return logging.Middleware(logger, httpserver.Recover(logger, httpserver.SecurityHeaders(mux)))
+}
+
+func photoRoutes(ctx context.Context, logger *slog.Logger, records annonces.PhotoRecords) (api.PhotoRoutes, error) {
+	settings, err := config.LoadPhotos(os.Getenv)
+	if err != nil {
+		return api.PhotoRoutes{}, err
+	}
+	objects, err := objets.NewStore(ctx, settings.Storage)
+	if err != nil {
+		return api.PhotoRoutes{}, err
+	}
+	sanitizer, err := photo.NewSanitizer(settings.Limits)
+	if err != nil {
+		return api.PhotoRoutes{}, err
+	}
+	return api.PhotoRoutes{
+		Service:        annonces.NewPhotoService(records, sanitizer, objects, settings.PerArticle, logger),
+		MaxUploadBytes: settings.MaxBytes,
+	}, nil
 }
 
 func internalHandler(logger *slog.Logger, reserver reservationsapi.Reserver, authenticator reservationsapi.Authenticator) http.Handler {

@@ -1,6 +1,6 @@
 # Service Place de marché
 
-Module Annonces : catalogue public, brouillons du vendeur, catégories, soumission au contrôle de publication, application de son résultat et diffusion des décisions de publication. Module Réservations : « réserver » pour Transactions. Module Comptes minimal : statut des vendeurs (inscription, suspension). Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), [`interne-v1.openapi.yaml`](../../contracts/api/place-de-marche/interne-v1.openapi.yaml) (port interne), messages [`controle.demande`, `controle.resultat` et `publication.decidee` v1](../../contracts/README.md).
+Module Annonces : catalogue public, brouillons du vendeur, photos, catégories, soumission au contrôle de publication, application de son résultat et diffusion des décisions de publication. Module Réservations : « réserver » pour Transactions. Module Comptes minimal : statut des vendeurs (inscription, suspension). Go, bibliothèque standard, `pgx`, `goose`, `libs/platform` ([D04](../../docs/decisions/D04-stack.md)). Contrats : [`contracts/api/place-de-marche/v1.openapi.yaml`](../../contracts/api/place-de-marche/v1.openapi.yaml), [`interne-v1.openapi.yaml`](../../contracts/api/place-de-marche/interne-v1.openapi.yaml) (port interne), messages [`controle.demande`, `controle.resultat` et `publication.decidee` v1](../../contracts/README.md).
 
 ## Sous-commandes et ports
 
@@ -102,6 +102,42 @@ Dans la même transaction que la décision, une ligne est ajoutée à `decision_
 
 Chaque décision appliquée écrit `publication.decidee` v1 dans l'outbox, dans sa propre transaction : application d'un résultat du Contrôle (`publie`, `refuse`, `a_verifier`, étape 3 du cycle de soumission) et décision d'un administrateur (`publie`, `refuse`). Un résultat sans effet (doublon, révision périmée) n'émet rien. L'événement porte `article_id`, `revision`, `seller_id`, `issue`, `reason` (sauf `publie`) et `decided_at` (`modifie_le` de l'article), sans aucun contenu saisi. Le relais le publie sur l'échange `pdm.evenements` (topic), clé `publication.decidee.v1` ; seule l'identité de la Place de marché a le droit d'y écrire, et seulement cette clé ([infra/canal](../../infra/canal/README.md)). Encodage : paquet `internal/annonces/diffusion`. Abonné : [Interactions](../interactions/README.md).
 
+## Photos (US-020)
+
+Choix F1 de [D07](../../docs/decisions/D07-donnees.md) : dépôt par l'API, ré-encodage, bucket S3 privé, lecture par URL présignée. Une photo par article par défaut (ordre de coupe du sprint 2).
+
+| Route | Accès | Effet |
+|---|---|---|
+| `POST /marche/v1/vendeur/articles/{id}/photos` | vendeur propriétaire, débit limité | Dépose une photo, 201 avec la photo et son URL |
+| `DELETE /marche/v1/vendeur/articles/{id}/photos/{photoId}` | vendeur propriétaire | Retire la photo, 204 |
+| `GET /marche/v1/vendeur/articles/{id}/photos` | vendeur propriétaire, tout état | Liste avec URL présignées |
+| `GET /marche/v1/articles/{id}/photos` | public, article publié seulement | Liste avec URL présignées |
+| `GET /marche/v1/admin/articles/{id}/photos` | admin, tout état | Liste avec URL présignées, pour l'examen « à vérifier » |
+
+- **Dépôt** : le corps est le fichier brut, sans multipart (le front l'envoie par `XMLHttpRequest`, `xhr.send(fichier)`, pour suivre la progression et pouvoir annuler) ; `Content-Type` et nom de fichier ignorés. Ordre : corps lu sous `http.MaxBytesReader` (413 au-delà de `PHOTOS_TAILLE_MAX_OCTETS`) ; propriété, état et nombre de photos de l'article vérifiés avant tout examen du fichier (un autre vendeur obtient 404 sans faire décoder quoi que ce soit) ; type reconnu par la signature du contenu, JPEG ou PNG seulement (415 pour GIF, WebP, SVG, faux `.jpg`, fichier vide ou tronqué) ; dimensions lues dans l'en-tête par `DecodeConfig`, refus 422 au-delà de `PHOTOS_PIXELS_MAX` ou de 65 535 pixels de côté, avant tout décodage (bombe de décompression) ; décodage par le décodeur du format reconnu, jamais par `image.Decode` ; décodages simultanés bornés par `PHOTOS_DECODAGES_SIMULTANES` (503 si aucun créneau ne se libère en 5 s) ; orientation EXIF d'un JPEG (étiquette 0x0112 du segment APP1, lue par un lecteur interne borné aux segments qui précèdent les données ; 8 cas, rotations et miroirs) appliquée par une vue sans copie des pixels ; ré-encodage JPEG qualité 85, transparence aplatie sur fond blanc : aucune métadonnée (EXIF, GPS, profil) ne survit, l'original n'est jamais stocké.
+- **Objet** : clé `photos/<26 caractères base32 aléatoires, 130 bits>.jpg`, générée par le serveur ; `Content-Type: image/jpeg` fixé par le serveur ; chiffrement par le réglage par défaut du bucket (SSE-S3). Écrit dans S3 avant la ligne `photo` ; si la transaction échoue (article soumis entre-temps, plafond atteint), l'objet est supprimé et l'erreur métier est rendue ; si cette suppression échoue aussi, journal Warn `event=annonces.photo_orpheline` (`article_id`).
+- **États** : dépôt et retrait seulement sur un article `brouillon` ou `refuse` ; sinon 409 `article-non-modifiable`, ou `article-reserve` s'il est réservé ou vendu. Au-delà de `PHOTOS_PAR_ARTICLE_MAX` : 409 `photos-limite-atteinte`. La révision de l'article ne change pas : une photo ne peut changer qu'avant la soumission, qui fige le compte de photos de la révision soumise. Le contrôle est atomique avec l'écriture (`SELECT … FOR UPDATE OF article`).
+- **Retrait** : la ligne est marquée `retiree_le` (le rôle d'exécution n'a ni `DELETE` ni `UPDATE` sur les autres colonnes de `photo`), puis l'objet est supprimé ; un échec de suppression laisse un objet orphelin, journal Warn `event=annonces.photo_orpheline` (`photo_id`), vidé au plus tard par `down`.
+- **Complétude** : chaque `controle.demande` porte `photo_count`, compté dans la transaction de la soumission, du recontrôle ou de la relance ; le Contrôle refuse un article sans photo (`annonce_incomplete`, règles v4). Contrat v1 inchangé, le champ y figurait déjà.
+- **Lecture** : URL présignée `GET` de `PHOTOS_URL_DUREE` (10 min par défaut, 15 min au plus), avec `expireLe` dans la réponse. Article non publié demandé sur la route publique, ou article d'un autre vendeur sur la route du vendeur : 404, réponse identique à un article inexistant. Les URL ne sont jamais journalisées par le service ; le masque de `libs/platform/logging` retire en plus toute signature `X-Amz-*` d'un journal.
+- **Accès S3** : client `aws-sdk-go-v2`, identifiants par la chaîne par défaut, soit en cluster le rôle du nœud lu par IMDSv2 ([D03](../../docs/decisions/D03-hebergement-orchestration.md), X6) ; aucune clé statique. Sommes de contrôle `WhenRequired` (compatibilité avec un S3 local).
+
+### S3 en local
+
+[`local/photos.compose.yml`](local/photos.compose.yml) lance SeaweedFS (S3 compatible, recommandé par D07 à la place de MinIO, non maintenu) et crée le bucket :
+
+```powershell
+docker compose -f services/place-de-marche/local/photos.compose.yml up -d
+$env:PHOTOS_BUCKET = "collector-photos-local"
+$env:PHOTOS_S3_ADRESSE = "http://127.0.0.1:8333"
+$env:PHOTOS_S3_STYLE_CHEMIN = "true"
+$env:AWS_ACCESS_KEY_ID = "local"
+$env:AWS_SECRET_ACCESS_KEY = "local"
+$env:AWS_EC2_METADATA_DISABLED = "true"
+```
+
+SeaweedFS lancé sans fichier d'identités n'exige aucune authentification : les URL présignées s'y ouvrent, mais leur signature et leur expiration ne s'y vérifient pas (à prouver sur le vrai bucket). Les identifiants `local` ne servent qu'à faire signer le SDK.
+
 ## Comptes (US-019)
 
 Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006) : `id` (sujet du jeton), `inscrit_le`, `suspendu`, `suspendu_le` (renseigné si et seulement si suspendu). Aucune jointure ni clé étrangère avec `article`.
@@ -113,7 +149,7 @@ Module `internal/comptes`, séparé d'Annonces. Table `compte` (migration 00006)
 
 ## Limitation de débit (US-027)
 
-Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après l'authentification et le rôle, sur les deux routes qui déclenchent un contrôle : `POST /marche/v1/vendeur/articles/{id}/soumission` et `PUT /marche/v1/vendeur/articles/{id}` (recontrôle, US-021). Le dépôt de photo (US-020) s'y branchera de la même façon. Le catalogue et les autres routes vendeur ne sont pas limités.
+Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après l'authentification et le rôle, sur les deux routes qui déclenchent un contrôle, `POST /marche/v1/vendeur/articles/{id}/soumission` et `PUT /marche/v1/vendeur/articles/{id}` (recontrôle, US-021), et sur le dépôt de photo `POST /marche/v1/vendeur/articles/{id}/photos` (US-020). Le catalogue et les autres routes vendeur ne sont pas limités.
 
 - Deux seaux par requête, débités ensemble : l'adresse du client et le compte (sujet du jeton). Le premier vide refuse : 429 Problem Details, `Retry-After` en secondes arrondies au supérieur, journal Info `event=http.debit_depasse` avec `adresse_client` (adresse lue), `cle` (clé du seau d'adresse, /64 en IPv6) et `limite` (`adresse` ou `compte`).
 - Adresse du client : dernière valeur du dernier `X-Forwarded-For`, celle ajoutée par l'ALB en mode `append` ; à défaut, adresse source de la connexion. Une adresse IPv6 compte pour son /64. La confiance dans l'en-tête repose sur les NodePorts joignables depuis l'ALB seul (MS2, MS4).
@@ -148,6 +184,16 @@ Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après
 | `RESERVATION_DUREE` | `serve` | `10m` | Durée d'une réservation (`time.ParseDuration`, au moins `1s`) ; quelques secondes (ex. `5s`) pour la démonstration et les tests d'expiration |
 | `RESERVATION_DUREE_MAX` | `serve` | `30m` | Plafond, au moins `1s` : l'échéance vaut `now() + min(RESERVATION_DUREE, RESERVATION_DUREE_MAX)` |
 | `RESERVATION_CLIENT_AUTORISE` | `serve` | `transactions` | Valeur exigée de `azp` dans le jeton de service de « réserver » |
+| `PHOTOS_BUCKET` | `serve` | obligatoire | Nom du bucket privé des photos (`BUCKET_PHOTOS` de `tools/lib.sh`) |
+| `PHOTOS_REGION` | `serve` | `us-east-1` | Région du bucket |
+| `PHOTOS_S3_ADRESSE` | `serve` | aucune | Point de terminaison S3 compatible (`http(s)://hôte:port`), en local seulement ; vide : AWS |
+| `PHOTOS_S3_STYLE_CHEMIN` | `serve` | `false` | `true` pour l'adressage par chemin (S3 local) |
+| `PHOTOS_URL_DUREE` | `serve` | `10m` | Validité des URL présignées, de `1s` à `15m` (MD7) |
+| `PHOTOS_TAILLE_MAX_OCTETS` | `serve` | `5242880` (5 Mio) | Taille maximale d'un dépôt, de 1 Kio à 20 Mio |
+| `PHOTOS_PIXELS_MAX` | `serve` | `16000000` | Plafond largeur × hauteur, jusqu'à 40 000 000 |
+| `PHOTOS_PAR_ARTICLE_MAX` | `serve` | `1` | Photos par article, de 1 à 10 |
+| `PHOTOS_DECODAGES_SIMULTANES` | `serve` | `2` | Décodages simultanés par réplica, de 1 à 8 ; la limite mémoire du conteneur se dimensionne sur `PIXELS_MAX × 8 octets × ce nombre` (≈ 256 Mo par défaut) |
+| `AWS_*` | `serve` | aucune | Lus par la chaîne par défaut du SDK ; jamais en cluster (rôle du nœud), seulement pour un S3 local |
 | `JOURNAL_NIVEAU` | toutes | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` ; journaux JSON sur la sortie standard |
 
 ## Rôles PostgreSQL attendus
@@ -155,10 +201,10 @@ Intergiciel `libs/platform/ratelimit` (seau de jetons en mémoire), posé après
 Créés par l'amorçage de la base `marche`, avant toute migration ([D07](../../docs/decisions/D07-donnees.md), MD1, MD2) :
 
 - `marche_migration` : propriétaire de la base et du schéma `public`, seul à exécuter du DDL ; secret livré au seul Job de migration.
-- `marche_execution` : `NOSUPERUSER NOCREATEDB NOCREATEROLE`, propriétaire d'aucun objet, sans `CREATE` sur `public` ; nom fixe, car la première migration lui accorde `SELECT`, `INSERT`, `UPDATE` sur les tables et `USAGE`, `SELECT` sur les séquences par `ALTER DEFAULT PRIVILEGES`. Aucun `DELETE`, aucun droit sur la table de version de `goose`. Ni `UPDATE` sur `decision_admin`, `compte` et `reservation` (journaux). Le relais garde sa transaction ouverte pendant la publication : `idle_in_transaction_session_timeout` est à poser sur ce rôle.
+- `marche_execution` : `NOSUPERUSER NOCREATEDB NOCREATEROLE`, propriétaire d'aucun objet, sans `CREATE` sur `public` ; nom fixe, car la première migration lui accorde `SELECT`, `INSERT`, `UPDATE` sur les tables et `USAGE`, `SELECT` sur les séquences par `ALTER DEFAULT PRIVILEGES`. Aucun `DELETE`, aucun droit sur la table de version de `goose`. Ni `UPDATE` sur `decision_admin`, `compte` et `reservation` (journaux) ; sur `photo`, `UPDATE` de la seule colonne `retiree_le` (migration 00010). Le relais garde sa transaction ouverte pendant la publication : `idle_in_transaction_session_timeout` est à poser sur ce rôle.
 
 Une migration exécutée sans que `marche_execution` existe échoue.
 
 ## Limites d'entrée
 
-Corps JSON de 32 Kio au plus (413 au-delà) ; titre 200 caractères, description 5 000 ; prix jusqu'à 1 000 000 €, frais de port jusqu'à 1 000 €. Messages du canal : 64 Kio au plus, validés contre leur schéma avant décodage (MC6).
+Corps JSON de 32 Kio au plus (413 au-delà) ; photo de `PHOTOS_TAILLE_MAX_OCTETS` au plus (5 Mio par défaut) ; titre 200 caractères, description 5 000 ; prix jusqu'à 1 000 000 €, frais de port jusqu'à 1 000 €. Messages du canal : 64 Kio au plus, validés contre leur schéma avant décodage (MC6).

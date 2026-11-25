@@ -52,6 +52,12 @@ func repond(client *http.Client, adresse string) bool {
 
 func lancerPlaceDeMarche(t *testing.T, canal *canalDeTest, adresseBase string, emetteur emetteurDeJetons) (*environnement, *journalPartage) {
 	t.Helper()
+	return lancerPlaceDeMarcheSurLeBucket(t, canal, adresseBase, emetteur, nouveauBucket(t))
+}
+
+func lancerPlaceDeMarcheSurLeBucket(t *testing.T, canal *canalDeTest, adresseBase string, emetteur emetteurDeJetons, bucket bucketDeTest) (*environnement, *journalPartage) {
+	t.Helper()
+	avecLesVariables(t, bucket.variables())
 	api, gestion := adresseLibre(t), adresseLibre(t)
 	variables := canal.environnementDeService(identiteMarche)
 	variables["BASE_DE_DONNEES_URL"] = adresseBase
@@ -89,7 +95,9 @@ func lancerPlaceDeMarche(t *testing.T, canal *canalDeTest, adresseBase string, e
 		}
 		return repond(client, "http://"+gestion+"/disponibilite")
 	})
-	return emetteur.environnementSur(t, "http://"+api, client), journal
+	e := emetteur.environnementSur(t, "http://"+api, client)
+	e.avecPhotos = true
+	return e, journal
 }
 
 func construireControle(t *testing.T) string {
